@@ -7,10 +7,10 @@ is [`data-source-registry.yaml`](data-source-registry.yaml), validated by:
 hearthmap check-registry
 ```
 
-> **M0 state:** no source is `VERIFIED`. Entries are leads drawn from background
-> knowledge, recorded so research can be tracked. URLs (where present) were not
-> visited during M0. Do not cite any registry fact as established until the
-> entry is `VERIFIED`.
+> **M1A state (2026-10-15):** 8 sources are `VERIFIED` (inspected at the
+> source and the data opened). All others remain leads; do not cite them as
+> established fact. No source is yet permitted for `POTENTIAL_HARD_EXCLUSION`
+> or `PARCEL_LEGAL_VERIFICATION`.
 
 ## Fields
 
@@ -20,7 +20,14 @@ hearthmap check-registry
 | `name`, `category`, `publisher` | What it is and who publishes it |
 | `priority` | `must_have` / `useful` / `later` (see [research-backlog.md](research-backlog.md)) |
 | `verification_status` | `VERIFIED` / `CANDIDATE` / `NEEDS_RESEARCH` |
-| `source_url`, `access_method`, `format` | How to get it |
+| `role` | `PRIMARY` / `SECONDARY` / `VALIDATION_ONLY` among sources for the same theme |
+| `permitted_uses` | `REGIONAL_SCREENING`, `POTENTIAL_HARD_EXCLUSION`, `LEGAL_WARNING_ONLY`, `PARCEL_LEGAL_VERIFICATION`, `VALIDATION_REFERENCE` ([legal-vs-screening.md](../product/legal-vs-screening.md)) |
+| `dataset_title`, `landing_page`, `data_endpoint` | Exact title, official landing page, actual endpoint used |
+| `access_method`, `access_restrictions`, `format`, `source_crs` | How to get it and what it is |
+| `last_update` | Publisher's last update, as stated |
+| `verification_evidence` | What was actually inspected (a working URL is not verification) |
+| `redirects_or_changes` | Redirects, renamed files, changed services |
+| `analytical_suitability` | What the data may and may not support |
 | `coverage`, `spatial_resolution`, `temporal_coverage` | Where, how fine, when |
 | `last_verified` | Date someone actually checked the entry (required for `VERIFIED`) |
 | `license_or_usage_notes` | Licence, attribution, redistribution limits |
@@ -40,7 +47,13 @@ NEEDS_RESEARCH ──(dataset identified)──► CANDIDATE ──(checked: url
 
 Rules enforced by validation:
 
-- `VERIFIED` requires `last_verified` and `source_url`.
+- `VERIFIED` requires `last_verified`, `publisher`, `dataset_title`,
+  `landing_page`, `data_endpoint`, `format`, `source_crs`,
+  `license_or_usage_notes`, `verification_evidence` and non-empty
+  `permitted_uses`.
+- A `LEGAL_WARNING_ONLY` source cannot also claim `PARCEL_LEGAL_VERIFICATION`.
+- A `FAIL` (definitive exclusion) may only cite sources that are `VERIFIED`
+  with `POTENTIAL_HARD_EXCLUSION` (`hearthmap.scoring.evidence`).
 - Any `processing_status` other than `NOT_ACQUIRED`/`REJECTED` requires
   `local_raw_path`.
 - `confidence` other than `UNKNOWN` requires the entry to be at least
@@ -49,7 +62,8 @@ Rules enforced by validation:
 
 ## Promoting an entry to VERIFIED — checklist
 
-1. Visit the source; record exact URL and access method.
+1. Visit the source; record landing page, exact data endpoint, access method
+   and any redirects or changed services.
 2. Read the licence; record redistribution and attribution terms.
 3. Download a sample; open in QGIS; record **CRS and datum** (Indian 1975?).
 4. Record coverage, resolution, vintage/date, update frequency.

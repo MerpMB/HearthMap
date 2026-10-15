@@ -49,6 +49,24 @@ delete them here.
 20. Travel-time model: OSM network with assumed speeds per road class — how to
     validate speeds for mountain roads?
 
+## Raised by M1A (2026-10-15)
+
+23. Register for a GISTDA API key (user action) to evaluate the 2011–2023 flood
+    recurrence layer, which is more recent than the 2005–2016 layer used.
+24. RFD reserve polygons touch ~80% of AOI cells (mean cell fraction 0.76) and
+    overlap national parks. How should overlapping legal categories be
+    presented, and which areas are already revoked/allocated (e.g. land-reform
+    transfers) but still drawn as reserve?
+25. GISTDA 1:50k and COD-AB disagree by up to 4.9 km along part of the Chiang
+    Mai boundary — which is right there? (Inspect in QGIS against imagery.)
+26. geoBoundaries ADM1 (OSM 2017) diverges strongly (sym. diff up to 12%); is it
+    usable at all for validation, or should it be dropped?
+27. OSM waterway completeness differs strongly between provinces (Phayao: 309
+    ways) — is a DEM-derived drainage network needed for stream proximity?
+28. The flood layer ends in 2016 and is satellite-observed only. What
+    complementary evidence (local flood marks, DDPM records, modelled hazard)
+    is needed before any flood constraint may become definitive?
+
 ## Process
 
 21. Who validates outputs in QGIS, and against which known places?

@@ -38,6 +38,10 @@ No frontend, no database server, no cloud. QGIS is the inspection tool.
 | `provenance/` | `ProvenanceRecord`, `SourceReference`, `ProcessingStep`, sidecar I/O, data-source registry model | Implemented |
 | `ingestion/` | Read a registered vector source, refuse missing CRS, checksum, emit `SourceReference` | Minimal generic reader only; no source-specific pipelines |
 | `scoring/` | Hard-constraint evaluation contract, weighted suitability, explanation rendering | Skeleton: arithmetic + contracts, **no real layer computations** |
+| `spatial/transform.py` | Recorded CRS normalisation (datum contract, ADR-0006) | Implemented (M0.1) |
+| `spatial/overlay.py` | Area-based grid overlay metrics (no centroid sampling) | Implemented (M0.1) |
+| `ingestion/acquire.py`, `arcgis.py`, `readers.py` | RAW acquisition with manifests/checksums, paged ArcGIS subsets, raw readers | Implemented (M1A) |
+| `scoring/evidence.py` | FAIL evidence must come from sources permitted for hard exclusion | Implemented (M0.1) |
 | `cli.py` | `hearthmap check-config`, `check-registry`, `make-grid` | Implemented |
 
 Dependencies point one way: `config`, `enums` ← `spatial` ← `validation` /
@@ -51,9 +55,11 @@ or (later) parcels.
 
 ```text
 eligible = all enabled hard constraints evaluated and PASS
-if any FAIL:          status = EXCLUDED, suitability_score = null, exclusion_reasons = [...]
-elif any UNKNOWN:     status = UNRESOLVED (or EXCLUDED under strict policy)
-else:                 status = ELIGIBLE, suitability_score = weighted component score
+if any FAIL (definitive):   status = EXCLUDED, suitability_score = null, exclusion_reasons = [...]
+elif any UNKNOWN + strict:  status = EXCLUDED (exclusion_basis = conservative_policy)
+elif any UNKNOWN or FLAG:   status = UNRESOLVED (flags = screening / legal-verification hits)
+else:                       status = ELIGIBLE, suitability_score = weighted component score
+rankable = ELIGIBLE and score_basis == complete   (unless experimental mode)
 ```
 
 Details: [scoring-model-v0.1.md](../product/scoring-model-v0.1.md),

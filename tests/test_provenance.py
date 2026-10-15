@@ -13,6 +13,7 @@ from hearthmap.config import ConfigError
 from hearthmap.enums import Confidence, VerificationStatus
 from hearthmap.provenance import (
     DataSourceRegistry,
+    PermittedUse,
     ProvenanceRecord,
     SourceReference,
     current_code_version,
@@ -110,13 +111,37 @@ def test_repository_registry_is_valid():
     assert "boundaries-ocha-cod-ab" in reg
 
 
-def test_repository_registry_claims_nothing_verified_yet():
-    # M0 honesty check: no dataset has actually been inspected yet. Update this
-    # test deliberately when the first source is genuinely verified.
+def test_repository_registry_verification_state_m1a():
+    # Updated deliberately in M1A (was "nothing verified" in M0). Honesty checks:
     reg = load_registry(REGISTRY_PATH)
-    assert reg.by_status(VerificationStatus.VERIFIED) == []
-    assert all(s.confidence is Confidence.UNKNOWN for s in reg.sources)
-    assert all(s.processing_status == "NOT_ACQUIRED" for s in reg.sources)
+    verified = reg.by_status(VerificationStatus.VERIFIED)
+    assert {s.id for s in verified} == {
+        "boundaries-ocha-cod-ab",
+        "boundaries-gistda-50k",
+        "boundaries-geoboundaries",
+        "dem-copernicus-glo30",
+        "flood-gistda-repeated-2005-2016",
+        "forest-reserve-rfd",
+        "protected-gistda-mnre",
+        "osm-overpass-aoi",
+    }
+    # Every verified source was actually acquired and processed locally.
+    assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)
+    # No M1A source is fit for definitive exclusion or parcel-level legal truth yet.
+    for s in reg.sources:
+        assert PermittedUse.POTENTIAL_HARD_EXCLUSION not in s.permitted_uses
+        assert PermittedUse.PARCEL_LEGAL_VERIFICATION not in s.permitted_uses
+    # Unverified entries never claim assessed quality.
+    assert all(s.confidence is Confidence.UNKNOWN for s in reg.sources if s not in verified)
+    # Exactly one PRIMARY boundary source.
+    primaries = [s.id for s in reg.sources if s.category == "boundaries" and s.role == "PRIMARY"]
+    assert primaries == ["boundaries-ocha-cod-ab"]
+
+
+def test_forest_reserve_is_legal_warning_only():
+    entry = load_registry(REGISTRY_PATH).get("forest-reserve-rfd")
+    assert PermittedUse.LEGAL_WARNING_ONLY in entry.permitted_uses
+    assert any("certify" in lim for lim in entry.known_limitations)
 
 
 def _raw_registry() -> dict:
@@ -133,7 +158,8 @@ def test_verified_requires_last_verified():
 
 def test_confidence_requires_inspection():
     raw = _raw_registry()
-    raw["sources"][0]["confidence"] = "HIGH"
+    entry = next(e for e in raw["sources"] if e["verification_status"] == "NEEDS_RESEARCH")
+    entry["confidence"] = "HIGH"
     with pytest.raises(ValidationError, match="claims the data was assessed"):
         DataSourceRegistry.model_validate(raw)
 
@@ -141,6 +167,7 @@ def test_confidence_requires_inspection():
 def test_acquired_requires_local_path():
     raw = _raw_registry()
     raw["sources"][0]["processing_status"] = "ACQUIRED"
+    raw["sources"][0]["local_raw_path"] = None
     with pytest.raises(ValidationError, match="requires local_raw_path"):
         DataSourceRegistry.model_validate(raw)
 

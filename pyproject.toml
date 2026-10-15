@@ -44,3 +44,7 @@ src = ["src", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Markdown table rows in the generated report are long by nature.
+"scripts/m1a/package.py" = ["E501"]

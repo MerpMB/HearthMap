@@ -10,6 +10,13 @@ Repository, documentation, configuration, data-source registry, provenance and
 confidence model, CRS strategy, grid generator, scoring skeleton, tests.
 **Scaffolding only** — no real data, no real scores.
 
+## M0.1 + M1A — Verification gate and geography truth (done)
+
+Foundation corrections (datum contract, legal vs screening evidence, ranking
+comparability, area-based overlays) and the first verified/acquired sources
+with a validated 500 m grid. No scoring. See
+[m1a-validation-report.md](../research/m1a-validation-report.md).
+
 ## M1 — Regional hazard + infrastructure scan
 
 - Acquire and register: admin boundaries, DEM, flood history/hazard, landslide

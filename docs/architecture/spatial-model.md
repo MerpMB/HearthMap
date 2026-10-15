@@ -1,7 +1,7 @@
 # Spatial model and CRS strategy
 
-Status: **Decided for M0/M1** ([ADR-0002](decisions/0002-canonical-crs-utm-47n.md)),
-with verification items flagged below. Config: [`config/spatial.yaml`](../../config/spatial.yaml).
+Status: **Provisional for M1** ([ADR-0002](decisions/0002-canonical-crs-utm-47n.md);
+datum contract [ADR-0006](decisions/0006-recorded-datum-transformations.md)). Revised in M0.1. Config: [`config/spatial.yaml`](../../config/spatial.yaml).
 
 ## 1. Three CRS roles
 
@@ -14,13 +14,15 @@ with verification items flagged below. Config: [`config/spatial.yaml`](../../con
 
 ## 2. Why UTM 47N
 
-- UTM zone 47N spans **96°E–102°E** with central meridian **99°E**. Chiang
-  Mai, Chiang Rai and Phayao lie roughly between 97.3°E and 100.9°E — entirely
-  inside one zone, so no zone-boundary splitting.
-- Maximum offset from the central meridian is ≈2°. At ~18–20°N the UTM point
-  scale factor ranges ≈0.9996 (at 99°E) to ≈1.0002 (at the study-area edges):
-  distance error well under 0.05%, i.e. < 0.5 m per km. Far below the
-  uncertainty of any input dataset we expect.
+- UTM zone 47N spans **96°E–102°E**. The validated M1A AOI (COD-AB
+  boundaries of Chiang Mai, Chiang Rai and Phayao) spans **98.008°E–100.629°E,
+  17.242°N–20.465°N**, entirely inside the zone, so there is no zone-boundary
+  splitting.
+- EPSG:32647 is therefore an appropriate conformal metric CRS for *regional*
+  analysis of this AOI. We deliberately make **no numerical distortion claim**
+  (an earlier draft did; it was removed in M0.1 because it had not been
+  demonstrated over the AOI). If a calculation ever needs a distortion bound,
+  compute it over the AOI (e.g. `pyproj.Proj.get_factors`) and record it.
 - It is a standard, widely supported CRS in GDAL/PROJ/QGIS and is commonly
   used by Thai and international datasets for this area.
 - It uses the WGS 84 datum, which is what GNSS, OSM and global datasets
@@ -33,25 +35,45 @@ distortion).
 
 ## 3. Thai datum hazard: Indian 1975
 
-Many Thai government datasets — especially older ones — are published in the
-**Indian 1975** datum (geographic EPSG:4240, UTM 47N **EPSG:24047**). Coordinates
-look almost identical to WGS 84 / UTM 47N numbers but are offset by a datum
-shift on the order of **hundreds of metres**. Mislabelling one as the other
-silently misplaces every feature by more than one grid cell.
+Thai datasets may use the **Indian 1975** datum (geographic EPSG:4240, UTM 47N
+**EPSG:24047**). Its coordinates look like WGS 84 / UTM 47N numbers, so a
+mislabelled CRS is not visually obvious. The core issue is not one "offset
+size": **a datum change involves choosing a coordinate operation**, and that
+choice must never be silent.
+
+### Datum-transformation contract (implemented in `hearthmap.spatial.transform`)
+
+Every normalisation stores a `TransformationRecord` in provenance:
+
+| Field | Meaning |
+|---|---|
+| `source_crs`, `source_datum` | e.g. `EPSG:24047`, `Indian 1975` |
+| `target_crs`, `target_datum` | e.g. `EPSG:32647`, `World Geodetic System 1984 ensemble` |
+| `datum_change` | whether a datum transformation (not only a conversion) occurred |
+| `operation`, `steps[]` | PROJ operation and each step (`Conversion` / `Transformation`) with authority code |
+| `transformation_codes` | e.g. `["EPSG:1812"]` (Indian 1975 to WGS 84 (4)) |
+| `accuracy_m` | stated accuracy from the EPSG registry; `None` if unpublished, `0` for pure conversions |
+| `candidates`, `selection` | every operation PROJ offered, and whether ours was `only_candidate`, `best_ranked` or `pinned` |
+| `proj_pipeline`, `pyproj_version`, `proj_version` | reproducibility |
 
 Rules:
 
-1. **Never assume a source CRS.** `spatial.yaml: require_explicit_source_crs:
-   true`; ingestion refuses layers without CRS metadata.
-2. When a source's `.prj`/metadata says UTM 47N, confirm the **datum**
-   (WGS 84 vs. Indian 1975) from the publisher's documentation and record it
-   in the registry.
-3. Indian 1975 → WGS 84 transformations exist in several variants with
-   different accuracies. Record which PROJ pipeline was used in the provenance
-   step `parameters` (verification item: identify the most appropriate
-   transformation for Northern Thailand before M1 ingestion).
-4. Validate every ingested layer against a known reference (e.g. overlay on
-   OSM roads or imagery in QGIS) before use.
+1. **Never assume a source CRS** (`require_explicit_source_crs: true`).
+2. Confirm the **datum** from publisher documentation, not only from `.prj`.
+3. `hearthmap.spatial.reproject()` refuses any datum change
+   (`DatumChangeError`); datum changes must use `reproject_recorded()`.
+4. PROJ ranks candidates for the AOI (`area_of_interest`). **Ballpark**
+   operations (which skip the datum shift) are refused unless explicitly allowed.
+5. An operation can be pinned by authority code (e.g. `pinned="EPSG:1304"`).
+6. Observed with pyproj 3.8 / PROJ 9.8 for EPSG:24047 → EPSG:32647 over the AOI:
+   EPSG:1812 (stated accuracy 3 m, area "Thailand - onshore"), EPSG:1304 (5 m,
+   onshore plus Gulf of Thailand) and a world ballpark offset. Default choice is
+   the best-ranked EPSG:1812; a dataset's own documentation should override this
+   when it names the transformation used to produce it.
+7. Validate every ingested layer against an independent reference before use.
+
+No M1A source required a datum change: all are WGS 84 based (EPSG:4326,
+EPSG:3857 or EPSG:32647), so every M1A record has `datum_change: false`.
 
 ## 4. Analysis grid
 
@@ -60,14 +82,32 @@ Rules:
   from the CRS origin. Cell ids encode the absolute column/row
   (`G500-E000958-N004102` = easting index 958, northing index 4102), so ids are
   stable across runs and across region subsets for the same CRS + size.
-- Cell selection: `intersects` (default, keeps edge cells) or
-  `centroid_within`; edge cells carry `coverage_fraction`.
+- Cell selection: `intersects` (default; interiors must overlap, edge-touching
+  cells excluded) or `centroid_within`; every cell carries `coverage_fraction`.
 - Grid resolution must not exceed the resolution of the evidence: a 500 m cell
   coloured by district-level data is still district-level data — confidence and
   `spatial_resolution` in provenance must say so.
-- Rough size: the three provinces cover on the order of 40,000 km² → on the order
-  of 150,000–170,000 cells at 500 m (to be measured once real boundaries are
-  acquired).
+- Measured in M1A: **162,073 cells** (157,344 full, 4,729 partial) over the
+  39,930.34 km² COD-AB AOI ([m1a-validation-report.md](../research/m1a-validation-report.md)).
+
+### 4.1 Grid / sampling contract
+
+The 500 m grid is a **regional analysis surface**, not the fundamental
+resolution of any dataset. Overlays retain metrics such as:
+
+| Metric | Meaning |
+|---|---|
+| `coverage_fraction` | share of the cell inside the AOI |
+| `<layer>_affected_area_fraction` | share of the cell covered by the union of intersecting features |
+| `<layer>_max_<value>` | worst (max) attribute among intersecting features, e.g. max flood recurrence |
+| mean / percentile / threshold-share | e.g. `elev_mean_m`, `slope_gt15_fraction` from native pixels |
+| `dist_<feature>_m` | straight-line distance to the nearest feature |
+
+**Hazard overlays are never designed around centroid sampling alone.** A narrow
+but severe hazard (a 10 m channel along a cell edge) appears as
+`affected_area_fraction > 0` and in `max_*` even though the centroid misses it
+(`hearthmap.spatial.overlay.polygon_cell_metrics`, tested). A fraction of 0
+means "no mapped feature", never "no hazard".
 
 ## 5. Analysis units other than the grid
 
@@ -82,11 +122,12 @@ Rules:
 
 ## 6. Rasters
 
-- DEMs (e.g. Copernicus GLO-30) are typically distributed in EPSG:4326.
-  Reproject once to EPSG:32647 at a resolution close to native (~30 m), with
-  bilinear resampling for continuous values, before deriving slope.
-- **Slope must be computed on a projected DEM** (or with proper geodesic cell
-  sizes); computing slope directly on a degree-grid DEM is a classic error.
+- Copernicus GLO-30 is distributed in EPSG:4326 with EGM2008 heights (EPSG:3855).
+- The M1A terrain preview avoids resampling: slope is computed on the native
+  grid with **geodesic pixel spacing** per row, and native pixel centres are
+  binned into 500 m cells. Any future raster product in EPSG:32647 must record
+  its resampling method in provenance.
+- **Slope is never computed in degree units.**
 - Rasterio is an optional dependency (`pip install -e ".[raster]"`), added when
   the first raster is ingested.
 

@@ -14,10 +14,27 @@ priority over visually impressive output.
 
 ## Status
 
-**M0 — Foundation.** This milestone contains architecture, documentation,
-configuration and a small, tested Python core. It contains **no real
-geographic data and no real scores.** All spatial tests use explicitly
-synthetic geometry. See [docs/product/roadmap.md](docs/product/roadmap.md).
+**M1A — Geography truth.** M0 built the foundation; M0.1 corrected it
+(datum-transformation contract, legal vs screening evidence, ranking
+comparability, area-based overlays); M1A verified and acquired the first real
+sources (boundaries, DEM, observed flood history, forest/protected screening,
+OSM roads/waterways) and built a validated 500 m grid for Chiang Mai, Chiang
+Rai and Phayao. **No location has a suitability score.** See
+[m1a-validation-report.md](docs/research/m1a-validation-report.md) and
+[roadmap.md](docs/product/roadmap.md).
+
+Data never enters Git. To rebuild M1A locally:
+
+```bash
+uv pip install --python .venv -e ".[dev,raster]"
+python scripts/m1a/acquire_boundaries.py   # + acquire_flood_gistda / acquire_forest / acquire_osm / acquire_dem
+python scripts/m1a/build_boundaries.py
+python scripts/m1a/build_dem.py
+python scripts/m1a/build_layers.py
+python scripts/m1a/package.py               # -> outputs/m1a/hearthmap-m1a.gpkg (open in QGIS)
+```
+
+(The COD-AB geodatabase was fetched with `curl`; see its `manifest.json`.)
 
 ## Quick start
 

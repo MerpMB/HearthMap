@@ -1,8 +1,18 @@
 # Research backlog — datasets to locate
 
-Status: M0. Ordered by priority for M1. Registry ids refer to
-[data-source-registry.yaml](data-source-registry.yaml). Nothing listed here is
-verified yet.
+Status: updated after M1A (2026-10-15). Registry ids refer to
+[data-source-registry.yaml](data-source-registry.yaml).
+
+## M1A outcome
+
+| Theme | Result |
+|---|---|
+| Boundaries | VERIFIED + acquired: COD-AB (PRIMARY), GISTDA 1:50k (SECONDARY), geoBoundaries ADM1 (VALIDATION_ONLY). Official DOPA dataset still not found. |
+| Elevation | VERIFIED + acquired: Copernicus GLO-30 (DSM). FABDEM evaluated, deferred (CC BY-NC-SA). |
+| Flood | VERIFIED + acquired: GISTDA repeated flooding 2005–2016 (observed history). 2011–2023 recurrence and event layers need a GISTDA API key (blocked). Modelled hazard not researched yet. |
+| Forest / protected | VERIFIED + acquired: RFD reserve forest (legal warning only), GISTDA-served MNRE parks 2014 + sanctuaries. Current DNP boundaries, ALRO and watershed classes still missing. |
+| Roads / waterways | VERIFIED + acquired: OSM Overpass AOI subset. National Geofabrik extract rejected (size guard). |
+| Landslide | Not started in M1A (still highest-uncertainty must-have). |
 
 Legend: **Must-have** = blocks a hard constraint or core dimension.
 **Useful** = materially improves a score. **Later** = enrichment.
