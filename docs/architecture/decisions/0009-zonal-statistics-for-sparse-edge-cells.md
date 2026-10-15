@@ -1,7 +1,7 @@
 # ADR-0009 — Zonal statistics for sparse edge cells
 
-Status: Proposed (M1A.1). Recommendation only; not yet applied to any terrain
-suitability or constraint.
+Status: Accepted (M1B) - implemented in `hearthmap.terrain.zonal` and used for all
+M1B terrain indicators. Not applied to any suitability or constraint.
 
 ## Context
 

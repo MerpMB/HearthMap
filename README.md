@@ -14,7 +14,9 @@ priority over visually impressive output.
 
 ## Status
 
-**M1A — Geography truth.** M0 built the foundation; M0.1 corrected it
+**M1B — Hazard evidence (provisional).** Per-cell flood, landslide (DMR) and DSM-terrain evidence with provisional, explainable interpretations; experimental exclusion candidates and threshold sensitivity only. No exclusions, scores or recommendations; M1A.1 human visual sign-off is PENDING. See [m1b-hazard-evidence-report.md](docs/research/m1b-hazard-evidence-report.md).
+
+Previously: **M1A — Geography truth.** M0 built the foundation; M0.1 corrected it
 (datum-transformation contract, legal vs screening evidence, ranking
 comparability, area-based overlays); M1A verified and acquired the first real
 sources (boundaries, DEM, observed flood history, forest/protected screening,

@@ -17,6 +17,14 @@ comparability, area-based overlays) and the first verified/acquired sources
 with a validated 500 m grid. No scoring. See
 [m1a-validation-report.md](../research/m1a-validation-report.md).
 
+## M1B — Hazard evidence engine v0.1 (done, provisional)
+
+Per-cell hazard evidence (flood observed 2005-2016, DMR landslide susceptibility
+and inventory, support-aware DSM terrain, OSM waterway context) with
+provisional categorical interpretation, experimental exclusion candidates and
+threshold sensitivity. Next: hazard policy review (thresholds, which evidence
+may ever become definitive) - blocked on M1A.1 human visual sign-off.
+
 ## M1 — Regional hazard + infrastructure scan
 
 - Acquire and register: admin boundaries, DEM, flood history/hazard, landslide

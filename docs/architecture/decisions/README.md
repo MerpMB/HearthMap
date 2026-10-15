@@ -13,4 +13,4 @@ status. Superseded decisions are kept and marked, not deleted.
 | [0006](0006-recorded-datum-transformations.md) | Recorded datum transformations | Accepted (M0.1) |
 | [0007](0007-legal-vs-screening-evidence.md) | Legal truth separate from screening geometry | Accepted (M0.1) |
 | [0008](0008-dem-choice-m1.md) | DEM choice for M1 regional terrain screening | Accepted (provisional) |
-| [0009](0009-zonal-statistics-for-sparse-edge-cells.md) | Zonal statistics for sparse edge cells | Proposed (M1A.1) |
+| [0009](0009-zonal-statistics-for-sparse-edge-cells.md) | Zonal statistics for sparse edge cells | Accepted, implemented for terrain (M1B) |

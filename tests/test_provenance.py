@@ -124,6 +124,9 @@ def test_repository_registry_verification_state_m1a():
         "forest-reserve-rfd",
         "protected-gistda-mnre",
         "osm-overpass-aoi",
+        # M1B (2026-10-15)
+        "landslide-susceptibility-dmr",
+        "landslide-inventory-dmr",
     }
     # Every verified source was actually acquired and processed locally.
     assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)
@@ -218,3 +221,18 @@ def test_data_verified_requires_acquisition():
     entry["data_verified"] = True
     with pytest.raises(ValidationError, match="acquired"):
         DataSourceRegistry.model_validate(raw)
+
+
+def test_landslide_concepts_are_registered_separately():
+    reg = load_registry(REGISTRY_PATH)
+    roles = {
+        s.id: s.evidence_role
+        for s in reg.sources
+        if s.category == "landslide" and s.evidence_role is not None
+    }
+    assert roles["landslide-susceptibility-dmr"] == "SUSCEPTIBILITY"
+    assert roles["landslide-inventory-dmr"] == "HISTORICAL_EVENT_LOCATIONS"
+    assert roles["debris-flow-flash-flood-dmr"] == "MODELLED_IMPACT_AREA"
+    susc = reg.get("landslide-susceptibility-dmr")
+    assert PermittedUse.POTENTIAL_HARD_EXCLUSION not in susc.permitted_uses
+    assert any("NOT published" in lim for lim in susc.known_limitations)

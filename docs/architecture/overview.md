@@ -42,6 +42,9 @@ No frontend, no database server, no cloud. QGIS is the inspection tool.
 | `spatial/overlay.py` | Area-based grid overlay metrics (no centroid sampling) | Implemented (M0.1) |
 | `ingestion/acquire.py`, `arcgis.py`, `readers.py` | RAW acquisition with manifests/checksums, paged ArcGIS subsets, raw readers | Implemented (M1A) |
 | `scoring/evidence.py` | FAIL evidence must come from sources permitted for hard exclusion | Implemented (M0.1) |
+| `terrain/` | Horn slope (geodesic spacing) and support-aware weighted zonal statistics (ADR-0009) | Implemented (M1B) |
+| `hazard/` | Hazard evidence schema, provisional interpretation, experimental exclusion candidates, threshold sensitivity | Implemented (M1B, provisional) |
+| `qa/` | Spatial QA helpers and review-only guards | Implemented (M1A.1) |
 | `cli.py` | `hearthmap check-config`, `check-registry`, `make-grid` | Implemented |
 
 Dependencies point one way: `config`, `enums` ← `spatial` ← `validation` /

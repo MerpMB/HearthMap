@@ -387,52 +387,109 @@ sources:
   processing_status: NOT_ACQUIRED
   notes: Investigate Thai agency products (e.g. DDPM, RID, DWR) and global models (JRC river flood hazard).
     Global models are usually too coarse for small northern valleys.
-- id: landslide-dmr-susceptibility
-  name: Landslide susceptibility / risk-area maps
+- id: landslide-susceptibility-dmr
+  name: DMR landslide susceptibility (areas with potential for landslide occurrence)
   category: landslide
   priority: must_have
-  verification_status: NEEDS_RESEARCH
-  role: null
-  permitted_uses: []
-  publisher: Department of Mineral Resources (DMR) - to confirm
-  landing_page: null
-  access_method: null
-  format: null
-  coverage: null
-  spatial_resolution: null
-  temporal_coverage: null
-  last_verified: null
-  license_or_usage_notes: null
-  expected_update_frequency: null
-  confidence: UNKNOWN
-  known_limitations: []
-  local_raw_path: null
-  processing_status: NOT_ACQUIRED
-  notes: Determine whether mapped polygons (not only village risk lists) are available for the three provinces,
-    and at what scale.
-- id: landslide-event-inventory
-  name: Historical landslide event inventory
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: SUSCEPTIBILITY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division
+  dataset_title: พื้นที่มีโอกาสเกิดแผ่นดินถล่ม / LANDSLIDE_SUSCEPTIBILITY (05010103)
+  landing_page: https://data.dmr.go.th/dataset/landslide_susceptibility
+  data_endpoint: https://data.dmr.go.th/dataset/29b3d834-43bb-4187-9118-8eb0bf8ee4d5/resource/b2605199-dbe1-465f-a8c2-24a091651af6/download/shp_05010103-.rar
+  access_method: Anonymous HTTPS (descriptive User-Agent; portal intermittently returns 502/504). Same
+    53,199 features also in a CSV export and an ArcGIS MapServer (gisportal.dmr.go.th/.../HAZARD/LANDSLIDE_SUSCEPTIBILITY).
+  access_restrictions: None stated
+  format: RAR (Thai folder name) containing ESRI Shapefile, UTF-8, 53,199 polygons
+  source_crs: EPSG:32647
+  coverage: 'Partial national coverage, 248,018 km2. AOI coverage of province area: Chiang Mai 93.1%,
+    Chiang Rai 77.6%, Phayao 76.2%.'
+  spatial_resolution: '~1 km lattice: 1 km2 cells, some merged into larger same-class polygons (up to
+    7,130 km2); lattice offset from the HearthMap grid (x mod 1000 = 143.6 m, y mod 1000 = 115 m)'
+  temporal_coverage: Not stated; SHP resource 2021-06-21
+  last_update: CSV export 2026-06-23 (identical rows/classes to SHP); metadata 2026-08-10; stated update
+    cycle 5 years
+  last_verified: '2026-10-15'
+  verification_evidence: CKAN package_show + data dictionary (.docx) read; SHP extracted and opened; field/class
+    values and CSV cross-checked (53,199 rows, identical gridcodes); ArcGIS service count 53,199; AOI
+    coverage measured.
+  license_or_usage_notes: Creative Commons Attributions (catalogue)
+  expected_update_frequency: Every 5 years (catalogue)
+  confidence: MEDIUM
+  known_limitations:
+  - 'Classes: gridcode 1 Very Low, 2 Low, 3 Medium, 4 High, 5 Very High (data dictionary LUT_SUSCEPT_LEVEL
+    + per-class Desc_T/Desc_E). Methodology is NOT published with the dataset; the catalogue cites DMR
+    community-level landslide surveys as data source.'
+  - '~1 km resolution: coarser than the 500 m analysis grid.'
+  - 'Partial coverage: unmapped land is NOT ASSESSED, never ''Very Low''.'
+  - 1,196 polygons (national) had ring self-intersections; repaired with make_valid (audited).
+  analytical_suitability: Regional susceptibility evidence; not yet permitted for hard exclusion (M1A.1
+    human sign-off pending; policy review needed).
+  local_raw_path: data/raw/landslide-susceptibility-dmr/2026-08-10/
+  processing_status: PROCESSED
+  notes: Supersedes M0 placeholder 'landslide-dmr-susceptibility'.
+- id: landslide-inventory-dmr
+  name: DMR landslide inventory (mapped landslide scars) 1989-2019
   category: landslide
   priority: useful
-  verification_status: NEEDS_RESEARCH
-  role: null
-  permitted_uses: []
-  publisher: null
-  landing_page: null
-  access_method: null
-  format: null
-  coverage: null
-  spatial_resolution: null
-  temporal_coverage: null
-  last_verified: null
-  license_or_usage_notes: null
-  expected_update_frequency: null
-  confidence: UNKNOWN
+  verification_status: VERIFIED
+  role: SECONDARY
+  evidence_role: HISTORICAL_EVENT_LOCATIONS
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division
+  dataset_title: ร่องรอยแผ่นดินถล่ม / LANDSLIDE_INVENTORY_MAP (05010102)
+  landing_page: https://data.dmr.go.th/dataset/landslide_inventory_map
+  data_endpoint: https://data.dmr.go.th/dataset/258c96e9-67cc-4605-8def-9e5cb4e23da3/resource/8558dd02-1554-4422-8c32-b743e116b244/download/shp_05010102-.rar
+  access_method: Anonymous HTTPS (portal intermittently 504; resumable acquisition)
+  access_restrictions: None; more detail on request from the Environmental Geology Division
+  format: RAR containing ESRI Shapefile (points), 56,177 features; CSV export
+  source_crs: EPSG:32647
+  coverage: 'National; AOI points: Chiang Mai 4,240, Chiang Rai 1,796, Phayao 46'
+  spatial_resolution: Points interpreted from aerial photographs
+  temporal_coverage: 1989-2019 (catalogue); YEAR_DATA field empty in the data
+  last_update: CSV 2026-06-23; metadata 2026-06-23
+  last_verified: '2026-10-15'
+  verification_evidence: CKAN metadata + data dictionary read; SHP extracted and opened.
+  license_or_usage_notes: Creative Commons Attributions (catalogue)
+  expected_update_frequency: Every 5 years (catalogue)
+  confidence: LOW
   known_limitations:
-  - Event inventories are biased toward reported events near settlements and roads.
-  local_raw_path: null
+  - 'Very uneven coverage between provinces (Phayao 46 points): absence is not stability.'
+  - No event dates in the data; duplicate coordinates occur.
+  - Historical event locations - a different concept from susceptibility; kept separate.
+  analytical_suitability: Supporting historical evidence (CAUTION level), not exclusion.
+  local_raw_path: data/raw/landslide-inventory-dmr/2026-06-23/
+  processing_status: PROCESSED
+- id: debris-flow-flash-flood-dmr
+  name: DMR modelled areas affected by landslide debris flow / flash flood
+  category: landslide
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  evidence_role: MODELLED_IMPACT_AREA
+  metadata_verified: true
+  data_verified: false
+  acquisition_status: DEFERRED
+  permitted_uses: []
+  publisher: Department of Mineral Resources (DMR)
+  landing_page: https://data.dmr.go.th/dataset/debris_flood
+  format: File geodatabase zip (226 MB, 2024-01-23); ArcGIS MapServer HAZARD/DEBRIS_FLOOD
+  last_verified: '2026-10-15'
+  license_or_usage_notes: Creative Commons Attributions (catalogue)
+  confidence: UNKNOWN
   processing_status: NOT_ACQUIRED
-  notes: Candidates include DMR records and the NASA Global Landslide Catalog (global, sparse).
+  notes: 'Modelled impact areas (a third concept: neither susceptibility nor events). Deferred from M1B;
+    near the size guard - prefer an AOI subset via the MapServer.'
 - id: seismic-active-faults
   name: Active fault lines
   category: seismic

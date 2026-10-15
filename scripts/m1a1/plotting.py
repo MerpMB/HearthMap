@@ -67,12 +67,16 @@ def grid_image(grid, values: np.ndarray, cell: float = 500.0):
     return arr, extent
 
 
-def save(fig, path: Path, source: str) -> None:
+def save(
+    fig,
+    path: Path,
+    source: str,
+    tag: str = "HearthMap M1A.1 review - descriptive QA, not a suitability map.",
+) -> None:
     fig.text(
         0.005,
         0.003,
-        f"Source: {source}  |  {CRS_NOTE}  |  HearthMap M1A.1 review - "
-        "descriptive QA, not a suitability map.",
+        f"Source: {source}  |  {CRS_NOTE}  |  {tag}",
         fontsize=6.5,
         color="#333333",
     )
