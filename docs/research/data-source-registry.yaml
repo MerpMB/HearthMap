@@ -1,0 +1,825 @@
+# HearthMap data-source registry (machine-readable).
+#
+# Validated by `hearthmap check-registry` (hearthmap.provenance.registry).
+# Human guide: data-source-registry.md
+#
+# IMPORTANT — M0 state: NOTHING here is VERIFIED. Entries are drawn from
+# background knowledge of commonly used sources and have not been checked for
+# current availability, URL, licence, coverage or quality. URLs, where given,
+# have not been visited in M0. Every factual-looking field must be re-checked
+# before a source moves to VERIFIED.
+#
+# verification_status: VERIFIED | CANDIDATE | NEEDS_RESEARCH
+#   CANDIDATE       = believed to exist and be relevant; details unverified
+#   NEEDS_RESEARCH  = unclear whether a usable public dataset exists
+# priority: must_have | useful | later
+# processing_status: NOT_ACQUIRED | ACQUIRED | PROCESSING | PROCESSED | REJECTED
+# confidence: HIGH | MEDIUM | LOW | UNKNOWN  (quality of the dataset itself; UNKNOWN until inspected)
+
+schema_version: 1
+sources:
+
+  # ---------------------------------------------------------------- boundaries
+  - id: boundaries-ocha-cod-ab
+    name: Thailand administrative boundaries (COD-AB), province/district/sub-district
+    category: boundaries
+    priority: must_have
+    verification_status: CANDIDATE
+    publisher: UN OCHA via Humanitarian Data Exchange (HDX); lineage from Thai government sources to be confirmed
+    source_url: https://data.humdata.org/
+    access_method: Download
+    format: Shapefile / GeoPackage (to confirm)
+    coverage: Thailand
+    spatial_resolution: Admin levels 0-3 (to confirm)
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: To confirm (HDX datasets commonly CC BY / CC BY-IGO)
+    expected_update_frequency: Irregular
+    confidence: UNKNOWN
+    known_limitations:
+      - Boundary vintage and lineage unknown until checked; sub-district changes over time.
+      - Generalisation level unknown; may be unsuitable for parcel-scale edge decisions.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Preferred first candidate for M1 grid generation. Compare against geoBoundaries.
+
+  - id: boundaries-geoboundaries
+    name: geoBoundaries Thailand (ADM1-ADM3)
+    category: boundaries
+    priority: useful
+    verification_status: CANDIDATE
+    publisher: William & Mary geoLab (geoBoundaries)
+    source_url: https://www.geoboundaries.org/
+    access_method: Download / API
+    format: GeoJSON / Shapefile
+    coverage: Thailand
+    spatial_resolution: Admin levels (to confirm)
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: To confirm per dataset (geoBoundaries has open and humanitarian-only releases)
+    expected_update_frequency: Irregular
+    confidence: UNKNOWN
+    known_limitations:
+      - Secondary compilation; source lineage per country must be checked.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Cross-check source for province outlines.
+
+  - id: boundaries-thai-official
+    name: Official Thai administrative boundaries (DOPA / RTSD / other agency)
+    category: boundaries
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: null
+    source_url: null
+    access_method: null
+    format: null
+    coverage: Thailand
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Determine whether an authoritative, downloadable official boundary set exists and in which datum (Indian 1975 risk).
+
+  # ----------------------------------------------------------------- elevation
+  - id: dem-copernicus-glo30
+    name: Copernicus DEM GLO-30
+    category: elevation
+    priority: must_have
+    verification_status: CANDIDATE
+    publisher: European Space Agency / Copernicus programme
+    source_url: null
+    access_method: Download (several mirrors incl. public cloud buckets; to confirm)
+    format: Cloud-optimised GeoTIFF tiles
+    coverage: Global
+    spatial_resolution: ~30 m (1 arc-second)
+    temporal_coverage: Acquisitions roughly 2011-2015 (to confirm)
+    last_verified: null
+    license_or_usage_notes: To confirm (Copernicus DEM licence)
+    expected_update_frequency: Static
+    confidence: UNKNOWN
+    known_limitations:
+      - Digital SURFACE model - includes tree canopy and buildings; inflates heights in forest and biases slope.
+      - Vertical accuracy degrades in steep, forested terrain typical of the north.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Reproject to EPSG:32647 before deriving slope.
+
+  - id: dem-fabdem
+    name: FABDEM (Forest And Buildings removed Copernicus DEM)
+    category: elevation
+    priority: useful
+    verification_status: CANDIDATE
+    publisher: University of Bristol
+    source_url: null
+    access_method: Download
+    format: GeoTIFF tiles
+    coverage: Global
+    spatial_resolution: ~30 m
+    temporal_coverage: Derived from Copernicus DEM
+    last_verified: null
+    license_or_usage_notes: Believed non-commercial licence (CC BY-NC-SA) - must confirm before use
+    expected_update_frequency: Static
+    confidence: UNKNOWN
+    known_limitations:
+      - Machine-learning correction; errors in dense forest remain.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Possibly better bare-earth proxy for slope; licence is the key question.
+
+  # --------------------------------------------------------------------- flood
+  - id: flood-gistda-history
+    name: GISTDA satellite-observed flood extents (historical)
+    category: flood
+    priority: must_have
+    verification_status: CANDIDATE
+    publisher: Geo-Informatics and Space Technology Development Agency (GISTDA)
+    source_url: null
+    access_method: To confirm (portal / WMS / download / request)
+    format: null
+    coverage: Thailand
+    spatial_resolution: Depends on sensor (to confirm)
+    temporal_coverage: Multi-year (to confirm)
+    last_verified: null
+    license_or_usage_notes: To confirm
+    expected_update_frequency: Event-driven / annual
+    confidence: UNKNOWN
+    known_limitations:
+      - Satellite observation misses short-lived flash floods and cloud-covered peaks.
+      - Absence of observed flooding is NOT evidence of no flood risk.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Key input for flood_unacceptable exclusion and hazard score.
+
+  - id: flood-jrc-global-surface-water
+    name: JRC Global Surface Water (water occurrence/recurrence)
+    category: flood
+    priority: useful
+    verification_status: CANDIDATE
+    publisher: European Commission Joint Research Centre
+    source_url: https://global-surface-water.appspot.com/
+    access_method: Download / Google Earth Engine
+    format: GeoTIFF
+    coverage: Global
+    spatial_resolution: ~30 m
+    temporal_coverage: From 1984 (end year to confirm)
+    last_verified: null
+    license_or_usage_notes: To confirm
+    expected_update_frequency: Irregular
+    confidence: UNKNOWN
+    known_limitations:
+      - Landsat-based; misses brief floods and floods under cloud.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Proxy for permanent/seasonal water and frequently inundated land.
+
+  - id: flood-modelled-hazard
+    name: Modelled river/flash flood hazard maps (national or global)
+    category: flood
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: null
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Investigate Thai agency products (e.g. DDPM, RID, DWR) and global models (JRC river flood hazard). Global models are usually too coarse for small northern valleys.
+
+  # ----------------------------------------------------------------- landslide
+  - id: landslide-dmr-susceptibility
+    name: Landslide susceptibility / risk-area maps
+    category: landslide
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Department of Mineral Resources (DMR) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Determine whether mapped polygons (not only village risk lists) are available for the three provinces, and at what scale.
+
+  - id: landslide-event-inventory
+    name: Historical landslide event inventory
+    category: landslide
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: null
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Event inventories are biased toward reported events near settlements and roads.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Candidates include DMR records and the NASA Global Landslide Catalog (global, sparse).
+
+  - id: seismic-active-faults
+    name: Active fault lines
+    category: seismic
+    priority: later
+    verification_status: NEEDS_RESEARCH
+    publisher: Department of Mineral Resources (DMR) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Northern Thailand has recorded damaging earthquakes; use as context/score signal, not an exclusion, unless a meaningful fault-setback rule is found.
+
+  # ----------------------------------------------------------------- hydrology
+  - id: rivers-osm
+    name: OpenStreetMap waterways
+    category: hydrology
+    priority: must_have
+    verification_status: CANDIDATE
+    publisher: OpenStreetMap contributors (extracts e.g. via Geofabrik)
+    source_url: https://download.geofabrik.de/asia/thailand.html
+    access_method: Download (PBF / Shapefile extract)
+    format: OSM PBF
+    coverage: Thailand
+    spatial_resolution: Variable (vector)
+    temporal_coverage: Continuously updated
+    last_verified: null
+    license_or_usage_notes: ODbL (attribution + share-alike on derived databases) - confirm obligations
+    expected_update_frequency: Daily
+    confidence: UNKNOWN
+    known_limitations:
+      - Completeness varies; small streams and drainage channels often missing.
+      - Classification (river vs stream vs canal) inconsistent.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Also the likely source for roads and nuisance features - one extract, several layers.
+
+  - id: rivers-hydrosheds
+    name: HydroRIVERS / HydroSHEDS
+    category: hydrology
+    priority: useful
+    verification_status: CANDIDATE
+    publisher: WWF / HydroSHEDS
+    source_url: null
+    access_method: Download
+    format: Shapefile / GeoDatabase
+    coverage: Global
+    spatial_resolution: Derived from ~90 m / 15 arc-second DEM (to confirm)
+    temporal_coverage: Static
+    last_verified: null
+    license_or_usage_notes: To confirm
+    expected_update_frequency: Static
+    confidence: UNKNOWN
+    known_limitations:
+      - DEM-derived network; positional error of tens to hundreds of metres in flat valleys.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Consistent stream order for "major river" proximity.
+
+  # ------------------------------------------------- protected / restricted land
+  - id: protected-wdpa
+    name: World Database on Protected Areas (WDPA)
+    category: protected_land
+    priority: must_have
+    verification_status: CANDIDATE
+    publisher: UNEP-WCMC / IUCN (Protected Planet)
+    source_url: https://www.protectedplanet.net/
+    access_method: Download
+    format: Shapefile / GeoDatabase
+    coverage: Global
+    spatial_resolution: Vector, variable
+    temporal_coverage: Monthly releases
+    last_verified: null
+    license_or_usage_notes: Restrictive terms (non-commercial; no redistribution) - must confirm
+    expected_update_frequency: Monthly
+    confidence: UNKNOWN
+    known_limitations:
+      - May omit national forest reserves and other Thai legal categories.
+      - Boundaries may be generalised or point-only for some sites.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Baseline only; Thai agency boundaries are needed for legal certainty.
+
+  - id: protected-dnp-boundaries
+    name: National parks, wildlife sanctuaries and other DNP-managed areas
+    category: protected_land
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Department of National Parks, Wildlife and Plant Conservation (DNP) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Needed for protected_or_state_land exclusion.
+
+  - id: forest-reserve-rfd
+    name: National forest reserve boundaries
+    category: protected_land
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Royal Forest Department (RFD) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Forest-reserve boundaries are known to be contested in places; mapped line may differ from on-the-ground status.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Very large share of northern land may be forest reserve; this layer will remove a lot of area.
+
+  - id: watershed-classification
+    name: Watershed classification (classes 1A-5)
+    category: protected_land
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: null
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Upper watershed classes carry land-use restrictions; confirm publisher, scale and legal effect.
+
+  - id: land-reform-alro
+    name: Agricultural land reform (ALRO) areas
+    category: land_rights
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Agricultural Land Reform Office (ALRO) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Land under reform rights generally cannot be freely bought for residential use; ultimately verified per parcel via title (M5).
+
+  # ------------------------------------------------------------------ planning
+  - id: planning-comprehensive-plans
+    name: Comprehensive town/city plans (land-use zoning)
+    category: planning
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Department of Public Works and Town & Country Planning (DPT) and local authorities - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: Plan revisions every several years (to confirm)
+    confidence: UNKNOWN
+    known_limitations:
+      - Plans likely cover municipal/peri-urban areas only; most rural land may have no plan.
+      - Plans expire and are revised; vintage and legal status must be tracked.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: '"No plan" must be represented as unknown/unplanned, not as compatible.'
+
+  - id: landuse-ldd
+    name: Land-use / land-cover maps
+    category: land_use
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: Land Development Department (LDD) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Global alternatives (e.g. ESA WorldCover) may substitute if access is difficult.
+
+  # --------------------------------------------------------------------- roads
+  - id: roads-osm
+    name: OpenStreetMap road network
+    category: roads
+    priority: must_have
+    verification_status: CANDIDATE
+    publisher: OpenStreetMap contributors
+    source_url: https://download.geofabrik.de/asia/thailand.html
+    access_method: Download (same extract as rivers-osm)
+    format: OSM PBF
+    coverage: Thailand
+    spatial_resolution: Vector, variable
+    temporal_coverage: Continuously updated
+    last_verified: null
+    license_or_usage_notes: ODbL - confirm obligations
+    expected_update_frequency: Daily
+    confidence: UNKNOWN
+    known_limitations:
+      - Surface type, width and rainy-season passability mostly missing.
+      - Road presence does not prove legal public access to adjacent land.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Basis for travel-time accessibility (network analysis).
+
+  - id: roads-official-doh-drr
+    name: Official national and rural road networks
+    category: roads
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: Department of Highways (DOH) / Department of Rural Roads (DRR) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Useful for road class/ownership; check data.go.th.
+
+  # ----------------------------------------------------------- family services
+  - id: schools-official
+    name: School locations by level
+    category: education
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Ministry of Education / OBEC / other bodies - to confirm (possibly via data.go.th)
+    source_url: https://data.go.th/
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: Point (if coordinates exist)
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Coordinates may be missing or geocoded to sub-district centroids.
+      - Private and international schools may be in separate registries or absent.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Need level (kindergarten/primary/secondary/vocational) and ideally quality signals. Fallback - OSM amenity=school (incomplete).
+
+  - id: universities
+    name: Universities and higher-education campuses
+    category: education
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: null
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: Point
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Small number of sites; could be curated manually from official sources with each point cited.
+
+  - id: health-facilities-moph
+    name: Health facility registry (hospitals, health centres)
+    category: health
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Ministry of Public Health (MOPH) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: Point (if coordinates exist)
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Facility level/capability (emergency, specialist) may not be encoded.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Distinguish emergency-capable hospitals from primary care.
+
+  # ---------------------------------------------------------------- utilities
+  - id: electricity-pea
+    name: Electricity distribution coverage / grid proximity
+    category: electricity
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: Provincial Electricity Authority (PEA) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Public line-level data may not exist; proxies (OSM power lines, settlement presence) are weak.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: If unavailable, keep as UNKNOWN and push to parcel-level field check.
+
+  - id: water-pwa-service
+    name: Piped water service areas
+    category: water
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Provincial Waterworks Authority (PWA) and local/village systems - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Many rural areas rely on village (local-authority) systems or wells, which may be unmapped.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Water must remain an explicit uncertainty if unmapped.
+
+  - id: telecom-ookla-open-data
+    name: Ookla Open Data speed tiles (fixed and mobile)
+    category: telecom
+    priority: useful
+    verification_status: CANDIDATE
+    publisher: Ookla
+    source_url: null
+    access_method: Download (public cloud bucket; to confirm)
+    format: Parquet / Shapefile tiles
+    coverage: Global
+    spatial_resolution: ~600 m web-mercator tiles (to confirm)
+    temporal_coverage: Quarterly
+    last_verified: null
+    license_or_usage_notes: To confirm (believed CC BY-NC-SA)
+    expected_update_frequency: Quarterly
+    confidence: UNKNOWN
+    known_limitations:
+      - Only where tests were run; absence of tiles is not absence of service.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: null
+
+  # --------------------------------------------------------------- land value
+  - id: land-value-treasury-appraisal
+    name: Official assessed land values
+    category: land_value
+    priority: must_have
+    verification_status: NEEDS_RESEARCH
+    publisher: Treasury Department - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: Multi-year appraisal cycles (to confirm)
+    confidence: UNKNOWN
+    known_limitations:
+      - Assessed values are for taxation/fees and can differ strongly from market prices.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Needed for M3. Determine whether bulk or only per-parcel lookup is available.
+
+  # ------------------------------------------------------------------- safety
+  - id: crime-police-statistics
+    name: Crime statistics
+    category: safety
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: Royal Thai Police - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: Likely province or police-station area at best
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Reporting rates vary; recorded crime is not crime.
+      - Coarse resolution forbids village-level inference.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Use only at native resolution; see data-quality-framework ethics section.
+
+  # --------------------------------------------------- infrastructure projects
+  - id: infra-rail-north
+    name: Northern rail projects (e.g. Den Chai - Chiang Rai - Chiang Khong line)
+    category: infrastructure_projects
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: State Railway of Thailand (SRT) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Alignment, station locations and completion dates must be verified from current official sources; project timelines slip.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Growth catalyst signal for M3; also a potential noise/severance nuisance near the alignment.
+
+  - id: infra-road-projects
+    name: Planned or ongoing major road projects
+    category: infrastructure_projects
+    priority: later
+    verification_status: NEEDS_RESEARCH
+    publisher: null
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations: []
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: null
+
+  # ------------------------------------------------------------- environment
+  - id: fire-hotspots-firms
+    name: NASA FIRMS active fire hotspots
+    category: environment
+    priority: useful
+    verification_status: CANDIDATE
+    publisher: NASA
+    source_url: https://firms.modaps.eosdis.nasa.gov/
+    access_method: Download / API (free key may be required)
+    format: CSV / Shapefile points
+    coverage: Global
+    spatial_resolution: ~375 m (VIIRS) / ~1 km (MODIS)
+    temporal_coverage: Multi-year archive
+    last_verified: null
+    license_or_usage_notes: To confirm
+    expected_update_frequency: Near real-time
+    confidence: UNKNOWN
+    known_limitations:
+      - Detects burning, not smoke exposure; haze is regional and wind-driven.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Seasonal burning and haze are a major northern livability factor; local burning density is a useful (partial) signal.
+
+  - id: air-quality-pcd
+    name: Air-quality monitoring station data (PM2.5)
+    category: environment
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: Pollution Control Department (PCD) - to confirm
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: Station points (sparse)
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - Sparse stations; interpolation between valleys is unreliable.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Likely regional context rather than a cell-level differentiator.
+
+  - id: nuisance-sources
+    name: Quarries, mines, landfills, industrial estates, large livestock farms
+    category: environment
+    priority: useful
+    verification_status: NEEDS_RESEARCH
+    publisher: null
+    source_url: null
+    access_method: null
+    format: null
+    coverage: null
+    spatial_resolution: null
+    temporal_coverage: null
+    last_verified: null
+    license_or_usage_notes: null
+    expected_update_frequency: null
+    confidence: UNKNOWN
+    known_limitations:
+      - OSM coverage of these features is likely partial.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Candidates - OSM landuse tags, mining concessions (DPIM - to confirm), industrial estate registries.
+
+  # -------------------------------------------------------------- population
+  - id: population-grids
+    name: Gridded population / built-up surface (e.g. GHSL, WorldPop)
+    category: population
+    priority: useful
+    verification_status: CANDIDATE
+    publisher: EC JRC (GHSL) / WorldPop - to confirm which
+    source_url: null
+    access_method: Download
+    format: GeoTIFF
+    coverage: Global
+    spatial_resolution: ~100 m (to confirm per product)
+    temporal_coverage: Epoch-based estimates
+    last_verified: null
+    license_or_usage_notes: To confirm
+    expected_update_frequency: Multi-year
+    confidence: UNKNOWN
+    known_limitations:
+      - Modelled, not counted; dasymetric allocation errors in rural areas.
+    local_raw_path: null
+    processing_status: NOT_ACQUIRED
+    notes: Urban intensity / density for livability and access-to-services context.
