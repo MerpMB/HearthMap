@@ -106,3 +106,8 @@ freshness:
     health_citizeninfo: {source_date: "2020-03-14", basis: "resource file date", expected_update_frequency: "Ad hoc (one-off programme)"}
     roads_osm: {source_date: "2026-10-15", basis: "Overpass timestamp", expected_update_frequency: "Continuous"}
     roads_drr: {source_date: "2026-10-16", basis: "service queried (feature survey_date varies)", expected_update_frequency: "Unknown"}
+
+reconcile:               # M2A.1 source comparison (flags and evidence only; never merges stale and current records)
+  match_radius_m: 300          # identical comparison name within this distance => MATCHED
+  possible_radius_m: 150       # a different name within this distance => POSSIBLE_MATCH (not merged)
+  same_name_far_m: 3000        # identical name farther than this is a different school with a common name

@@ -141,6 +141,9 @@ def test_repository_registry_verification_state_m1a():
         "places-dopa-gis02",
         "universities",
         "health-citizeninfo-dga",
+        # M2A.1 (2026-10-16): OBEC authoritative classification (2020) and OSM current validation
+        "education-obec-school-list",
+        "osm-facilities-aoi",
     }
     # Every verified source was actually acquired and processed locally.
     assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)

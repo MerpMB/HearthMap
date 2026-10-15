@@ -1145,7 +1145,7 @@ sources:
   local_raw_path: data/raw/roads-drr-gis/download-2026-10-16/
   processing_status: PROCESSED
 - id: schools-official
-  name: Ministry of Education institution register (ฐานทะเบียนสถานศึกษา)
+  name: Ministry of Education institution register (ข้อมูลโรงเรียนในประเทศไทย / ฐานทะเบียนสถานศึกษา)
   category: education
   priority: must_have
   verification_status: NEEDS_RESEARCH
@@ -1154,20 +1154,83 @@ sources:
   permitted_uses: []
   publisher: Ministry of Education (MOE) data catalogue
   landing_page: https://catalog.moe.go.th/
-  access_method: Not reached
-  coverage: null
-  spatial_resolution: null
-  temporal_coverage: null
+  access_method: Not reached (retried 2026-10-16 in M2A.1)
   last_verified: '2026-10-16'
-  verification_evidence: catalog.moe.go.th and data.moe.go.th refused connections (curl, Python and the fetch tool) on 2026-10-16. data.go.th mirrors only expose province-level counts, not institution records. NOT verified.
-  license_or_usage_notes: null
-  expected_update_frequency: null
+  verification_evidence: 'Retried in M2A.1: https://catalog.moe.go.th and data.moe.go.th refused or failed to resolve (Python, curl, fetch tool and the in-app browser); plain http on catalog.moe.go.th answers but lists zero datasets (a different, empty CKAN instance; package_show returns nothing); the MOE file server 203.159.172.49 timed out. A web-search index shows the live catalogue lists a 2568 institution statistics dataset (counts by level/affiliation/province, XLSX) and states the data-exchange API requires an inter-agency MOU. None of the live resources could be opened here, so NOTHING is verified. No authentication or access restriction was bypassed.'
   confidence: UNKNOWN
   known_limitations:
-  - Authoritative level, affiliation and status fields were NOT obtained, so education levels are derived (see places-dopa-gis02).
+  - The current register is the intended PRIMARY education source; until it is acquired the primary layer is the stale DOPA 2021 fallback.
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: Retry from another network or request the register from MOE; replacing the derived levels with authoritative ones is the main education upgrade path.
+  notes: Obtain the register from another network or request it from the MOE Education Data Center; a loader is still needed; source roles, reconcile and compose_primary are in place.
+- id: education-obec-school-list
+  name: OBEC school list with class range, MOE code and coordinates (OBEC_SCHOOL_007)
+  category: education
+  priority: must_have
+  verification_status: VERIFIED
+  role: SECONDARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Office of the Basic Education Commission (OBEC), Education Data Center
+  dataset_title: รายชื่อ ร.ร. สังกัด สพฐ. ปี 2563 (OBEC_SCHOOL_007); data.go.th record obec-school-007
+  landing_page: https://opendata.edudev.in.th/
+  data_endpoint: https://opendata.edudev.in.th/v1/OBEC_SCHOOL_007
+  access_method: Public JSON API (no key, no authentication)
+  format: JSON array, 29,642 schools nationally (1,537 in the three provinces)
+  source_crs: EPSG:4326 (latitude/longitude with 4 decimals)
+  coverage: OBEC-affiliated schools nationwide (not private, local-authority, vocational or university institutions)
+  spatial_resolution: Point
+  temporal_coverage: Academic year 2563 (2020)
+  last_update: Catalogue record modified 2024-04-12; API footer v1.0.0 2021-06-25
+  last_verified: '2026-10-16'
+  verification_evidence: Full list downloaded; fields inspected (moeCode, schoolName, schoolType, province/district/subdistrict, classMinLevel/classMaxLevel, students, coordinates). 5 of 1,537 regional records fail coordinate QA, 8 are flagged. Class range 0-0 on 14 records is treated as UNKNOWN.
+  license_or_usage_notes: Open Data Common (data.go.th record obec-school-007)
+  dataset_licence: Open Data Common
+  expected_update_frequency: Annual (the API still serves 2563)
+  confidence: MEDIUM
+  known_limitations:
+  - 'STALE (2020): an AUTHORITATIVE CLASSIFICATION source for matched schools, not a current register.'
+  - Only OBEC schools; 211 OBEC schools have no DOPA counterpart (kept as a separate layer, not unioned).
+  analytical_suitability: Authoritative levels (class range) and MOE code for schools matched to the primary layer. Enrolment fields are not used and are not quality.
+  local_raw_path: data/raw/education-obec-school-list/api-2026-10-16/
+  processing_status: PROCESSED
+- id: osm-facilities-aoi
+  name: OpenStreetMap schools, colleges, hospitals and clinics for the AOI (Overpass)
+  category: education
+  priority: useful
+  verification_status: VERIFIED
+  role: VALIDATION_ONLY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: OpenStreetMap contributors
+  dataset_title: 'OSM nwr amenity=school|kindergarten|college|university|hospital|clinic|doctors|childcare, healthcare=hospital|clinic|centre'
+  landing_page: https://www.openstreetmap.org/copyright
+  data_endpoint: https://maps.mail.ru/osm/tools/overpass/api/interpreter (area ISO3166-2 TH-50/56/57)
+  access_method: Overpass API POST, one query per province
+  format: Overpass JSON (out tags center)
+  source_crs: EPSG:4326
+  coverage: Chiang Mai, Chiang Rai, Phayao
+  spatial_resolution: Point (way/relation centres)
+  temporal_coverage: Snapshot 2026-10-16
+  last_update: Continuous
+  last_verified: '2026-10-16'
+  verification_evidence: Responses inspected; element counts and names tallied (1,034 education objects of which 225 unnamed; 251 hospital-type objects of which 37 unnamed).
+  license_or_usage_notes: 'ODbL 1.0; kept separate from government layers; never merged into primary layers.'
+  dataset_licence: ODbL 1.0
+  expected_update_frequency: Continuous
+  confidence: LOW
+  known_limitations:
+  - Crowd-sourced and incomplete; presence in OSM is not an official register entry and absence is not closure.
+  - Used only to detect current-only / possible-match records against the stale registers.
+  analytical_suitability: Current-validation of register staleness. Never authoritative for classification or capability.
+  local_raw_path: data/raw/osm-facilities-aoi/api-2026-10-16/
+  processing_status: PROCESSED
 - id: places-dopa-gis02
   name: DOPA government places and important places (gis-02), education subset
   category: education
@@ -1233,7 +1296,7 @@ sources:
   local_raw_path: data/raw/places-dopa-gis02/download-2026-10-16/
   processing_status: PROCESSED
 - id: health-facilities-moph
-  name: MOPH hospital and health-facility service levels (authoritative)
+  name: MoPH HCODE / hospital service levels (authoritative)
   category: health
   priority: must_have
   verification_status: NEEDS_RESEARCH
@@ -1241,16 +1304,16 @@ sources:
   acquisition_status: NOT_STARTED
   permitted_uses: []
   publisher: Ministry of Public Health (MOPH)
-  landing_page: null
-  access_method: null
+  landing_page: https://hcode.moph.go.th/
+  access_method: Not accessible (retried 2026-10-16 in M2A.1)
   last_verified: '2026-10-16'
-  verification_evidence: No machine-readable, verified source of hospital service level (regional / general / community) or emergency capability was found on data.go.th; provincial mirrors only count facilities. NOT verified.
+  verification_evidence: 'hcode.moph.go.th returns HTTP 403 and, with a browser User-Agent, a Cloudflare "Just a moment" bot-challenge page; the challenge was NOT bypassed and no private API was reverse-engineered. opendata.moph.go.th (HDC) is a statistical-report service (its bundle points at https://opendata.moph.go.th/api and needs request headers), not a facility-coordinate register. Whether hospital_level is public or permission-gated could not be inspected. NOTHING is verified.'
   confidence: UNKNOWN
   known_limitations:
-  - Higher-level and emergency-capable hospitals cannot be identified from verified data, so higher_level_hospital accessibility is DEFERRED.
+  - 'Higher-level / regional hospital and emergency capability cannot be identified from lawful accessible data: hospital level stays PARTIALLY_ASSESSED.'
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: Supply an authoritative list in config/healthcare-reference-levels.yaml to enable higher-level accessibility.
+  notes: Request an HCODE export (facility, organisation type, service level, hospital level, coordinates, active status) from MOPH, or supply an authoritative list in config/healthcare-reference-levels.yaml.
 - id: health-citizeninfo-dga
   name: Government health-facility coordinates (CITIZENinfo)
   category: health
