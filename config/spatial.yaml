@@ -1,0 +1,22 @@
+# CRS strategy and analysis-grid settings.
+# Rationale: docs/architecture/spatial-model.md, ADR-0002.
+schema_version: 1
+
+crs:
+  # All processed layers, distances, areas, buffers, slopes and grids.
+  canonical: "EPSG:32647"        # WGS 84 / UTM zone 47N (metres)
+  # GeoJSON exchange and human-readable coordinates.
+  interchange: "EPSG:4326"
+  # Web basemaps only - never for measurement.
+  display: "EPSG:3857"
+  # Refuse source layers that carry no CRS metadata instead of guessing.
+  require_explicit_source_crs: true
+
+grid:
+  cell_size_m: 500
+  # intersects: keep every cell touching the boundary (edge cells get coverage_fraction)
+  # centroid_within: keep cells whose centre lies inside the boundary
+  selection: intersects
+  id_prefix: G
+  # Guard against accidental huge grids (e.g. wrong CRS units).
+  max_cells: 2000000

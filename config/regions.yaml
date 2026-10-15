@@ -1,0 +1,37 @@
+# Regions in scope. Geometry is NOT defined here: province polygons must come
+# from an acquired, registered boundary dataset (see docs/research/).
+schema_version: 1
+
+study_area:
+  id: northern-thailand-m0
+  name: Northern Thailand - initial scope
+  # Deliberately generous lon/lat box used ONLY to catch gross CRS errors
+  # (swapped axes, wrong datum/zone). It is not a boundary and must never be
+  # used for analysis or clipping.
+  sanity_envelope:
+    crs: "EPSG:4326"
+    bounds: [97.0, 16.5, 101.5, 21.0]   # [min_lon, min_lat, max_lon, max_lat]
+
+regions:
+  - id: chiang-rai
+    name_en: Chiang Rai
+    name_th: เชียงราย
+    # Thai province code (TIS 1099). Recalled, not yet checked against the
+    # boundary dataset -> CANDIDATE. Used later to select features by code.
+    province_code: "57"
+    province_code_status: CANDIDATE
+    enabled: true
+
+  - id: chiang-mai
+    name_en: Chiang Mai
+    name_th: เชียงใหม่
+    province_code: "50"
+    province_code_status: CANDIDATE
+    enabled: true
+
+  - id: phayao
+    name_en: Phayao
+    name_th: พะเยา
+    province_code: "56"
+    province_code_status: CANDIDATE
+    enabled: true
