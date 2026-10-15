@@ -1,0 +1,121 @@
+# Seismic evidence model v0.1 (M1D) - evidence engineering, NOT a seismic hazard model.
+#
+# STATUS: PROVISIONAL and EXPERIMENTAL. No final seismic policy is selected
+# (default_policy must stay null). Thresholds below are descriptive starting points:
+# no documented seismic-hazard methodology supports them, and none was tuned to reach
+# a convenient share of the AOI.
+#
+# Four concepts are kept apart and never collapsed into one number:
+#   FAULT_CONTEXT, EARTHQUAKE_HAZARD (shaking/intensity zones), HISTORICAL_SEISMICITY,
+#   GROUND_RESPONSE (not assessable with the data in hand - an explicit limitation).
+# Distance to a fault trace is context, not a risk score; there is no fault_distance_score.
+# Absence of nearby mapped faults or historical events never lowers concern and never
+# means "earthquake safe". Terrain/lowland strata and hydrogeomorphic results are never inputs.
+schema_version: 1
+seismic_id: seismic-evidence
+seismic_version: 0.1.0
+status: PROVISIONAL
+experimental: true
+default_policy: null
+
+# Reporting radii for fault/event context (km). Descriptive only.
+reporting_radii_km: [5, 10, 20, 50]
+history_magnitude_thresholds: [4.0, 5.0, 6.0]
+
+sources:
+  faults:
+    source_id: seismic-active-faults-dmr
+    role: FAULT_CONTEXT
+  intensity_zones:
+    source_id: seismic-intensity-zones-dmr
+    role: EARTHQUAKE_HAZARD
+    class_field: INTENSITY
+    classes: ["I-III", "IV", "V", "VI", "VII"]   # publisher MMI codes, never renumbered
+  history:
+    - {source_id: geohazard-events-dmr, kind: DMR_EARTHQUAKE_INVENTORY}
+    - {source_id: seismic-felt-events-tmd, kind: TMD_FELT_EVENTS}
+    - {source_id: seismicity-usgs-comcat, kind: USGS_INSTRUMENTAL}
+  validation:
+    - {source_id: seismic-tambon-near-faults-dmr, kind: DMR_TAMBON_WITHIN_20KM_LISTING}
+
+# Experimental interpretation. Each family reaches tier 0 (nothing), 1 (notable) or
+# 2 (strong-tier signal). A single family can raise at most REQUIRES_SEISMIC_VERIFICATION;
+# STRONG_SEISMIC_SCREENING_CONCERN needs >= strong_requires_families families at tier 2
+# ("multiple appropriately supported signals"). Neither the fault-distance radii nor the
+# intensity zones rest on a documented hazard methodology, so two such context signals are
+# not enough: all three independent families (mapped fault very near, intensity zone VII,
+# a recorded M>=5 event nearby) must agree. Requiring only two would flag ~35% of the AOI
+# (see seismic-sensitivity.csv).
+interpretation:
+  strong_requires_families: 3   # all three families (fault, intensity zone, historical event) at strong tier
+  single_family_max_level: VERIFY
+  fault:
+    verify_within_km: 10       # tier 1: nearest mapped active-fault trace within this distance
+    strong_tier_within_km: 5   # tier 2 signal (still cannot be strong on its own)
+  shaking:
+    class_tier1: VII           # tier 1: share of the cell in this MMI zone >= min_fraction
+    class_tier2: VII
+    tier1_min_fraction: 0.25
+    tier2_min_fraction: 0.5
+    min_assessed_fraction: 0.5 # below: shaking zone context is not assessed for the cell
+  history:
+    magnitude: 5.0             # column hist_nearest_ge{magnitude}_km (any source)
+    tier1_within_km: 50
+    tier2_within_km: 25
+
+# Family-level confidence, kept as separate dimensions (never one number).
+confidence:
+  fault_context:
+    source: MEDIUM             # official DMR map (2012, 14-16 fault groups)
+    methodology: UNKNOWN       # mapping/age-dating methods not published; fields partly populated
+    spatial_completeness: MEDIUM   # national traces; unmapped/buried faults unknown
+    temporal_completeness: NOT_APPLICABLE
+  earthquake_hazard_zones:
+    source: MEDIUM
+    methodology: LOW           # "model program" only; scenario/return period/PGA basis undocumented
+    spatial_completeness: HIGH     # covers 99.97% of the AOI
+    temporal_completeness: UNKNOWN
+  historical_seismicity:
+    source: MEDIUM             # DMR inventory, TMD felt list, USGS instrumental catalogue
+    methodology: LOW           # felt/effects lists mixed with instrumental data; not deduplicated
+    spatial_completeness: LOW
+    temporal_completeness: LOW # instrumental completeness ~M4.5 from the 1970s; chronicles earlier
+  ground_response:
+    source: NOT_ASSESSED
+    methodology: NOT_ASSESSED
+    spatial_completeness: NOT_ASSESSED
+    temporal_completeness: NOT_APPLICABLE
+decision_confidence: LOW       # always LOW in v0.1: ground response unassessed, methods weak
+
+ground_response:
+  status: NOT_ASSESSED
+  available_evidence: []       # slope or flatness is NOT ground-response evidence
+  missing_evidence:
+    - ground_material_site_class_vs30
+    - sediment_thickness_and_basin_geometry
+    - local_amplification
+    - liquefaction_susceptibility
+    - building_design_and_code_zone
+
+# Columns the seismic interpretation may never read.
+prohibited_evidence_columns:
+  - slope_p90_deg
+  - slope_stratum
+  - lowland_stratum
+  - slope_stratum_reporting_only
+  - regional_search_status
+  - flood_fusion_state
+  - landslide_class5_fraction
+  - hazard_interpretation
+
+reason_codes:
+  FAULT_TRACE_WITHIN_VERIFY_DISTANCE: "A mapped DMR active-fault trace lies within {fault_verify_km:g} km of the cell (context only; distance is not shaking or risk)"
+  FAULT_TRACE_VERY_NEAR: "A mapped active-fault trace lies within {fault_strong_km:g} km (strong-tier fault signal; cannot be strong alone)"
+  SHAKING_ZONE_CLASS_VII_DOMINANT: "DMR model intensity zone VII covers >= {shaking_min_fraction:.0%} of the cell (zone methodology undocumented)"
+  HISTORICAL_EVENT_NEAR: "A historical earthquake of M >= {history_magnitude:g} was recorded within {history_tier1_km:g} km (corroborating context)"
+  HISTORICAL_EVENT_VERY_NEAR: "A historical earthquake of M >= {history_magnitude:g} was recorded within {history_tier2_km:g} km (strong-tier history signal)"
+  MULTIPLE_STRONG_TIER_SIGNALS: "At least {strong_requires_families} independent evidence families reach their strong tier"
+  SHAKING_ZONE_NOT_ASSESSED: "DMR intensity zones cover only part of the cell"
+  GROUND_RESPONSE_NOT_ASSESSED: "Site effects (ground material, sediment thickness, amplification, liquefaction) are not assessed"
+  NO_NEARBY_HISTORICAL_EVENT_RECORDED: "No qualifying historical event is recorded nearby (the catalogues are incomplete; this is not evidence of low seismic hazard)"
+  SHAKING_ZONE_BELOW_TIER: "The DMR model intensity zone is below the tier-1 class (still not evidence of low hazard)"

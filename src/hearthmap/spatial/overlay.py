@@ -127,13 +127,15 @@ def categorical_cell_fractions(
     mat = np.column_stack([fr[c] for c in classes])
     out[f"{prefix}_assessed_fraction"] = mat.sum(axis=1).clip(0, 1)
     present = mat > 1e-12
-    codes = np.array(classes)
+    numeric = all(isinstance(c, (int, float, np.integer, np.floating)) for c in classes)
+    codes = np.array(classes) if numeric else np.array(classes, dtype=object)
+    missing = np.nan if numeric else None  # text codes (e.g. MMI 'VII') stay text; no code = None
     any_present = present.any(axis=1)
     max_idx = np.where(present, np.arange(len(classes)), -1).max(axis=1)
-    out[f"{prefix}_max_class"] = np.where(any_present, codes[np.maximum(max_idx, 0)], np.nan)
+    out[f"{prefix}_max_class"] = np.where(any_present, codes[np.maximum(max_idx, 0)], missing)
     # ties -> higher code: reverse argmax
     dom_idx = len(classes) - 1 - np.argmax(mat[:, ::-1], axis=1)
-    out[f"{prefix}_dominant_class"] = np.where(any_present, codes[dom_idx], np.nan)
+    out[f"{prefix}_dominant_class"] = np.where(any_present, codes[dom_idx], missing)
     out[f"{prefix}_class_distribution"] = [
         ";".join(f"{c}:{v:.3f}" for c, v in zip(classes, row, strict=True) if v > 1e-12)
         for row in mat
