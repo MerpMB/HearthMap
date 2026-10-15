@@ -21,7 +21,11 @@ def pct(x: float) -> str:
 def table(df: pd.DataFrame) -> str:
     cols = list(df.columns)
     out = ["| " + " | ".join(map(str, cols)) + " |", "|" + "---|" * len(cols)]
-    out += ["| " + " | ".join(str(v) for v in r) + " |" for r in df.itertuples(index=False)]
+    # Escape pipes inside values (e.g. "landslide|terrain") so Markdown cells stay intact.
+    out += [
+        "| " + " | ".join(str(v).replace("|", r"\|") for v in r) + " |"
+        for r in df.itertuples(index=False)
+    ]
     return "\n".join(out)
 
 
