@@ -74,6 +74,18 @@ class SourceState(StrEnum):
     SOURCE_UNAVAILABLE = "SOURCE_UNAVAILABLE"
 
 
+class Availability(StrEnum):
+    """Current reachability of a source that exists (M2A.3).
+
+    A temporary outage is not permanent unavailability.
+    """
+
+    AVAILABLE = "AVAILABLE"
+    TEMPORARILY_UNREACHABLE = "TEMPORARILY_UNREACHABLE"
+    BLOCKED_FOR_AGENT = "BLOCKED_FOR_AGENT"
+    PERMANENTLY_UNAVAILABLE = "PERMANENTLY_UNAVAILABLE"
+
+
 class PermittedUse(StrEnum):
     """What a source may be used for (docs/product/legal-vs-screening.md)."""
 
@@ -116,6 +128,8 @@ class DataSourceEntry(BaseModel):
     # M2A.2: existence vs agent reachability, and the lawful way to obtain a blocked source.
     source_state: SourceState | None = None
     acquisition_path: str | None = None
+    availability: Availability | None = None
+    last_access_attempt: dt.date | None = None
     permitted_uses: list[PermittedUse] = Field(default_factory=list)
     publisher: str | None = None
     dataset_title: str | None = None
@@ -175,6 +189,26 @@ class DataSourceEntry(BaseModel):
             raise ValueError(
                 f"{self.id}: a source the agent could not reach cannot be data_verified"
             )
+        if (
+            self.availability is Availability.PERMANENTLY_UNAVAILABLE
+            and self.source_state is not SourceState.SOURCE_UNAVAILABLE
+        ):
+            raise ValueError(
+                f"{self.id}: PERMANENTLY_UNAVAILABLE requires source_state SOURCE_UNAVAILABLE"
+            )
+        if self.source_state is SourceState.SOURCE_UNAVAILABLE and self.availability in (
+            Availability.TEMPORARILY_UNREACHABLE,
+            Availability.BLOCKED_FOR_AGENT,
+        ):
+            raise ValueError(
+                f"{self.id}: a temporarily unreachable source is not SOURCE_UNAVAILABLE"
+            )
+        if (
+            self.availability
+            in (Availability.TEMPORARILY_UNREACHABLE, Availability.BLOCKED_FOR_AGENT)
+            and self.last_access_attempt is None
+        ):
+            raise ValueError(f"{self.id}: an unreachable source must record last_access_attempt")
         if self.source_state is SourceState.SOURCE_UNAVAILABLE and not self.verification_evidence:
             raise ValueError(
                 f"{self.id}: SOURCE_UNAVAILABLE must cite the evidence that it does not exist"

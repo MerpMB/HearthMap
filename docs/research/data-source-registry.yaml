@@ -16,6 +16,7 @@
 #                 PARCEL_LEGAL_VERIFICATION | VALIDATION_REFERENCE
 # source_state (M2A.2): SOURCE_EXISTS_AGENT_ACCESSIBLE | SOURCE_EXISTS_AGENT_BLOCKED | SOURCE_MANUALLY_ACQUIRED | SOURCE_UNAVAILABLE
 #   (a source the agent cannot reach is NOT unavailable; acquisition_path says how the project user can supply it)
+# availability (M2A.3): AVAILABLE | TEMPORARILY_UNREACHABLE | BLOCKED_FOR_AGENT | PERMANENTLY_UNAVAILABLE (+ last_access_attempt when unreachable)
 # priority: must_have | useful | later
 # processing_status: NOT_ACQUIRED | ACQUIRED | PROCESSING | PROCESSED | REJECTED
 # confidence: HIGH | MEDIUM | LOW | UNKNOWN  (quality of the dataset itself)
@@ -1153,20 +1154,55 @@ sources:
   verification_status: NEEDS_RESEARCH
   role: null
   source_state: SOURCE_EXISTS_AGENT_BLOCKED
+  availability: TEMPORARILY_UNREACHABLE
+  last_access_attempt: '2026-10-16'
   acquisition_path: 'Manual import by the project user: data/manual/moe-register-current/ + MANIFEST.yaml, then python scripts/m2a2/import_manual.py moe-register-current (schema, ids, coordinates, provinces, dates and coverage are validated before use)'
   acquisition_status: NOT_STARTED
   permitted_uses: []
   publisher: Ministry of Education (MOE) data catalogue
-  landing_page: https://catalog.moe.go.th/
+  landing_page: https://catalog.moe.go.th/th/dataset/dataset_04_25660427
   access_method: Not reached (retried 2026-10-16 in M2A.1)
   last_verified: '2026-10-16'
-  verification_evidence: 'The source EXISTS (reported by the project user in the M2A.2 brief after independent verification: the live MOE catalogue lists a current school-register dataset; not confirmed by the agent) but the agent environment cannot reach it. Retried in M2A.1: https://catalog.moe.go.th and data.moe.go.th refused or failed to resolve (Python, curl, fetch tool and the in-app browser); plain http on catalog.moe.go.th answers but lists zero datasets (a different, empty CKAN instance; package_show returns nothing); the MOE file server 203.159.172.49 timed out. A web-search index shows the live catalogue lists a 2568 institution statistics dataset (counts by level/affiliation/province, XLSX) and states the data-exchange API requires an inter-agency MOU. None of the live resources could be opened here, so NOTHING is verified. No authentication or access restriction was bypassed.'
+  verification_evidence: 'M2A.3: the project user also timed out (ERR_CONNECTION_TIMED_OUT) in a normal Chrome browser on https://catalog.moe.go.th/th/dataset/dataset_04_25660427, and independent external checks currently fail too, so this is a server-side outage, not a user or network mistake; the dataset is not known to be gone. Do not retry repeatedly. The source EXISTS (reported by the project user in the M2A.2 brief after independent verification: the live MOE catalogue lists a current school-register dataset; not confirmed by the agent) but the agent environment cannot reach it. Retried in M2A.1: https://catalog.moe.go.th and data.moe.go.th refused or failed to resolve (Python, curl, fetch tool and the in-app browser); plain http on catalog.moe.go.th answers but lists zero datasets (a different, empty CKAN instance; package_show returns nothing); the MOE file server 203.159.172.49 timed out. A web-search index shows the live catalogue lists a 2568 institution statistics dataset (counts by level/affiliation/province, XLSX) and states the data-exchange API requires an inter-agency MOU. None of the live resources could be opened here, so NOTHING is verified. No authentication or access restriction was bypassed.'
   confidence: UNKNOWN
   known_limitations:
   - The current register is the intended PRIMARY education source; until it is acquired the primary layer is the stale DOPA 2021 fallback.
   local_raw_path: null
   processing_status: NOT_ACQUIRED
   notes: Obtain the register from another network or request it from the MOE Education Data Center; a loader is still needed; source roles, reconcile and compose_primary are in place.
+- id: moe-data-virtualization-student-report
+  name: MOE e-INSPECTION basic-info reports from the Data Virtualization service (Power BI embeds)
+  category: education
+  priority: useful
+  verification_status: CANDIDATE
+  role: VALIDATION_ONLY
+  evidence_role: CURRENT_PRESENCE_EVIDENCE_NOT_PRIMARY_LOCATION_REGISTER
+  intended_role: Validate which schools currently have enrolment (academic year 2569) once an institution list can be exported
+  source_state: SOURCE_EXISTS_AGENT_ACCESSIBLE
+  availability: AVAILABLE
+  acquisition_path: No documented API or export. Remaining route is a manual export or a request to the MOE Education Data Center / ICT Center for the Data Virtualization table.
+  metadata_verified: true
+  data_verified: false
+  acquisition_status: NOT_STARTED
+  permitted_uses: []
+  publisher: Ministry of Education, Office of the Inspector General (e-INSPECTION); data from the MOE Data Virtualization service
+  dataset_title: ข้อมูลนักเรียน จำแนกรายสถานศึกษาและหน่วยงานต้นสังกัด (and two aggregate siblings)
+  landing_page: https://inp.moe.go.th/inspec2026/?module=basic_info
+  data_endpoint: Power BI publish-to-web embed (host app.powerbi.com; report key is a capability URL and is not recorded); page endpoint _pages/_api/get_powerbi_data.php?id=1..3 returns metadata only
+  access_method: HTML page that embeds Power BI; no documented API, no export control found, Power BI internal query service NOT used
+  format: Power BI visuals (not a structured download)
+  coverage: National; 11,508,493 students shown for academic year 2569 term 1; per-school rows with MOE code, name, size class, male/female counts, affiliation; province/district filters
+  temporal_coverage: Academic year 2569 (2026), term 1
+  last_update: Page records updated 2026-04-17
+  last_verified: '2026-10-16'
+  verification_evidence: Page HTML, iframe hosts and the page's own metadata endpoint inspected (outputs/m2a3-review/inp-moe-inspection.json); the public embed was viewed once in the in-app browser. Visible fields do NOT include coordinates, grades served or status, and no export control exists. No terms are stated on the page or report and none are inferred from the parent site.
+  confidence: UNKNOWN
+  known_limitations:
+  - NOT_SUITABLE_AS_PRIMARY_LOCATION_REGISTER - no coordinates and no education-level fields.
+  - Data is reachable only through the Power BI visual; extracting it would need an undocumented interface, so nothing was extracted.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: The remaining blocker for current education locations is the MOE CKAN register (temporarily unreachable) or a manual/server-recovery supply.
 - id: education-obec-school-list
   name: OBEC school list with class range, MOE code and coordinates (OBEC_SCHOOL_007)
   category: education

@@ -13,6 +13,7 @@ from hearthmap.provenance.model import (
 )
 from hearthmap.provenance.registry import (
     DEFAULT_REGISTRY_PATH,
+    Availability,
     DataSourceEntry,
     DataSourceRegistry,
     PermittedUse,
@@ -26,6 +27,7 @@ from hearthmap.provenance.registry import (
 __all__ = [
     "DEFAULT_REGISTRY_PATH",
     "SIDECAR_SUFFIX",
+    "Availability",
     "DataSourceEntry",
     "DataSourceRegistry",
     "PermittedUse",
