@@ -232,4 +232,6 @@ def test_hazard_actions_remain_immutable_after_refresh():
     merged = haz.merge(new, on="cell_id", how="left", suffixes=("", "_fam"))
     for c in action_cols:
         assert merged[c].equals(haz[c])
-    assert set(haz["cell_id"]) == set(new["cell_id"]) and new["cell_id"].is_unique  # same cells; row order is irrelevant
+    assert (
+        set(haz["cell_id"]) == set(new["cell_id"]) and new["cell_id"].is_unique
+    )  # same cells; row order is irrelevant

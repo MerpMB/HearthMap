@@ -24,12 +24,48 @@ def main() -> int:
     s = json.loads((R / "facility-refresh-summary.json").read_text("utf-8"))
     c = s["classification"]
     chg = pd.read_csv(R / "accessibility-change-summary.csv")
-    aoi = chg[chg.stratum == "AOI"][["category", "nearest_changed_pct", "median_old_min", "median_new_min", "median_change_min", "p05_change_min", "p95_change_min", "newly_resolved_km2"]]
-    low = chg[chg.stratum == "ROAD_WITHIN_500M_AND_LOW_SLOPE_LE_5"][["category", "resolved_both_km2", "nearest_changed_pct", "median_old_min", "median_new_min", "median_change_min"]]
-    prov = chg[chg.stratum.isin(["TH50", "TH56", "TH57"]) & chg.category.isin(["kindergarten", "secondary_school"])][["category", "stratum", "nearest_changed_pct", "median_old_min", "median_new_min", "median_change_min"]]
+    aoi = chg[chg.stratum == "AOI"][
+        [
+            "category",
+            "nearest_changed_pct",
+            "median_old_min",
+            "median_new_min",
+            "median_change_min",
+            "p05_change_min",
+            "p95_change_min",
+            "newly_resolved_km2",
+        ]
+    ]
+    low = chg[chg.stratum == "ROAD_WITHIN_500M_AND_LOW_SLOPE_LE_5"][
+        [
+            "category",
+            "resolved_both_km2",
+            "nearest_changed_pct",
+            "median_old_min",
+            "median_new_min",
+            "median_change_min",
+        ]
+    ]
+    prov = chg[
+        chg.stratum.isin(["TH50", "TH56", "TH57"])
+        & chg.category.isin(["kindergarten", "secondary_school"])
+    ][
+        [
+            "category",
+            "stratum",
+            "nearest_changed_pct",
+            "median_old_min",
+            "median_new_min",
+            "median_change_min",
+        ]
+    ]
     sens = pd.read_csv(R / "obec-only-union-sensitivity.csv")
     qa = pd.read_csv(R / "facility-coordinate-qa-counts.csv")
-    big = pd.read_csv(R / "accessibility-largest-changes.csv").sort_values("change_min").head(6)[["category", "province", "old_min", "new_min", "change_min"]]
+    big = (
+        pd.read_csv(R / "accessibility-largest-changes.csv")
+        .sort_values("change_min")
+        .head(6)[["category", "province", "old_min", "new_min", "change_min"]]
+    )
     freeze = json.loads((R / "routing-freeze-evidence.json").read_text("utf-8"))
     log = json.loads((R / "source-access-log.json").read_text("utf-8"))
     lines = [
@@ -45,9 +81,13 @@ def main() -> int:
         "",
         "Source access attempts (no authentication or bot challenge bypassed):",
         "",
-        tbl(pd.DataFrame(log)[["name", "http_status", "error", "note"]].fillna("").assign(error=lambda d: d["error"].str[:60])),
+        tbl(
+            pd.DataFrame(log)[["name", "http_status", "error", "note"]]
+            .fillna("")
+            .assign(error=lambda d: d["error"].str[:60])
+        ),
         "",
-        f"* MOE register: **not acquired** (https refused / unresolved; plain http serves an empty CKAN instance). Role if acquired: PRIMARY; DOPA would become HISTORICAL/VALIDATION. The role and reconciliation machinery (`compose_primary`, `reconcile`) is in place; a loader for the register is still to be written.",
+        "* MOE register: **not acquired** (https refused / unresolved; plain http serves an empty CKAN instance). Role if acquired: PRIMARY; DOPA would become HISTORICAL/VALIDATION. The role and reconciliation machinery (`compose_primary`, `reconcile`) is in place; a loader for the register is still to be written.",
         f"* OBEC_SCHOOL_007 (academic year 2563, 2020): MOE code, class min/max, school type, 4-decimal coordinates; {s['obec_records_in_aoi']} schools in the AOI; QA {json.dumps(s['obec_qa'])}. Role AUTHORITATIVE_CLASSIFICATION (stale).",
         f"* Classification, schools: authoritative **{c['schools_authoritative']}**, derived **{c['schools_derived']}** (of which {c['schools_derived_default_primary_low']} default to PRIMARY at LOW confidence), unknown {c['schools_unknown']}; in M2A all {c['m2a_baseline_schools_derived']} school levels were derived. {c['level_sets_changed_vs_m2a']} institutions changed level set.",
         f"* All institutions (incl. early-childhood centres, colleges, learning resources): authoritative {c['all_authoritative']}, derived/unknown {c['all_derived_or_unknown']} of {c['all_institutions']}. Early-childhood, vocational and university levels remain name-derived (OBEC covers schools only).",
@@ -60,7 +100,17 @@ def main() -> int:
         "",
         "## 3. Source reconciliation (statuses with retained evidence in the CSVs)",
         "",
-        tbl(pd.DataFrame([{"comparison": k, **{kk: vv for kk, vv in s[k].items() if kk != 'current_side_legacy_only'}} for k in ("education_obec", "education_osm", "health_osm")])),
+        tbl(
+            pd.DataFrame(
+                [
+                    {
+                        "comparison": k,
+                        **{kk: vv for kk, vv in s[k].items() if kk != "current_side_legacy_only"},
+                    }
+                    for k in ("education_obec", "education_osm", "health_osm")
+                ]
+            )
+        ),
         "",
         f"DOPA vs OBEC: schools matched {s['education_obec']['current_side_matched']} ({s['education_obec']['match_rate_pct']}%), possible {s['education_obec']['current_side_possible_match']}, coordinate conflicts {s['obec_coordinate_conflicts']}, OBEC-only {s['obec_only_schools']}. OSM comparisons: current-only means a current OSM object with no stale-register counterpart (it may be an unregistered, private or new facility); stale-only means no OSM counterpart (it is not evidence of closure). {s['osm_other_clinics_out_of_scope']} OSM clinics/doctors are outside the government-register scope.",
         "",
