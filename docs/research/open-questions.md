@@ -145,6 +145,20 @@ delete them here.
 48. TMD has no bulk instrumental catalogue or API. Request a structured catalogue for
     northern Thailand?
 
+## Raised by M1E (2026-10-16) — hazard integration
+
+49. Which integration policy translates hazard families into search actions
+    (BALANCED_ACTION reference, AVOIDANCE_FIRST, VERIFICATION_FIRST)? None is clearly better;
+    VERIFICATION_FIRST deprioritizes almost nothing because flood and landslide evidence rarely
+    co-occur.
+50. 70% of low-slope land has a critical regional evidence gap because DMR landslide
+    susceptibility is not assessed there. Is a lowland-specific hazard source (e.g. DEM-derived
+    drainage / flood-plain geometry) needed before the family/infrastructure model weighs
+    lowland candidates?
+51. How should site-verification burden (86% of the AOI needs it for at least one family) and
+    seismic-design burden enter later suitability without becoming a score?
+52. Who performs and records the parcel-level due diligence in the handoff checklist?
+
 ## Process
 
 21. Who validates outputs in QGIS, and against which known places?

@@ -23,6 +23,14 @@ M1C–M1C.3 visual QA pending). They are a project risk-tolerance decision, not 
 optimum. No seismic policy is selected; the seismic interpretation is experimental.
 Hydrogeomorphic and seismic results are independent and are only cross-tabulated.
 
+## Integration (M1E)
+
+Hazard-family outcomes are translated into separate decision axes (regional search action,
+site verification, engineering mitigation, data completeness) by
+[natural-hazard-integration.md](natural-hazard-integration.md); there is no scalar hazard
+score. Regional seismic shaking requires engineering mitigation and site verification; it does
+not deprioritize a region. The future suitability contract is designed but not activated.
+
 ## Site-level evidence still missing
 
 * local geology and ground material; sediment thickness and basin effects

@@ -73,6 +73,15 @@ BALANCED + FLOOD_ANY_SOURCE (not production truth). Regional screening is suppor
 parcel/site seismic assessment is not. See
 [m1d-seismic-evidence-report.md](../research/m1d-seismic-evidence-report.md).
 
+## M1E — Natural Hazard policy integration (done, provisional)
+
+Per-family severity/confidence/action/reason codes; separate decision axes (regional search
+action, site verification, engineering mitigation, data completeness); regional seismic
+shaking maps to engineering mitigation, never to deprioritization; three integration policies
+compared (none selected); future suitability contract and parcel handoff designed, not
+activated. No scalar hazard score. See
+[m1e-natural-hazard-integration-report.md](../research/m1e-natural-hazard-integration-report.md).
+
 ## M1 — Regional hazard + infrastructure scan
 
 - Acquire and register: admin boundaries, DEM, flood history/hazard, landslide

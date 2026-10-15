@@ -14,6 +14,13 @@ priority over visually impressive output.
 
 ## Status
 
+**M1E — Natural Hazard integration.** Hazard families keep their own severity, confidence,
+action and reason codes; the integration adds separate decision axes (regional search action,
+site verification, engineering mitigation, data completeness) and **no scalar hazard score**.
+Regional seismic shaking requires engineering mitigation, not regional deprioritization.
+Provisional regional screening only. See
+[m1e-natural-hazard-integration-report.md](docs/research/m1e-natural-hazard-integration-report.md).
+
 **M1D — Seismic and active-fault evidence.** Fault context, DMR probabilistic PGA hazard
 zones (10% in 50 years, shown as MMI), historical seismicity and an explicit
 "ground response not assessed" limitation, as experimental **regional** screening. The
