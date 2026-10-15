@@ -129,6 +129,13 @@ def test_repository_registry_verification_state_m1a():
         "landslide-inventory-dmr",
         # M1C.1 (2026-10-15), data opened with a project API key
         "flood-gistda-history",
+        # M1D (2026-10-16), data opened and validated
+        "seismic-active-faults-dmr",
+        "seismic-intensity-zones-dmr",
+        "seismic-tambon-near-faults-dmr",
+        "geohazard-events-dmr",
+        "seismic-felt-events-tmd",
+        "seismicity-usgs-comcat",
     }
     # Every verified source was actually acquired and processed locally.
     assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)
@@ -241,3 +248,44 @@ def test_landslide_concepts_are_registered_separately():
     susc = reg.get("landslide-susceptibility-dmr")
     assert PermittedUse.POTENTIAL_HARD_EXCLUSION not in susc.permitted_uses
     assert any("NOT published" in lim for lim in susc.known_limitations)
+
+
+def test_seismic_sources_record_licence_layers_and_eq_zone_semantics():
+    reg = load_registry(REGISTRY_PATH)
+    eq = reg.get("seismic-intensity-zones-dmr")
+    # publisher basis recorded faithfully: probabilistic PGA, 10% in 50 years, Sadigh et al. (1997)
+    ev = eq.verification_evidence
+    assert "10% probability of exceedance in 50 years" in ev and "Sadigh et al. (1997)" in ev
+    assert "การวิเคราะห์ความน่าจะเป็นของค่าความเร่งพื้นดินสูงสุด" in ev
+    assert "Modified Mercalli" in ev and "MMI" in eq.methodology
+    assert "PGA-to-MMI transformation" in eq.methodology and "NOT documented" in eq.methodology
+    # licence layers stay separate and the discrepancy is recorded, not silently dropped
+    for sid in ("seismic-intensity-zones-dmr", "seismic-active-faults-dmr"):
+        e = reg.get(sid)
+        assert e.dataset_licence.startswith("Creative Commons Attributions")
+        assert e.service_terms and e.legal_use_disclaimer and e.licence_discrepancy
+        assert e.confidence.value in ("MEDIUM", "LOW", "HIGH")
+    assert "superseded data.go.th" in eq.legal_use_disclaimer
+    # a non-commercial restriction is not adopted as the dataset licence
+    for sid in ("seismic-intensity-zones-dmr", "seismic-active-faults-dmr"):
+        assert "commercial" not in reg.get(sid).dataset_licence.lower()
+
+
+def test_historical_catalogues_stay_separate_sources_with_roles():
+    reg = load_registry(REGISTRY_PATH)
+    roles = {
+        s.id: s.evidence_role
+        for s in reg.sources
+        if s.id in ("geohazard-events-dmr", "seismic-felt-events-tmd", "seismicity-usgs-comcat")
+    }
+    assert set(roles) == {
+        "geohazard-events-dmr",
+        "seismic-felt-events-tmd",
+        "seismicity-usgs-comcat",
+    }
+    assert len(set(roles.values())) == 3
+    usgs = reg.get("seismicity-usgs-comcat")
+    assert "not the Thai national record" in " ".join(usgs.known_limitations)
+    assert "never merged" in " ".join(reg.get("geohazard-events-dmr").known_limitations)
+    for sid in roles:
+        assert reg.get(sid).data_verified and reg.get(sid).methodology

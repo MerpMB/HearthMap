@@ -509,61 +509,253 @@ sources:
   notes: 'Modelled impact areas (a third concept: neither susceptibility nor events). Deferred from M1B;
     near the size guard - prefer an AOI subset via the MapServer.'
 - id: seismic-active-faults-dmr
-  name: DMR active fault zones of Thailand (fault traces)
+  name: DMR active fault groups of Thailand (fault traces)
   category: seismic
   priority: must_have
-  verification_status: CANDIDATE
-  role: null
+  verification_status: VERIFIED
+  role: PRIMARY
   evidence_role: ACTIVE_FAULT_TRACES
-  intended_role: REQUIRED_FOR_NATURAL_HAZARD_RESILIENCE_COMPLETENESS
+  intended_role: FAULT_CONTEXT_FOR_REGIONAL_SEISMIC_SCREENING
   metadata_verified: true
-  data_verified: false
-  acquisition_status: DEFERRED
-  permitted_uses: []
-  publisher: Department of Mineral Resources (DMR)
-  dataset_title: THA_DMR_ZONE_ACTIVEFAULT_WMS (active fault zones; DMR 2012 map, 14 zones)
-  landing_page: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division
+  dataset_title: กลุ่มรอยเลื่อนมีพลัง (zone-acttivefault); ArcGIS service THA_DMR_ZONE_ACTIVEFAULT_WMS (identical attribute tables republished as ZONE_ACTIVEFAULT, ZONE_ACTIVEFAULT_WMS_GSi and a Thai-named service)
+  landing_page: https://data.dmr.go.th/ (catalogue record zone-acttivefault); https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD
   data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/THA_DMR_ZONE_ACTIVEFAULT_WMS/MapServer/0
-  access_method: Public ArcGIS REST MapServer (query supported)
-  format: Polyline features, 640 segments
-  source_crs: EPSG:32647 (service spatial reference)
-  coverage: Thailand; zones include Mae Chan, Mae Ing, Mae Tha, Phayao (in/near the AOI)
-  last_verified: '2026-10-15'
-  verification_evidence: Service and layer metadata inspected (fields F_ZONE_ID, F_ZONE_T/E, F_NAME_T/E,
-    TYPE, STRIKE, DIP, LENGTH_KM, MCE, TRENCHSITE, TRENCHLAT, TRENCHLONG, SLIP_RATE; count 640). Data
-    NOT downloaded or inspected; licence not stated on the service. A DMR 2023 presentation lists 14 active
-    fault zones (DMR 2012).
-  license_or_usage_notes: Not stated on the service; DMR open data catalogue uses CC BY - to confirm for
-    this layer
-  confidence: UNKNOWN
+  access_method: Public ArcGIS REST MapServer (query supported, no key); 640 polylines in 2 pages
+  format: Polyline features (626 LineString, 14 MultiLineString), 640 traces in 17 fault groups
+  source_crs: EPSG:32647 (service spatial reference; attribute LENGTH_KM equals geometry length)
+  coverage: Thailand; groups in or near the AOI include Mae Chan, Mae Lao, Mae Ing, Mae Tha, Phayao, Wiang Haeng, Mae Hong Son, Thoen, Pua, Moei
+  spatial_resolution: Map scale not documented
+  temporal_coverage: DMR active-fault map (2012 vintage per DMR 2023 material); catalogue record created 2023-06-19
+  last_update: Catalogue record modified 2026-08-13 (data.dmr.go.th)
+  last_verified: '2026-10-16'
+  verification_evidence: 'Catalogue record and ArcGIS layer inspected; all 640 features downloaded and checked
+    (CRS EPSG:32647, 0 invalid or duplicate geometries, 0 empty, attribute length = geometry length, 3 service
+    aliases have identical attribute tables). Attribute completeness is poor: DIP populated for 47 of 640, SLIP_P_EV
+    56, F_EVENT 62, DISPLACE 236; TRENCHSITE/TRENCHLAT/TRENCHLONG/DATE/V_DISPLACE/REFERENCE are empty. The DMR
+    "tambon within 20 km" listing (1,329 points) lies entirely within 20 km of these traces.'
+  license_or_usage_notes: 'Catalogue (data.dmr.go.th and the current data.go.th record gdpublish-zone-acttivefault):
+    Creative Commons Attributions, accessible_condition "none". See dataset_licence / legal_use_disclaimer for
+    the older data.go.th record that carries a restriction.'
+  dataset_licence: Creative Commons Attributions (official DMR catalogue data.dmr.go.th, and data.go.th record gdpublish-zone-acttivefault modified 2026-09-25)
+  service_terms: None stated on the ArcGIS service (copyrightText and description empty)
+  legal_use_disclaimer: 'Older data.go.th record "activefault" (created 2020-07-14, modified 2023-04-19) states
+    accessible_condition: not usable as legal reference, no commercial use, DMR not liable. The current official
+    DMR record and the newer data.go.th records state none. Not adopted as a licence term; used conservatively
+    (no legal reference use, regional screening only).'
+  licence_discrepancy: 'Restriction text exists only on the superseded data.go.th record (2020 vintage) and its
+    mirrors; authoritative current catalogue says Creative Commons Attributions / no access condition.'
+  methodology: 'Publisher: compiled from satellite-image interpretation, geology, geomorphology, earthquake-event
+    data and other relevant sources, with field checking, fault dating and corrections (data_source field).
+    Details unpublished; the field data dictionary could not be downloaded (HTTP 502).'
+  expected_update_frequency: Not stated
+  confidence: MEDIUM
   known_limitations:
-  - 'Fault traces alone are not an earthquake hazard model: distance-to-fault must NOT be used as an earthquake-risk
-    score without a documented methodology (ground motion, site effects, building code zones).'
-  - 'Related DMR services: T_ACTIVEFAULT = 1,329 sub-district points within 20 km of active faults (a
-    proximity listing, not a hazard surface); EQ_ZONE = 427 Modified Mercalli intensity zone polygons.'
-  analytical_suitability: Required before the Natural Hazard Resilience dimension can be considered complete
-    enough for suitability scoring.
-  processing_status: NOT_ACQUIRED
-  notes: Supersedes placeholder 'seismic-active-faults'. Not ingested in M1C.
+  - Fault traces are mapped context only; distance to a trace is NOT a shaking or risk measure and no fault distance score exists.
+  - Many source-native attributes are empty or zero placeholders (DIP "0" for 593 of 640); MCE units/scale are undocumented.
+  - Unmapped, buried or newly recognised faults are not represented; absence of a trace is not evidence of no fault.
+  analytical_suitability: Fault context for regional seismic screening (REQUIRES_SEISMIC_VERIFICATION at most when used alone).
+  local_raw_path: data/raw/seismic-active-faults-dmr/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D. Supersedes the placeholder 'seismic-active-faults'.
 - id: seismic-intensity-zones-dmr
-  name: DMR earthquake intensity zones (Modified Mercalli)
+  name: DMR earthquake disaster areas (EQ_ZONE) - probabilistic PGA hazard shown as MMI zones
+  category: seismic
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: PROBABILISTIC_EARTHQUAKE_HAZARD_ZONES
+  intended_role: EARTHQUAKE_HAZARD_CONTEXT_FOR_REGIONAL_SEISMIC_SCREENING
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division (maintainer)
+  dataset_title: พื้นที่พิบัติภัยแผ่นดินไหว (eq_zone), ArcGIS service HAZARD/EQ_ZONE
+  landing_page: https://data.dmr.go.th/ (catalogue record eq_zone)
+  data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/EQ_ZONE/MapServer/0
+  access_method: Public ArcGIS REST MapServer (query supported, no key); 427 polygons in 18 pages
+  format: Polygons (315 Polygon, 112 MultiPolygon); fields EQ_ZONE_ID, INTENSITY (MMI code), INTEN_T (Thai description)
+  source_crs: EPSG:32647 (service); 1 self-intersecting ring repaired (area change 1e-13 km2)
+  coverage: Thailand; covers 99.97% of the three-province AOI (39,919 of 39,930 km2); no overlapping polygons
+  spatial_resolution: Map scale NOT documented in the catalogue or data dictionary
+  temporal_coverage: Hazard level fixed at 10% probability of exceedance in 50 years; data year not stated
+  last_update: 'Catalogue record created 2023-06-19, modified 2026-08-13; earlier data.go.th record created
+    2020-07-18 (shapefile eq_zone_20200718), modified 2021-10-31'
+  last_verified: '2026-10-16'
+  verification_evidence: 'Official DMR catalogue record eq_zone read directly (data.dmr.go.th package_search API).
+    Publisher data_source, verbatim: "การวิเคราะห์ความน่าจะเป็นของค่าความเร่งพื้นดินสูงสุดของแผ่นดินไหวที่มีโอกาสเพียง
+    10% ที่มีค่าสูงกว่าค่าที่วิเคราะห์ได้ในคาบเวลา 50 ปี ตามสมการของ Sadigh and others (1997) ในโครงการการประเมินภัยพิบัติแผ่นดินไหว"
+    = probabilistic analysis of peak ground acceleration with a 10% probability of exceedance in 50 years, per Sadigh
+    et al. (1997), in the earthquake-hazard assessment project. Notes: "boundaries of areas that may be affected by
+    earthquakes in Thailand using a model program and probabilistic analysis". Data dictionary 05030103 describes
+    INTENSITY as the Modified Mercalli intensity zone code. All 427 features downloaded and validated; AOI class
+    areas: IV 39 km2, V 8,729, VI 9,721, VII 21,430, I-III 0.'
+  license_or_usage_notes: 'Official DMR catalogue: Creative Commons Attributions, accessible_condition "none".
+    See dataset_licence / service_terms / legal_use_disclaimer.'
+  dataset_licence: Creative Commons Attributions (official DMR catalogue data.dmr.go.th record eq_zone, accessible_condition "none")
+  service_terms: None stated on the ArcGIS service (copyrightText and description empty)
+  legal_use_disclaimer: 'The older national-portal record data.go.th/dataset/eqzone (created 2020-07-18, modified
+    2021-10-31, mirrored by OD Mekong) lists the same licence but an accessible_condition: data not usable as legal
+    reference, no commercial use, DMR not liable for damages. The current official DMR record states none. That
+    earlier M1D finding came from the superseded data.go.th/OD Mekong record, not from the DMR catalogue or the
+    service. Not recorded as an authoritative non-commercial restriction; legal-reference use is avoided anyway.'
+  licence_discrepancy: 'Two catalogues disagree: data.dmr.go.th (2023-06-19 / 2026-08-13) = CC Attributions, no
+    condition; data.go.th eqzone (2020 / 2021) = CC Attributions + restrictive access text. Resolution pending
+    DMR confirmation; project use (non-commercial regional screening, attribution given) satisfies both.'
+  methodology: 'Probabilistic seismic hazard: PGA with 10% probability of exceedance in 50 years (about a
+    475-year return level), Sadigh et al. (1997) ground-motion relation, earthquake-hazard assessment project.
+    The published GIS layer displays the result as MMI zones (I-III, IV, V, VI, VII). NOT documented: the PGA-to-MMI
+    transformation and class boundaries, source model (which faults/seismicity), site/Vs30 assumptions, map scale,
+    data year. None of these is inferred.'
+  expected_update_frequency: Catalogue other / unspecified
+  confidence: MEDIUM
+  known_limitations:
+  - The layer is a regional hazard display, not a site-response model (no local geology, sediment, amplification or liquefaction).
+  - PGA is the stated analysis variable but only MMI classes are published; do not read MMI as measured intensity.
+  - Hazard zones, fault traces and event catalogues are not statistically independent evidence.
+  analytical_suitability: Regional modelled-hazard context; a dominant top class (VII) may support STRONG_SEISMIC_SCREENING_CONCERN in provisional regional screening, never a parcel/site conclusion.
+  local_raw_path: data/raw/seismic-intensity-zones-dmr/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D. Corrects the earlier description ("model program, no scenario or return period").
+- id: seismic-tambon-near-faults-dmr
+  name: DMR tambon within about 20 km of active faults (listing)
   category: seismic
   priority: useful
-  verification_status: CANDIDATE
-  role: null
-  evidence_role: SEISMIC_INTENSITY_ZONES
+  verification_status: VERIFIED
+  role: VALIDATION_ONLY
+  evidence_role: FAULT_PROXIMITY_LISTING
   metadata_verified: true
-  data_verified: false
-  acquisition_status: DEFERRED
-  permitted_uses: []
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
   publisher: Department of Mineral Resources (DMR)
-  landing_page: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/EQ_ZONE/MapServer
-  format: Polygons, 427 features (fields INTENSITY, INTEN_T)
-  source_crs: EPSG:32647 (service)
-  last_verified: '2026-10-15'
-  confidence: UNKNOWN
-  processing_status: NOT_ACQUIRED
-  notes: Methodology/vintage unknown; candidate input for a future seismic dimension.
+  dataset_title: ตำบลที่อยู่ใกล้รอยเลื่อนมีพลังในรัศมี 20 กิโลเมตร (t-activefault)
+  landing_page: https://data.dmr.go.th/ (catalogue record t-activefault)
+  data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/T_ACTIVEFAULT/MapServer/0
+  access_method: Public ArcGIS REST MapServer (no key)
+  format: Points, 1,329 sub-district records (TB_CODE, TAMBON, DISTRICT, PROVINCE, fault group, coordinates)
+  source_crs: EPSG:32647 (service); lat/lon WGS 84 attributes
+  coverage: Thailand (sub-districts near active faults)
+  last_update: Catalogue record created 2023-06-22, modified 2026-08-13
+  last_verified: '2026-10-16'
+  verification_evidence: All 1,329 points downloaded; every point is within 19.95 km of the nearest DMR fault trace (median 7.07 km), consistent with the stated 20 km listing rule.
+  license_or_usage_notes: Catalogue Creative Commons Attributions, accessible_condition none
+  dataset_licence: Creative Commons Attributions (data.dmr.go.th and data.go.th gdpublish-t-activefault)
+  service_terms: None stated on the ArcGIS service
+  methodology: 'Publisher: field survey data and GIS calculation to find villages/sub-districts within about 20 km of active faults.'
+  confidence: MEDIUM
+  known_limitations:
+  - A proximity listing, not a hazard surface; used only to validate fault-trace geometry.
+  local_raw_path: data/raw/seismic-tambon-near-faults-dmr/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D validation reference.
+- id: geohazard-events-dmr
+  name: DMR geohazard events inventory (earthquake subset used)
+  category: seismic
+  priority: useful
+  verification_status: VERIFIED
+  role: SECONDARY
+  evidence_role: HISTORICAL_SEISMICITY_DMR_INVENTORY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division
+  dataset_title: เหตุการณ์ธรณีพิบัติภัย (GEOHAZARD_EVENTS)
+  landing_page: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/GEOHAZARD_EVENTS/MapServer
+  data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/GEOHAZARD_EVENTS/MapServer/0
+  access_method: Public ArcGIS REST MapServer (no key)
+  format: Points, 1,015 events (773 landslide, 124 sinkhole, 118 earthquake); fields incl. DATE, MAGNITUDE, DEPTH_KM, LATITUDE, LONGITUDE
+  source_crs: EPSG:32647 (service); lat/lon WGS 84 attributes used
+  coverage: Thailand
+  temporal_coverage: Earthquake records 1994-2025 (37 in 2025, a post-2025 Myanmar-sequence burst)
+  last_verified: '2026-10-16'
+  verification_evidence: All 1,015 events downloaded; 118 earthquakes with magnitude 3.0-6.3 (depth for 77); 84 within the AOI bounding region plus margin; Reference field attributes all events to the DMR environmental-geology division.
+  license_or_usage_notes: Not stated on the service; DMR catalogue licence for hazard datasets is Creative Commons Attributions - confirm for this layer.
+  service_terms: None stated on the ArcGIS service
+  methodology: Curated inventory of felt/damaging or notable events; selection criteria not documented. Not a complete instrumental catalogue.
+  confidence: LOW
+  known_limitations:
+  - Incomplete and uneven in time; magnitude scale not stated; kept separate from TMD and USGS and never merged.
+  - Landslide and sinkhole events in the same layer are not used for seismic evidence.
+  local_raw_path: data/raw/geohazard-events-dmr/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D historical seismicity (Thai authority, corroborating context only).
+- id: seismic-felt-events-tmd
+  name: TMD statistics of earthquakes affecting Thailand (felt events)
+  category: seismic
+  priority: useful
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: HISTORICAL_SEISMICITY_TMD_FELT_EVENTS
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Thai Meteorological Department (TMD), Earthquake Observation Division
+  dataset_title: สถิติข้อมูลแผ่นดินไหวที่มีผลกระทบต่อประเทศไทย (thailand_earthquake_stat.xls)
+  landing_page: https://earthquake.tmd.go.th/earthquakestat.html
+  data_endpoint: https://earthquake.tmd.go.th/eqstat_2excel.php
+  access_method: Public export link (SpreadsheetML), no key; recent events also via RSS (earthquake.tmd.go.th/feed)
+  format: SpreadsheetML (552 rows; DATE in Thai text, TIME, LOCAT., LAT.-LONG., M/I, DETAIL)
+  source_crs: WGS 84 lat/lon text (EPSG:4326)
+  coverage: Thailand and neighbouring events felt in Thailand
+  temporal_coverage: 552 records from 624 BC chronicles to 2026; 477 with usable coordinates (1930-2026)
+  last_verified: '2026-10-16'
+  verification_evidence: 'Export downloaded and parsed: dates in mixed full/abbreviated Thai months and 2- or 4-digit Buddhist-era years; M/I mixes magnitudes (some with type, e.g. "5.3 Mb") and MM intensities; 75 records without coordinates are excluded from spatial metrics. TMD offers no bulk instrumental catalogue or API (RSS of recent events only).'
+  license_or_usage_notes: Not stated by TMD on the statistics page.
+  service_terms: None stated
+  methodology: Felt/effects statistics compiled by TMD (instrumental and reported events); selection criteria not documented.
+  confidence: LOW
+  known_limitations:
+  - A felt-effects list, not a complete catalogue; includes distant events felt in Thailand.
+  - Preferred Thai operational/historical context where usable, but not deduplicated against DMR or USGS and never merged.
+  local_raw_path: data/raw/seismic-felt-events-tmd/download-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D historical seismicity.
+- id: seismicity-usgs-comcat
+  name: USGS ComCat earthquake catalogue (6x6 degree box, M>=3)
+  category: seismic
+  priority: useful
+  verification_status: VERIFIED
+  role: SECONDARY
+  evidence_role: HISTORICAL_SEISMICITY_INTERNATIONAL_CORROBORATION
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  - VALIDATION_REFERENCE
+  publisher: U.S. Geological Survey (composite of contributing seismic networks)
+  dataset_title: USGS ComCat FDSN event service
+  landing_page: https://earthquake.usgs.gov/fdsnws/event/1/
+  data_endpoint: https://earthquake.usgs.gov/fdsnws/event/1/query (16-22N, 96-102E, 1900-2026, M>=3)
+  access_method: Public FDSN API (GeoJSON), no key
+  format: GeoJSON, 384 events (mb 310, mw/mww/mwc/mwr/mwb ~62, ml 8, ms 4)
+  source_crs: EPSG:4326
+  coverage: Global composite; request box around the AOI
+  temporal_coverage: 1912-2026 (instrumental completeness for northern Thailand roughly M4.5 from the 1970s)
+  last_verified: '2026-10-16'
+  verification_evidence: Query counted (384 events M>=3, 364 M>=4) then downloaded; magnitude types and statuses recorded per event.
+  license_or_usage_notes: U.S. Government work (public domain); attribution requested.
+  service_terms: USGS data use policy
+  methodology: Catalogue of earthquake parameters contributed by seismic networks; magnitudes of mixed types.
+  confidence: MEDIUM
+  known_limitations:
+  - An international composite catalogue, not the Thai national record; used as corroborating context beside TMD and DMR.
+  - Not deduplicated against Thai sources; never merged.
+  local_raw_path: data/raw/seismicity-usgs-comcat/download-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D historical seismicity (instrumental reference).
 - id: rivers-osm
   name: OpenStreetMap waterways
   category: hydrology
