@@ -385,6 +385,52 @@ def main() -> int:
             )
     pd.DataFrame(brow).to_csv(REVIEW / "fault-distance-bands.csv", index=False)
 
+    # ------------------------------------------------ before/after: superseded v0.1 rule
+    # v0.1 required fault <= 5 km AND zone VII >= 50% AND a recorded M>=5 event <= 25 km for
+    # STRONG (so catalogue absence blocked escalation = negative evidence). Replayed here from
+    # the same evidence ONLY to document the correction; it is not a supported policy.
+    fdist = fc["fault_nearest_distance_km"].to_numpy()
+    vii = sc["shaking_classVII_fraction"].to_numpy()
+    hnear = hc["hist_nearest_ge5_km"].to_numpy()
+    asd = sc["shaking_assessed_fraction"].to_numpy() >= 0.5
+    with np.errstate(invalid="ignore"):
+        f2, f1 = fdist <= 5, (fdist <= 10) & ~(fdist <= 5)
+        s2, s1 = asd & (vii >= 0.5), asd & (vii >= 0.25) & ~(vii >= 0.5)
+        h2, h1 = hnear <= 25, (hnear <= 50) & ~(hnear <= 25)
+    old = np.where(
+        f2 & s2 & h2,
+        "STRONG_SEISMIC_SCREENING_CONCERN",
+        np.where(
+            f2 | f1 | s2 | s1 | h2 | h1,
+            "REQUIRES_SEISMIC_VERIFICATION",
+            np.where(~asd, "UNRESOLVED", "NO_MAJOR_SEISMIC_CONCERN_DETECTED"),
+        ),
+    )
+    ba = []
+    for z in INTERPRETATION_STATES:
+        for w in INTERPRETATION_STATES:
+            sel = (old == z) & (state == w)
+            if sel.any():
+                ba.append(
+                    {
+                        "v0_1_three_way_rule": z,
+                        "v0_2_corrected": w,
+                        "cells": int(sel.sum()),
+                        "area_km2": round(float(area[sel].sum()), 1),
+                    }
+                )
+    pd.DataFrame(ba).to_csv(REVIEW / "before-after-strong-logic.csv", index=False)
+    qa["before_after"] = {
+        "v0_1_area_km2": {z: round(float(area[old == z].sum()), 1) for z in INTERPRETATION_STATES},
+        "v0_2_area_km2": {
+            z: round(float(area[state == z].sum()), 1) for z in INTERPRETATION_STATES
+        },
+        "changed_area_km2": round(float(area[old != state].sum()), 1),
+        "cells_strong_in_v0_2_without_any_nearby_m5_event": int(
+            ((state == "STRONG_SEISMIC_SCREENING_CONCERN") & ~(hnear <= 50)).sum()
+        ),
+    }
+
     # ------------------------------------------------ fault regional context (per province)
     prow = []
     for _, pr in prov.iterrows():
@@ -466,26 +512,39 @@ def main() -> int:
     pd.DataFrame(drow).to_csv(REVIEW / "hydro-seismic-disagreement.csv", index=False)
 
     # ------------------------------------------------ experimental sensitivity (not a selection)
+    sh_prefix = "interpretation__shaking__"
+
+    def vii(frac: float, escalate: int = 2):
+        # modelled-hazard rule: top class (VII) share needed for STRONG (verify share stays 0.10)
+        return variant(
+            cfg,
+            **{
+                sh_prefix + "strong_min_fraction": frac,
+                sh_prefix + "verify_min_fraction": min(0.10, frac),
+                sh_prefix + "escalate_borderline_with_corroborating_signals": escalate,
+            },
+        )
+
     variants = {
-        "BASE": cfg,
+        "BASE (VII strong >= 0.50, escalation 2 signals)": cfg,
+        "VII_strong_ge_0.10": vii(0.10),
+        "VII_strong_ge_0.25": vii(0.25),
+        "VII_strong_ge_0.50_no_escalation": vii(0.50, 0),
+        "VII_strong_ge_0.50_escalation_1_signal": vii(0.50, 1),
+        "VII_strong_ge_0.75": vii(0.75),
+        "VII_strong_ge_0.75_escalation_1_signal": vii(0.75, 1),
         "fault_verify_5km": variant(
             cfg,
             interpretation__fault__verify_within_km=5.0,
-            interpretation__fault__strong_tier_within_km=5.0,
+            interpretation__fault__very_near_within_km=5.0,
         ),
         "fault_verify_20km": variant(cfg, interpretation__fault__verify_within_km=20.0),
-        "shaking_tier1_VI": variant(cfg, interpretation__shaking__class_tier1="VI"),
-        "shaking_fractions_0.75": variant(
-            cfg,
-            interpretation__shaking__tier1_min_fraction=0.75,
-            interpretation__shaking__tier2_min_fraction=0.75,
-        ),
-        "history_M4_within_50": variant(cfg, interpretation__history__magnitude=4.0),
-        "history_M6_within_50": variant(cfg, interpretation__history__magnitude=6.0),
-        "history_tier1_100km": variant(cfg, interpretation__history__tier1_within_km=100.0),
-        "strong_needs_2_families": variant(cfg, interpretation__strong_requires_families=2),
+        "history_M4_verify_50km": variant(cfg, interpretation__history__magnitude=4.0),
+        "history_M6_verify_50km": variant(cfg, interpretation__history__magnitude=6.0),
+        "history_verify_100km": variant(cfg, interpretation__history__verify_within_km=100.0),
     }
-    srow = []
+    base_state = interp["seismic_screening_interpretation"].to_numpy()
+    srow, hrow = [], []
     for name, vc in variants.items():
         r = interpret_seismic(base, vc)["seismic_screening_interpretation"].to_numpy()
         for scope, m in masks.items():
@@ -495,6 +554,7 @@ def main() -> int:
                     {
                         "variant": name,
                         "scope": scope,
+                        "stratum": "ALL",
                         "state": z,
                         "cells": int(sel.sum()),
                         "area_km2": round(float(area[sel].sum()), 1),
@@ -502,11 +562,53 @@ def main() -> int:
                         "experimental": True,
                     }
                 )
+        for sname, sm in smask.items():
+            if sname == "ALL":
+                continue
+            for z in INTERPRETATION_STATES:
+                sel = sm & (r == z)
+                srow.append(
+                    {
+                        "variant": name,
+                        "scope": "AOI",
+                        "stratum": sname,
+                        "state": z,
+                        "cells": int(sel.sum()),
+                        "area_km2": round(float(area[sel].sum()), 1),
+                        "share_of_area": round(float(area[sel].sum() / area[sm].sum()), 4),
+                        "experimental": True,
+                    }
+                )
+        for h in HYDRO_ORDER:
+            for z in INTERPRETATION_STATES:
+                sel = (hydro == h) & (r == z)
+                hrow.append(
+                    {
+                        "variant": name,
+                        "hydro_status": h,
+                        "seismic_state": z,
+                        "cells": int(sel.sum()),
+                        "area_km2": round(float(area[sel].sum()), 1),
+                    }
+                )
+        srow.append(
+            {
+                "variant": name,
+                "scope": "AOI",
+                "stratum": "ALL",
+                "state": "CHANGED_VS_BASE",
+                "cells": int((r != base_state).sum()),
+                "area_km2": round(float(area[r != base_state].sum()), 1),
+                "share_of_area": round(float(area[r != base_state].sum() / area.sum()), 4),
+                "experimental": True,
+            }
+        )
+    pd.DataFrame(hrow).to_csv(REVIEW / "seismic-sensitivity-hydro-crosstab.csv", index=False)
     pd.DataFrame(srow).to_csv(REVIEW / "seismic-sensitivity.csv", index=False)
 
     # family signal areas per tier
     fam = []
-    for f in ("fault_tier", "shaking_tier", "history_tier"):
+    for f in ("fault_tier", "modelled_hazard_tier", "history_tier"):
         for tier in ("NONE", "NOTABLE", "STRONG_TIER"):
             sel = (interp[f] == tier).to_numpy()
             fam.append(
@@ -565,12 +667,12 @@ def main() -> int:
         (
             "VERIFY by fault proximity only",
             (interp["fault_tier"] != "NONE").to_numpy()
-            & (interp["shaking_tier"] == "NONE").to_numpy()
+            & (interp["modelled_hazard_tier"] == "NONE").to_numpy()
             & (interp["history_tier"] == "NONE").to_numpy(),
         ),
         (
             "VERIFY by intensity zone only",
-            (interp["shaking_tier"] != "NONE").to_numpy()
+            (interp["modelled_hazard_tier"] != "NONE").to_numpy()
             & (interp["fault_tier"] == "NONE").to_numpy()
             & (interp["history_tier"] == "NONE").to_numpy(),
         ),
@@ -608,9 +710,9 @@ def main() -> int:
         "majority_pcode",
         "seismic_screening_interpretation",
         "fault_tier",
-        "shaking_tier",
+        "modelled_hazard_tier",
         "history_tier",
-        "strong_tier_families",
+        "corroborating_signals",
         "seismic_reason_codes",
         "seismic_unresolved_reasons",
         "fault_nearest_distance_km",

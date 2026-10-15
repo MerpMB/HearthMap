@@ -202,23 +202,28 @@ def main() -> int:
         [float(area[code == i].sum()) for i in range(4)],
         "Seismic screening interpretation v0.1 (experimental, not selected)",
     )
-    fam = {"fault_tier": 0, "shaking_tier": 1, "history_tier": 2}
-    tiers = np.zeros(len(ev))
-    for f in fam:
-        tiers += (ev[f] == "STRONG_TIER").to_numpy().astype(float)
+    ev_code = np.select(
+        [
+            ev["modelled_hazard_tier"] == "STRONG_TIER",
+            ev["modelled_hazard_tier"] == "NOTABLE",
+            ev["fault_tier"] != "NONE",
+        ],
+        [3, 2, 1],
+        0,
+    ).astype(float)
     cat(
         axes[1],
         grid,
-        tiers,
+        ev_code,
         ["#f0f0f0", "#fee391", "#ec7014", "#662506"],
         [
-            "no strong-tier family",
-            "1 family at strong tier",
-            "2 families",
-            "3 families (= strong concern)",
+            "no modelled-hazard or fault signal",
+            "fault within 10 km only (verification)",
+            "modelled hazard: class VII 10-50% of cell",
+            "modelled hazard: class VII >= 50% of cell",
         ],
-        [float(area[tiers == i].sum()) for i in range(4)],
-        "How many evidence families reach their strong tier (fault <= 5 km, zone VII >= 50%, M>=5 event <= 25 km)",
+        [float(area[ev_code == i].sum()) for i in range(4)],
+        "Evidence behind the state: DMR probabilistic PGA zones (shown as MMI) vs fault proximity",
     )
     for ax in axes:
         outline(ax, prov)
