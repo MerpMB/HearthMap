@@ -142,9 +142,9 @@ def main() -> int:
         grid,
         np.clip(k, 0, 4),
         cols,
-        ["0 families", "1 family", "2 families", "3 families", "4 families"],
+        ["0 triggers", "1 trigger", "2 triggers", "3 triggers", "4+ triggers"],
         [float(area[np.clip(k, 0, 4) == i].sum()) for i in range(5)],
-        "Number of hazard families that call for site verification (burden of information, not severity)",
+        "Number of verification triggers (families, plus the seismic screening state where it alone verifies) - information burden, not severity",
     )
     outline(axes[0], prov)
     prov_bars(

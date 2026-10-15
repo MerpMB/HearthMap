@@ -118,9 +118,9 @@ def build(prefix: str) -> str:
     )
     bu = (
         burden.assign(v=lambda x: (100 * x["share_of_scope_area"]).round(1))
-        .pivot_table(
-            index="families_requiring_verification", columns="scope", values="v", sort=False
-        )[list(NAMES)]
+        .pivot_table(index="verification_triggers", columns="scope", values="v", sort=False)[
+            list(NAMES)
+        ]
         .rename(columns=NAMES)
         .reset_index()
     )
@@ -170,7 +170,7 @@ def build(prefix: str) -> str:
         "",
         table(fam_t),
         "",
-        "Families requiring site verification per cell (% of scope area):",
+        "Verification triggers per cell (% of scope area; triggers >= 1 equals the area flagged VERIFY_SITE_REQUIRED):",
         "",
         table(bu),
         "",

@@ -38,9 +38,18 @@ caution), against 28.9% on steep land: avoidance is mostly an upland/landslide m
 lowland flood evidence mostly gives caution and verification. Seismic evidence never enters
 this axis.
 
-**Verification burden.** 86.1% of the AOI calls for site verification for at least one
-family (0 families 19.1%, 1: 44.3%, 2: 30.4%, 3: 6.2%). The burden is broad, so it
-discriminates little on its own; its value is in naming *which* information is needed.
+**Verification burden (corrected in M1E.1).** 86.1% of the AOI (34,377 km²) is flagged
+`VERIFY_SITE_REQUIRED`. The M1E report quoted a trigger distribution that summed to 100% but
+implied only 80.9% with at least one trigger. Cause: the two numbers described different
+populations, both by area. The flag also fires where the seismic screening state alone
+requires verification (a nearby recorded M ≥ 5 event, which the history family reports as
+`CONTEXT_ONLY`): 8,502 cells, 2,072 km² (5.2% of the AOI), which the old count did not
+attribute to any trigger. Neither percentage was wrong; the count omitted a population. The
+count now includes that trigger (`seismic_state`), so *flag ⇔ triggers ≥ 1*. Policy
+semantics and every action area are unchanged. Corrected distribution (share of AOI area):
+0 triggers 13.9%, 1: 49.5%, 2: 30.4%, 3: 6.2%, 4: 0.03% (sums to 100%; ≥ 1 = 86.1%).
+The burden is broad, so it discriminates little on its own; its value is in naming *which*
+information is needed.
 
 **Engineering mitigation.** 21,436 km² (53.7%) requires seismic design (Chiang Rai 75.2%,
 Chiang Mai 50.7%, Phayao 24.0%; low-slope land 63.2%). This does not remove land from the

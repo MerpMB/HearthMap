@@ -312,12 +312,21 @@ def integrate(hydro: pd.DataFrame, seismic: pd.DataFrame, cfg: IntegrationConfig
     )
     unres_family = np.vstack([acts[f] == "UNRESOLVED" for f in FAMILIES]).any(axis=0)
     seis_state = seismic["seismic_screening_interpretation"].to_numpy()
-    verify_any = verify.any(axis=0) | np.isin(seis_state, ["REQUIRES_SEISMIC_VERIFICATION"])
+    # Verification TRIGGERS: a family whose action is VERIFY_SITE, plus the seismic screening
+    # state itself when it requires verification without any seismic family action doing so
+    # (the M1D state also verifies on a nearby recorded event, which the history family
+    # reports as CONTEXT_ONLY). The flag and the trigger count describe the same population:
+    # flag == (trigger count >= 1), by construction (M1E.1 accounting correction).
+    state_only = np.isin(seis_state, ["REQUIRES_SEISMIC_VERIFICATION"]) & ~verify.any(axis=0)
+    verify_any = verify.any(axis=0) | state_only
     out["site_verification_action"] = np.where(verify_any, "VERIFY_SITE_REQUIRED", "NONE_TRIGGERED")
     out["site_verification_families"] = [
-        "|".join(f for f, v in zip(FAMILIES, col, strict=True) if v) for col in verify.T
+        "|".join(
+            [f for f, v in zip(FAMILIES, col, strict=True) if v] + (["seismic_state"] if so else [])
+        )
+        for col, so in zip(verify.T, state_only, strict=True)
     ]
-    out["site_verification_burden_count"] = verify.sum(axis=0)
+    out["site_verification_burden_count"] = verify.sum(axis=0) + state_only.astype(int)
     out["engineering_mitigation_action"] = np.where(
         mitigate, "SEISMIC_DESIGN_REQUIRED", "NONE_TRIGGERED"
     )

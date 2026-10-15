@@ -283,19 +283,31 @@ def main() -> int:
 
     # ---- verification burden distribution
     brow = []
-    for k in range(0, 7):
+    for k in range(0, 8):
         mk = (act["site_verification_burden_count"] == k).to_numpy()
         for scope, m in masks.items():
             brow.append(
                 {
-                    "families_requiring_verification": k,
+                    "verification_triggers": k,
                     "scope": scope,
                     "cells": int((mk & m).sum()),
                     "area_km2": round(float(area[mk & m].sum()), 1),
                     "share_of_scope_area": share(mk, m),
                 }
             )
-    pd.DataFrame(brow).to_csv(REVIEW / "verification-burden-distribution.csv", index=False)
+    bdf = pd.DataFrame(brow)
+    # accounting invariant (M1E.1): the distribution reconciles to the reported total
+    aoi_b = bdf[bdf["scope"] == "AOI"]
+    flagged_area = float(
+        area[(act["site_verification_action"] == "VERIFY_SITE_REQUIRED").to_numpy()].sum()
+    )
+    assert abs(aoi_b["area_km2"].sum() - area.sum()) < 1.0, (
+        "burden distribution does not cover the AOI"
+    )
+    assert abs(aoi_b[aoi_b["verification_triggers"] >= 1]["area_km2"].sum() - flagged_area) < 1.0, (
+        "triggers >= 1 must equal the area flagged VERIFY_SITE_REQUIRED"
+    )
+    bdf.to_csv(REVIEW / "verification-burden-distribution.csv", index=False)
 
     # ---- per-family action distribution
     frows = []

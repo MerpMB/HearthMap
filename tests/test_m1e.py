@@ -338,3 +338,38 @@ def test_human_qa_gates_stay_truthful():
     for g in ("m1c", "m1c1", "m1c2", "m1c3", "m1d"):
         assert q.status(f"{g}_human_visual_signoff") == "PENDING", g
     assert PCFG.default_profile is None
+
+
+def test_verification_burden_distribution_reconciles_to_its_reported_total():
+    """M1E.1 accounting invariant: the flag and the trigger count are one population."""
+    rng = np.random.default_rng(11)
+    hs = [
+        {
+            "flood_years_ge3_area_fraction": float(rng.choice([0, 0.05, 0.2])),
+            "flood_area_fraction": float(rng.choice([0, 0.2])),
+            "slope_p90_deg": float(rng.choice([3.0, 32.0])),
+            "landslide_class5_fraction": float(rng.choice([0, 0.3])),
+        }
+        for _ in range(300)
+    ]
+    ss = [
+        {
+            "fault_nearest_distance_km": float(rng.choice([2.0, 8.0, 40.0])),
+            HIST: float(rng.choice([np.nan, 10.0, 40.0])),
+            "shaking_classVII_fraction": float(rng.choice([0, 0.3, 0.9])),
+            "shaking_classV_fraction": 0.0,
+        }
+        for _ in range(300)
+    ]
+    df = integrate(hydro(*hs), seis(*ss), CFG)
+    flag = df["site_verification_action"] == "VERIFY_SITE_REQUIRED"
+    k = df["site_verification_burden_count"]
+    assert (flag == (k >= 1)).all()  # no cell flagged with 0 triggers, none counted but unflagged
+    dist = k.value_counts()
+    assert dist.sum() == len(df) and dist[dist.index >= 1].sum() == flag.sum()
+    assert (df.loc[k == 0, "site_verification_families"] == "").all()
+    # a history-only seismic verification is attributed, not dropped
+    hist_only = run({}, {HIST: 10.0})
+    assert hist_only["site_verification_action"] == "VERIFY_SITE_REQUIRED"
+    assert hist_only["site_verification_burden_count"] == 1
+    assert hist_only["site_verification_families"] == "seismic_state"

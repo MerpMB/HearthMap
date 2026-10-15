@@ -51,7 +51,7 @@ fault → VERIFY; historical earthquake → CONTEXT (+VERIFY).
 * `regional_search_action` — `CONTINUE_SEARCH`, `CONTINUE_SEARCH_WITH_AVOIDANCE_CAUTION`,
   `DEPRIORITIZE_REGION`, `UNRESOLVED`; derived from **hydrogeomorphic outcomes only**.
 * `site_verification_action` — `VERIFY_SITE_REQUIRED` / `NONE_TRIGGERED`, with the families
-  concerned and a burden count.
+  concerned and a trigger count (flag ⇔ triggers ≥ 1).
 * `engineering_mitigation_action` — `SEISMIC_DESIGN_REQUIRED` / `NONE_TRIGGERED`.
 * `data_completeness` — `REGIONAL_COMPLETE_SITE_RESPONSE_MISSING`, `PARTIAL_REGIONAL_EVIDENCE`,
   `CRITICAL_REGIONAL_GAP`; with `ground_response_status = NOT_ASSESSED` and
@@ -90,7 +90,7 @@ their action semantics, never as `hazard_score 0–100`:
 | Dimension | Values | Source |
 |---|---|---|
 | `hazard_search_eligibility` | `SEARCHABLE`, `SEARCHABLE_WITH_CAUTION`, `DEPRIORITIZED`, `UNRESOLVED` | `regional_search_action` |
-| `hazard_verification_burden` | `NONE`, `LOW`, `MODERATE`, `HIGH` | families requiring site verification |
+| `hazard_verification_burden` | `NONE`, `LOW`, `MODERATE`, `HIGH` | verification triggers per cell (flag ⇔ triggers ≥ 1) |
 | `hazard_engineering_burden` | `NONE`, `SEISMIC_DESIGN_REQUIRED` | `engineering_mitigation_action` |
 | `hazard_uncertainty` | `REGIONAL_COMPLETE_SITE_RESPONSE_MISSING`, `PARTIAL_REGIONAL_EVIDENCE`, `CRITICAL_REGIONAL_GAP` | `data_completeness` |
 
