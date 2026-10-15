@@ -171,3 +171,51 @@ def classify_health(
         "class_basis": "NO_RULE_MATCHED",
         "class_confidence": "LOW",
     }
+
+
+# -- authoritative level ranges (OBEC school list: classMinLevel / classMaxLevel) ---------------------------
+_GRADE_ORDER = {
+    **{f"อ.{i}": i for i in (1, 2, 3)},
+    **{f"ป.{i}": 3 + i for i in range(1, 7)},
+    **{f"ม.{i}": 9 + i for i in range(1, 7)},
+}
+
+
+def levels_from_class_range(class_min: str | None, class_max: str | None) -> list[str]:
+    """Normalised levels from a source class range (อ.=kindergarten, ป.=primary, ม.1-3=lower, ม.4-6=upper)."""
+    lo, hi = _GRADE_ORDER.get(str(class_min)), _GRADE_ORDER.get(str(class_max))
+    if lo is None or hi is None or lo > hi:
+        return ["UNKNOWN"]  # '0', empty or unparseable: never guessed
+    out = []
+    if lo <= 3:
+        out.append("KINDERGARTEN")
+    if lo <= 9 and hi >= 4:
+        out.append("PRIMARY")
+    if lo <= 12 and hi >= 10:
+        out.append("LOWER_SECONDARY")
+    if hi >= 13:
+        out.append("UPPER_SECONDARY")
+    return out
+
+
+def resolve_levels(
+    derived: dict, authoritative_levels: list[str] | None, native_levels: str | None = None
+) -> dict:
+    """Authoritative classification outranks name inference; the winner and its method are recorded."""
+    if authoritative_levels and authoritative_levels != ["UNKNOWN"]:
+        return {
+            "source_native_levels": native_levels,
+            "normalized_levels": authoritative_levels,
+            "normalization_method": "AUTHORITATIVE_CLASS_RANGE",
+            "normalization_confidence": "HIGH",
+            "derived": False,
+        }
+    return {
+        "source_native_levels": native_levels,
+        "normalized_levels": derived["levels"],
+        "normalization_method": f"DERIVED_{derived['level_basis']}"
+        if derived["level_basis"] != "NONE"
+        else "UNKNOWN",
+        "normalization_confidence": derived["level_confidence"],
+        "derived": True,
+    }
