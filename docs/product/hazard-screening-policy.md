@@ -81,6 +81,18 @@ dataset-evaluated/positive-evidence flags, waterway context). Explanations are
 rendered deterministically from reason-code templates (`reason_codes` in
 config) and always include "THIS DOES NOT MEAN".
 
+### Separate completeness semantics (v0.2.1, M1C.2)
+
+`hazard_interpretation` (`NO_MAJOR_CONCERN_IN_ASSESSED_HAZARDS`,
+`CONCERN_REQUIRING_VERIFICATION`, `STRONG_CONCERN`,
+`DEPRIORITIZATION_LEVEL_CONCERN`) states what the hazards that were actually
+assessed indicate; `assessed_hazards` lists them; `data_completeness` is the
+completeness class; `landslide_assessment_status` is `ASSESSED`,
+`PARTIALLY_ASSESSED` or `NOT_ASSESSED`. Outside DMR coverage the landslide
+level is `NOT_ASSESSED` (never `NONE`, never "low susceptibility"), and the
+flood/terrain interpretation stays visible. The `regional_search_status` rule
+is unchanged.
+
 ## Profiles
 
 `CONSERVATIVE`, `BALANCED`, `PERMISSIVE` exist for sensitivity analysis. None

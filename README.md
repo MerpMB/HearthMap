@@ -14,6 +14,12 @@ priority over visually impressive output.
 
 ## Status
 
+**M1C.2 — Flood record reconciliation.** The two GISTDA flood products are
+identical for 2011–2013; the newer one lacks most 2014 and all 2016 flooding in
+the AOI, and most "legacy-only" flooding is 2005–2010. A conservative
+dual-source flood record is recommended before any profile is selected. See
+[m1c2-flood-reconciliation-report.md](docs/research/m1c2-flood-reconciliation-report.md).
+
 **M1C.1 — Flood truth refresh.** Primary flood evidence is now GISTDA observed
 flooding 2011–2023 (2005–2016 kept as corroboration); policy 0.2.0 re-run for
 all profiles, still with **no profile selected**. Human visual sign-off M1A.1

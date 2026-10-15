@@ -45,6 +45,16 @@ the new record; ~5.8% of the AOI changes BALANCED outcome, mostly to less
 concern. No profile selected. See
 [m1c1-flood-refresh-report.md](../research/m1c1-flood-refresh-report.md).
 
+## M1C.2 — Flood record reconciliation (done, descriptive)
+
+2011-2013 identical in both GISTDA products; the current product lacks most
+2014 and all 2016 AOI flooding; 98% of "legacy-only" cells are 2005-2010
+(temporal). Resolution does not explain the disagreement. Recommended (not
+implemented): per-year union record with provenance and legacy verification
+reasons. Policy 0.2.1 separates hazard interpretation, data completeness and
+landslide assessment status. See
+[m1c2-flood-reconciliation-report.md](../research/m1c2-flood-reconciliation-report.md).
+
 ## M1 — Regional hazard + infrastructure scan
 
 - Acquire and register: admin boundaries, DEM, flood history/hazard, landslide

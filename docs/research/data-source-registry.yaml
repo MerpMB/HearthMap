@@ -294,7 +294,9 @@ sources:
   local_raw_path: data/raw/flood-gistda-history/api-2026-10-15/
   processing_status: PROCESSED
   notes: Acquired in M1C.1 with a legitimate project key. Supersedes the 2005-2016 layer as PRIMARY; the
-    2005-2016 layer is kept as HISTORICAL_CORROBORATION (context only).
+    2005-2016 layer is kept as HISTORICAL_CORROBORATION (context only). M1C.2 role label PRIMARY_CURRENT_PRODUCT
+    (not "correct"); 2011-2013 geometry identical to the legacy product in the AOI, 2014 mostly and 2016 entirely
+    absent relative to it (docs/research/m1c2-flood-reconciliation-report.md).
 - id: flood-gistda-repeated-2005-2016
   name: GISTDA repeated flooding areas 2005-2016 (1:50k), observed
   category: flood
@@ -337,7 +339,8 @@ sources:
   processing_status: PROCESSED
   notes: 'M1C.1: reclassified from PRIMARY/TEMPORARY_HISTORICAL_EVIDENCE to SECONDARY/HISTORICAL_CORROBORATION
     (legacy historical evidence). Kept, not deleted: per-cell legacy_flood_2005_2016_* context columns; never
-    read by interpretation or policy. Primary flood evidence is now flood-gistda-history (2011-2023).'
+    read by interpretation or policy. Primary flood evidence is now flood-gistda-history (2011-2023). M1C.2
+    role label LEGACY_COMPARISON_PRODUCT (not "wrong"): maps 2014/2016 AOI flooding absent from the current product.'
 - id: flood-gistda-event
   name: GISTDA current/event flood extents (1/3/7/30-day) and STAC catalogs
   category: flood

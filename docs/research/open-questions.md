@@ -101,6 +101,17 @@ delete them here.
     coverage become UNRESOLVED (BALANCED +259 km2). Should lowland cells
     without DMR coverage be treated as a known gap rather than unresolved?
 
+## Raised by M1C.2 (2026-10-15) — flood reconciliation
+
+37. Why does the current GISTDA product lack most 2014 and all 2016 AOI
+    flooding that the legacy product maps (2011-2013 are identical)? Ask
+    GISTDA (wgs@gistda.or.th) for the method and year coverage of both.
+38. Adopt the recommended per-year union record (2005-2023, 19 years, per-year
+    provenance) and re-review recurrence thresholds on it?
+39. Should pre-2011 legacy-only flooding (6,281 cells, mostly 2005) raise cells
+    to REQUIRES_VERIFICATION, separately from common-period legacy-only
+    evidence (106 cells)?
+
 ## Process
 
 21. Who validates outputs in QGIS, and against which known places?
