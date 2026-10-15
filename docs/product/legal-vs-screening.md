@@ -55,7 +55,8 @@ Guards (all tested):
 |---|---|---|---|---|
 | `forest-reserve-rfd` (RFD reserve polygons) | yes | **no** | **yes** | **no** (publisher disclaimer) |
 | `protected-gistda-mnre` (parks 2014, sanctuaries) | yes | no | yes | no |
-| `flood-gistda-repeated-2005-2016` | yes | not yet (observed history only) | — | no |
+| `flood-gistda-history` (2011–2023, primary since M1C.1) | yes | not yet (observed history only) | — | no |
+| `flood-gistda-repeated-2005-2016` (legacy corroboration) | context only | no | — | no |
 | `boundaries-ocha-cod-ab` | yes (AOI definition) | n/a | — | no |
 | OSM roads/waterways | yes | no | — | no (road ≠ legal access) |
 

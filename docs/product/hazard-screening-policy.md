@@ -1,7 +1,9 @@
 # Hydrogeomorphic Hazard Screening policy v0.1 (M1C)
 
-Status: **PROVISIONAL**, no default profile. Gates: `M1A1_HUMAN_VISUAL_SIGNOFF =
-PENDING`, `M1B_HUMAN_VISUAL_SIGNOFF = PENDING`. Config:
+Status: **PROVISIONAL** (v0.2.0), no default profile. Gates:
+`M1A1_HUMAN_VISUAL_SIGNOFF = PASSED`, `M1B_HUMAN_VISUAL_SIGNOFF = PASSED`
+(`config/human-qa.yaml`); the M1C review pack itself is not recorded as
+reviewed. Config:
 [`config/hazard-policy.yaml`](../../config/hazard-policy.yaml); code:
 `hearthmap.hazard.policy`. Scope: hydrogeomorphic only
 ([natural-hazard-scope.md](natural-hazard-scope.md)).
@@ -25,7 +27,10 @@ evidence (`policy:` sources are rejected).
 Per profile, every threshold from config:
 
 1. **Per-hazard concern level** `NONE < VERIFY < STRONG < DEPRIORITIZE`
-   * Flood (observed ≥ k of 12 years, 2005–2016): DEPRIORITIZE if recurrent
+   * Flood (v0.2.0: GISTDA 2011–2023; recurrent = observed flooded in ≥
+     `min_years_flooded` of the **13** years; source, period and record length
+     are stated in `source_requirements.flood` and checked against the
+     evidence — v0.1.0 used ≥ 3 of 12 years, 2005–2016): DEPRIORITIZE if recurrent
      fraction ≥ `deprioritize_min_fraction`; STRONG if ≥ `strong_min_fraction`;
      VERIFY if any observed flooding ≥ `verify_min_fraction` or within
      `verify_distance_m`. No observed flood is informational only

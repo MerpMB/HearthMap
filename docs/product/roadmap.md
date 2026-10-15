@@ -36,6 +36,15 @@ only; seismic required before scoring). No profile is selected. Next: human
 policy selection, after M1A.1 and M1B visual sign-off. See
 [m1c-hazard-policy-report.md](../research/m1c-hazard-policy-report.md).
 
+## M1C.1 — Flood truth refresh + human QA gate closure (done, provisional)
+
+GISTDA flood recurrence 2011-2023 acquired with a project API key (never
+recorded), validated and made the primary flood evidence; 2005-2016 kept as
+corroboration. Human visual sign-off M1A.1/M1B PASSED. Policy 0.2.0 re-based on
+the new record; ~5.8% of the AOI changes BALANCED outcome, mostly to less
+concern. No profile selected. See
+[m1c1-flood-refresh-report.md](../research/m1c1-flood-refresh-report.md).
+
 ## M1 — Regional hazard + infrastructure scan
 
 - Acquire and register: admin boundaries, DEM, flood history/hazard, landslide

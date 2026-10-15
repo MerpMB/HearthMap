@@ -2,8 +2,9 @@
 
 Status: **PROVISIONAL.** Config: [`config/hazard.yaml`](../../config/hazard.yaml).
 Code: `hearthmap.hazard`, `hearthmap.terrain`, `scripts/m1b/`.
-Gate: `M1A1_HUMAN_VISUAL_SIGNOFF = PENDING` — no hazard rule may become a
-decision rule until it is cleared.
+Gates: `M1A1_HUMAN_VISUAL_SIGNOFF = PASSED`, `M1B_HUMAN_VISUAL_SIGNOFF = PASSED`
+(project user, 2026-10-15; `config/human-qa.yaml`). Passing the visual gates
+does not by itself turn any hazard rule into a decision rule.
 
 M1B converts geography into explainable per-cell **hazard evidence**. It does
 not answer "where should we buy?", excludes nothing, and scores nothing.
@@ -25,14 +26,18 @@ hazard, source and meaning.
 All area fractions are relative to the cell's **in-AOI area** and come from
 intersection areas — never from centroid membership.
 
-**Flood** (`flood-gistda-repeated-2005-2016`, role `TEMPORARY_HISTORICAL_EVIDENCE`,
-period 2005–2016): `flood_area_fraction`, `flood_freq_ge{2,3,5}_area_fraction`
-(share of the cell observed flooded in ≥ k of 12 years), `flood_max_freq`,
-`flood_dominant_freq` (area-weighted), `flood_feature_count`,
-`flood_distance_m` (cell polygon to nearest flood polygon; 0 = touching),
-`flood_evidence_period`, `flood_source_role`. The 2011–2023 GISTDA recurrence
-API remains `BLOCKED_CREDENTIAL_REQUIRED`; no key was present in the
-environment and catalogue example keys were not used.
+**Flood** (M1C.1: `flood-gistda-history`, role `PRIMARY_HISTORICAL_FLOOD_EVIDENCE`,
+period 2011–2023, 13 years): `flood_area_fraction`,
+`flood_years_ge{2,3,4,5}_area_fraction` (share of the cell observed flooded in
+≥ k of the **13** years), `flood_max_years`, `flood_dominant_years`
+(area-weighted), `flood_feature_count`, `flood_distance_m` (cell polygon to
+nearest flood polygon; 0 = touching), and the semantic columns
+`flood_source_id`, `flood_evidence_period`, `flood_record_years`,
+`flood_source_role`. Interpretation and policy refuse evidence whose record
+differs from config. The 2005–2016 layer (`flood-gistda-repeated-2005-2016`,
+`HISTORICAL_CORROBORATION`) is kept as `legacy_flood_2005_2016_*` (≥ k of 12
+years) — context only, never interpreted
+([flood-record-comparison.md](../research/flood-record-comparison.md)).
 
 **Landslide susceptibility** (`landslide-susceptibility-dmr`):
 `landslide_class{1..5}_fraction` using the **publisher's own `gridcode`**
@@ -78,7 +83,7 @@ Logic uses generic tiers `HIGH` / `CAUTION` / `NONE_DETECTED` / `UNRESOLVED`
 |---|---|---|---|---|
 | HIGH | `STRONG_RECURRENT_FLOOD_EVIDENCE` | `HIGH_LANDSLIDE_SUSCEPTIBILITY_EVIDENCE` | `STRONG_TERRAIN_STEEPNESS_CONCERN` | `HIGH_SCREENING_CONCERN` |
 | CAUTION | `OBSERVED_FLOOD_EVIDENCE` | `LANDSLIDE_SUSCEPTIBILITY_CAUTION` | `TERRAIN_STEEPNESS_CAUTION` | `SCREENING_CAUTION` |
-| NONE_DETECTED | `NO_OBSERVED_FLOOD_IN_2005_2016_RECORD` | `NO_HIGH_LANDSLIDE_SUSCEPTIBILITY_DETECTED` | `NO_STRONG_TERRAIN_STEEPNESS_DETECTED` | `NO_HIGH_SCREENING_CONCERN_DETECTED` |
+| NONE_DETECTED | `NO_OBSERVED_FLOOD_IN_2011_2023_RECORD` (period from config) | `NO_HIGH_LANDSLIDE_SUSCEPTIBILITY_DETECTED` | `NO_STRONG_TERRAIN_STEEPNESS_DETECTED` | `NO_HIGH_SCREENING_CONCERN_DETECTED` |
 | UNRESOLVED | `FLOOD_NOT_EVALUATED` | `LANDSLIDE_SUSCEPTIBILITY_NOT_ASSESSED` | `TERRAIN_SUPPORT_INSUFFICIENT` | `UNRESOLVED` |
 
 The M1B terms `HIGH_HAZARD_EVIDENCE` / `NO_HIGH_HAZARD_EVIDENCE_DETECTED` are

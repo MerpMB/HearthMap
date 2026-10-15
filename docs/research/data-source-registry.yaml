@@ -247,47 +247,61 @@ sources:
   name: GISTDA flood recurrence 2011-2023 via API Gateway (ข้อมูลพื้นที่น้ำท่วมซ้ำซาก)
   category: flood
   priority: must_have
-  verification_status: CANDIDATE
-  role: null
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: PRIMARY_HISTORICAL_FLOOD_EVIDENCE
   intended_role: PRIMARY_HISTORICAL_FLOOD_EVIDENCE
   metadata_verified: true
-  data_verified: false
-  acquisition_status: BLOCKED_CREDENTIAL_REQUIRED
-  permitted_uses: []
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
   publisher: GISTDA
-  dataset_title: ข้อมูลพื้นที่น้ำท่วมซ้ำซาก (disasters-01)
+  dataset_title: ข้อมูลพื้นที่น้ำท่วมซ้ำซาก (disasters-01), "flood recurrence in the 13-year cycle (2011-2023)"
   landing_page: https://opendata.gistda.or.th/dataset/disasters-01
   data_endpoint: https://api-gateway.gistda.or.th/api/2.0/resources/gi-service/v1.1/disasters/flood-recurrence
-    (point / geometry query, api_key required)
-  access_method: API only; personal API key from https://api-gateway.gistda.or.th/v2
-  access_restrictions: API key registration required. Catalogue example URLs embed API keys; they were
-    NOT used (not issued to this project).
-  format: JSON API (no bulk download found)
-  source_crs: Not inspected (no data acquired)
-  coverage: Thailand
-  spatial_resolution: Depends on sensor (to confirm)
-  temporal_coverage: 2011-2023 (catalogue description)
-  last_update: Catalogue updated 2026-09-04
+    (query parameter `area` = GeoJSON polygon, or lat/lon; `api_key` required)
+  access_method: 'authenticated GISTDA API; credential_source: environment (.env.local, Git-ignored). 124
+    lon/lat tiles of 0.2 deg covering the three provinces; recorded URLs sanitised (api_key=REDACTED)'
+  access_restrictions: Personal/project API key (GISTDA API Gateway). The key is never recorded in
+    manifests, provenance, reports or Git.
+  format: JSON (list of features with subdistrict/district/province names, `total`, `detail[]` per year,
+    `area`, `geom` GeoJSON); 381 MB raw for the AOI tiles
+  source_crs: Served as GeoJSON lon/lat (EPSG:4326). API `area` equals the polygon area in UTM 47N to
+    1e-12 (ratio median 1.0), suggesting a UTM-based production CRS
+  coverage: Thailand (national); all 124 AOI tiles answered (41 with no flood polygons)
+  spatial_resolution: 20 m (publisher metadata)
+  temporal_coverage: 2011-2023 (13 years; every feature carries exactly the 13 yearly values)
+  last_update: Catalogue metadata modified 2026-09-04; publisher update frequency "Yearly"
   last_verified: '2026-10-15'
-  verification_evidence: Catalogue metadata and access path inspected only; the data itself was not inspected
-    because a personal API key is required. Not VERIFIED.
-  license_or_usage_notes: Open Data Common (catalogue).
-  expected_update_frequency: Event-driven / annual
-  confidence: UNKNOWN
+  verification_evidence: 'Data opened and validated (M1C.1): 167,804 polygons (163,162 intersecting the AOI);
+    0 null/empty/invalid, 0 duplicates, pairwise overlap 1e-6 m2 total (areas additive); yearly freq values
+    only 0/1 and total = sum of yearly freq for every feature (total = years flooded, 1-7 in AOI);
+    feature-cap check: two densest tiles re-requested as quadrants returned identical flooded area per
+    class (ratio 1.000). See outputs/m1c1/flood-2011-2023-qa.json.'
+  license_or_usage_notes: Open Data Common (catalogue). Attribution GISTDA.
+  expected_update_frequency: Yearly (publisher)
+  confidence: MEDIUM
   known_limitations:
   - Satellite observation misses short-lived flash floods and cloud-covered peaks.
   - Absence of observed flooding is NOT evidence of no flood risk.
-  local_raw_path: null
-  processing_status: NOT_ACQUIRED
-  notes: 'BLOCKED on user action: register for a GISTDA API key to evaluate. More recent than the 2005-2016
-    layer actually acquired.'
+  - Publisher description says "frequency of floods in 10-year period" while the record has 13 yearly
+    values; detailed methodology (sensors, thresholds, compositing) is not published.
+  - Ends 2023 (2024-2026 not covered); not current/event flooding.
+  - Polygons are split by sub-district and by the query tile (attributes identical across splits).
+  analytical_suitability: Primary historical observed-flood evidence for regional screening (years flooded
+    of 13); not a hard exclusion on its own.
+  local_raw_path: data/raw/flood-gistda-history/api-2026-10-15/
+  processing_status: PROCESSED
+  notes: Acquired in M1C.1 with a legitimate project key. Supersedes the 2005-2016 layer as PRIMARY; the
+    2005-2016 layer is kept as HISTORICAL_CORROBORATION (context only).
 - id: flood-gistda-repeated-2005-2016
   name: GISTDA repeated flooding areas 2005-2016 (1:50k), observed
   category: flood
   priority: must_have
   verification_status: VERIFIED
-  role: PRIMARY
-  evidence_role: TEMPORARY_HISTORICAL_EVIDENCE
+  role: SECONDARY
+  evidence_role: HISTORICAL_CORROBORATION
   metadata_verified: true
   data_verified: true
   acquisition_status: ACQUIRED
@@ -321,8 +335,9 @@ sources:
     exclusion on its own.
   local_raw_path: data/raw/flood-gistda-repeated-2005-2016/service-2026-10-15/
   processing_status: PROCESSED
-  notes: Usable now as TEMPORARY historical observed-flood evidence (ends 2016). Intended to be superseded
-    by flood-gistda-history (2011-2023) once a legitimate project API key exists.
+  notes: 'M1C.1: reclassified from PRIMARY/TEMPORARY_HISTORICAL_EVIDENCE to SECONDARY/HISTORICAL_CORROBORATION
+    (legacy historical evidence). Kept, not deleted: per-cell legacy_flood_2005_2016_* context columns; never
+    read by interpretation or policy. Primary flood evidence is now flood-gistda-history (2011-2023).'
 - id: flood-gistda-event
   name: GISTDA current/event flood extents (1/3/7/30-day) and STAC catalogs
   category: flood

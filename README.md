@@ -14,12 +14,20 @@ priority over visually impressive output.
 
 ## Status
 
+**M1C.1 — Flood truth refresh.** Primary flood evidence is now GISTDA observed
+flooding 2011–2023 (2005–2016 kept as corroboration); policy 0.2.0 re-run for
+all profiles, still with **no profile selected**. Human visual sign-off M1A.1
+and M1B: PASSED. See
+[m1c1-flood-refresh-report.md](docs/research/m1c1-flood-refresh-report.md).
+The GISTDA API key lives only in the Git-ignored `.env.local` (template:
+`.env.example`).
+
 **M1C — Hydrogeomorphic hazard screening policy (provisional).** A regional
 screening ladder over the M1B evidence with three sensitivity profiles
 (CONSERVATIVE / BALANCED / PERMISSIVE); **no profile is selected** and outcomes
 never mean safe, buildable or rejected. Hydrogeomorphic screening only (flood
 observed 2005–2016, landslide susceptibility, DSM terrain); not a complete
-natural-hazard assessment. Human visual sign-off for M1A.1 and M1B is PENDING.
+natural-hazard assessment.
 See [m1c-hazard-policy-report.md](docs/research/m1c-hazard-policy-report.md).
 
 Before that, **M1B — Hazard evidence (provisional).** Per-cell flood, landslide (DMR) and DSM-terrain evidence with provisional, explainable interpretations; experimental exclusion candidates and threshold sensitivity only. No exclusions, scores or recommendations; M1A.1 human visual sign-off is PENDING. See [m1b-hazard-evidence-report.md](docs/research/m1b-hazard-evidence-report.md).

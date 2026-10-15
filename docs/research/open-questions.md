@@ -86,6 +86,21 @@ delete them here.
     and agree a documented seismic methodology before `hazard_resilience` may
     be scored.
 
+## Raised by M1C.1 (2026-10-15) — flood refresh
+
+34. The 2011-2023 record shows less observed flooding than 2005-2016 in the AOI
+    (any: 2,629 vs 3,570 km2; >= 3 years: 286 vs 605 km2), and 6,387 cells have
+    observed flooding only in the legacy record. Is this a real change, a
+    resolution/method effect (20 m vs 1:50k), or the 2011 extreme year sitting in
+    both? Should legacy-only positive evidence raise a cell to
+    REQUIRES_VERIFICATION (currently context only)?
+35. Is ">= 3 of 13 years" the right recurrence definition for the new record,
+    or should it be recalibrated (e.g. >= 2 of 13, which flags 5.4% of the AOI
+    at 10% cover vs 1.8% for >= 3)?
+36. Cells that lost their only (flood) signal and lie outside DMR landslide
+    coverage become UNRESOLVED (BALANCED +259 km2). Should lowland cells
+    without DMR coverage be treated as a known gap rather than unresolved?
+
 ## Process
 
 21. Who validates outputs in QGIS, and against which known places?
