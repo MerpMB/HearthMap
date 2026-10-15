@@ -127,6 +127,8 @@ def test_repository_registry_verification_state_m1a():
         # M1B (2026-10-15)
         "landslide-susceptibility-dmr",
         "landslide-inventory-dmr",
+        # M1C.1 (2026-10-15), data opened with a project API key
+        "flood-gistda-history",
     }
     # Every verified source was actually acquired and processed locally.
     assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)
@@ -198,13 +200,16 @@ def test_load_registry_wraps_errors(tmp_path: Path):
 
 def test_flood_sources_have_explicit_temporal_roles():
     reg = load_registry(REGISTRY_PATH)
-    current = reg.get("flood-gistda-repeated-2005-2016")
-    assert current.evidence_role == "TEMPORARY_HISTORICAL_EVIDENCE"
+    legacy = reg.get("flood-gistda-repeated-2005-2016")
+    assert legacy.evidence_role == "HISTORICAL_CORROBORATION"
+    assert legacy.role == "SECONDARY" and legacy.data_verified  # kept, not deleted
     newer = reg.get("flood-gistda-history")
-    assert newer.metadata_verified and not newer.data_verified
-    assert newer.acquisition_status == "BLOCKED_CREDENTIAL_REQUIRED"
-    assert newer.intended_role == "PRIMARY_HISTORICAL_FLOOD_EVIDENCE"
-    assert newer.verification_status != VerificationStatus.VERIFIED
+    assert newer.metadata_verified and newer.data_verified
+    assert newer.acquisition_status == "ACQUIRED"
+    assert newer.evidence_role == "PRIMARY_HISTORICAL_FLOOD_EVIDENCE" and newer.role == "PRIMARY"
+    assert newer.verification_status == VerificationStatus.VERIFIED
+    # the credential is described, never recorded
+    assert "credential_source: environment" in newer.access_method
 
 
 def test_verified_requires_data_verified():
@@ -217,7 +222,7 @@ def test_verified_requires_data_verified():
 
 def test_data_verified_requires_acquisition():
     raw = _raw_registry()
-    entry = next(e for e in raw["sources"] if e["id"] == "flood-gistda-history")
+    entry = next(e for e in raw["sources"] if e["id"] == "flood-gistda-event")
     entry["data_verified"] = True
     with pytest.raises(ValidationError, match="acquired"):
         DataSourceRegistry.model_validate(raw)
