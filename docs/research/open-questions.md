@@ -67,6 +67,25 @@ delete them here.
     complementary evidence (local flood marks, DDPM records, modelled hazard)
     is needed before any flood constraint may become definitive?
 
+## Raised by M1C (2026-10-15) — policy selection
+
+29. Which screening profile (CONSERVATIVE / BALANCED / PERMISSIVE), if any,
+    should the family adopt? ~17% of the AOI changes outcome between BALANCED
+    and either neighbour, so this is a real decision, not a formality.
+30. The summed High+Very High landslide rule drives ~70% of BALANCED
+    `REGIONAL_DEPRIORITIZE` cells. Is "High" (not only "Very High") DMR
+    susceptibility an acceptable basis for deprioritizing a region, given the
+    DMR methodology is unpublished?
+31. `REQUIRES_VERIFICATION` covers ~57-59% of the AOI under every profile
+    (mostly terrain/landslide-medium signals). Is that useful for regional
+    search, or should verification be split by kind before M2?
+32. ~90% of recurrently flooded cells lie where DMR landslide susceptibility
+    was not assessed (lowlands). Is "not assessed" in floodplains acceptable as
+    a known gap, rather than a critical unresolved state?
+33. Seismic: acquire the DMR active-fault traces (`seismic-active-faults-dmr`)
+    and agree a documented seismic methodology before `hazard_resilience` may
+    be scored.
+
 ## Process
 
 21. Who validates outputs in QGIS, and against which known places?

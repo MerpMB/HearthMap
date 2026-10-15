@@ -2,7 +2,7 @@
 
 > Committed copy of `outputs/m1b-review/README.md`; images live in the untracked review folder.
 
-**Status:** PROVISIONAL hazard *evidence* — not a decision. No exclusions, scores or rankings. `M1A1_HUMAN_VISUAL_SIGNOFF = PENDING` (only the builder has looked at the M1A.1 maps), so no rule here may be promoted to a DECISION_RULE. `NO_HIGH_HAZARD_EVIDENCE_DETECTED` never means safe.
+**Status:** PROVISIONAL hazard *evidence* — not a decision. No exclusions, scores or rankings. `M1A1_HUMAN_VISUAL_SIGNOFF = PENDING` (only the builder has looked at the M1A.1 maps), so no rule here may be promoted to a DECISION_RULE. `NO_HIGH_SCREENING_CONCERN_DETECTED` never means safe.
 
 Model and field semantics: `docs/product/hazard-evidence-model.md`; terrain method: `docs/architecture/terrain-methods.md`; thresholds: `config/hazard.yaml`.
 
@@ -19,7 +19,7 @@ Province rows use each cell's majority province; 1,442 cells carry the M1A.1 bou
 
 Overall categorical state (worst hazard wins, never averaged):
 
-| scope | HIGH_HAZARD_EVIDENCE | CAUTION | UNRESOLVED | NO_HIGH_HAZARD_EVIDENCE_DETECTED |
+| scope | HIGH_SCREENING_CONCERN | SCREENING_CAUTION | UNRESOLVED | NO_HIGH_SCREENING_CONCERN_DETECTED |
 |---|---|---|---|---|
 | AOI | 52,269 | 79,836 | 17,415 | 12,553 |
 | Chiang Mai | 33,101 | 43,622 | 5,403 | 7,975 |
@@ -104,23 +104,23 @@ Terrain is the most brittle candidate (25 -> 30 -> 35 deg moves the flagged shar
 
 ## Boundary context (Wiang Pa Pao)
 
-Cells in GISTDA zones gistda-50k-0008/0009 keep their physical hazard evidence ({'CAUTION': 28, 'HIGH_HAZARD_EVIDENCE': 8}); only their province attribution is uncertain.
+Cells in GISTDA zones gistda-50k-0008/0009 keep their physical hazard evidence ({'SCREENING_CAUTION': 28, 'HIGH_SCREENING_CONCERN': 8}); only their province attribution is uncertain.
 
 ## Files
 
 | File | Bytes |
 |---|---:|
 | experimental-exclusion-candidates.parquet | 962,171 |
-| hazard-data-dictionary.csv | 9,807 |
-| hazard-evidence.parquet | 22,694,335 |
-| hazard-statistics.json | 12,074 |
-| hearthmap-hazard-evidence.gpkg | 142,336,000 |
+| hazard-data-dictionary.csv | 11,494 |
+| hazard-evidence.parquet | 22,878,814 |
+| hazard-statistics.json | 12,806 |
+| hearthmap-hazard-evidence.gpkg | 155,471,872 |
 | hearthmap-hazard-evidence.gpkg.provenance.json | 4,257 |
 | threshold-sensitivity.csv | 9,138 |
 | m1b-review/experimental-exclusion-sensitivity.png | 168,178 |
-| m1b-review/flood-evidence.png | 183,056 |
-| m1b-review/landslide-evidence.png | 231,357 |
-| m1b-review/multi-hazard-evidence.png | 234,330 |
+| m1b-review/flood-evidence.png | 184,354 |
+| m1b-review/landslide-evidence.png | 232,399 |
+| m1b-review/multi-hazard-evidence.png | 235,507 |
 | m1b-review/terrain-slope-support.png | 652,633 |
 | m1b-review/unknown-incomplete-evidence.png | 138,405 |
 | m1b-review/waterway-context.png | 433,601 |

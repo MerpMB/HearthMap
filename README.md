@@ -14,7 +14,15 @@ priority over visually impressive output.
 
 ## Status
 
-**M1B — Hazard evidence (provisional).** Per-cell flood, landslide (DMR) and DSM-terrain evidence with provisional, explainable interpretations; experimental exclusion candidates and threshold sensitivity only. No exclusions, scores or recommendations; M1A.1 human visual sign-off is PENDING. See [m1b-hazard-evidence-report.md](docs/research/m1b-hazard-evidence-report.md).
+**M1C — Hydrogeomorphic hazard screening policy (provisional).** A regional
+screening ladder over the M1B evidence with three sensitivity profiles
+(CONSERVATIVE / BALANCED / PERMISSIVE); **no profile is selected** and outcomes
+never mean safe, buildable or rejected. Hydrogeomorphic screening only (flood
+observed 2005–2016, landslide susceptibility, DSM terrain); not a complete
+natural-hazard assessment. Human visual sign-off for M1A.1 and M1B is PENDING.
+See [m1c-hazard-policy-report.md](docs/research/m1c-hazard-policy-report.md).
+
+Before that, **M1B — Hazard evidence (provisional).** Per-cell flood, landslide (DMR) and DSM-terrain evidence with provisional, explainable interpretations; experimental exclusion candidates and threshold sensitivity only. No exclusions, scores or recommendations; M1A.1 human visual sign-off is PENDING. See [m1b-hazard-evidence-report.md](docs/research/m1b-hazard-evidence-report.md).
 
 Previously: **M1A — Geography truth.** M0 built the foundation; M0.1 corrected it
 (datum-transformation contract, legal vs screening evidence, ranking

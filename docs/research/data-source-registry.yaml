@@ -490,29 +490,62 @@ sources:
   processing_status: NOT_ACQUIRED
   notes: 'Modelled impact areas (a third concept: neither susceptibility nor events). Deferred from M1B;
     near the size guard - prefer an AOI subset via the MapServer.'
-- id: seismic-active-faults
-  name: Active fault lines
+- id: seismic-active-faults-dmr
+  name: DMR active fault zones of Thailand (fault traces)
   category: seismic
-  priority: later
-  verification_status: NEEDS_RESEARCH
+  priority: must_have
+  verification_status: CANDIDATE
   role: null
+  evidence_role: ACTIVE_FAULT_TRACES
+  intended_role: REQUIRED_FOR_NATURAL_HAZARD_RESILIENCE_COMPLETENESS
+  metadata_verified: true
+  data_verified: false
+  acquisition_status: DEFERRED
   permitted_uses: []
-  publisher: Department of Mineral Resources (DMR) - to confirm
-  landing_page: null
-  access_method: null
-  format: null
-  coverage: null
-  spatial_resolution: null
-  temporal_coverage: null
-  last_verified: null
-  license_or_usage_notes: null
-  expected_update_frequency: null
+  publisher: Department of Mineral Resources (DMR)
+  dataset_title: THA_DMR_ZONE_ACTIVEFAULT_WMS (active fault zones; DMR 2012 map, 14 zones)
+  landing_page: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD
+  data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/THA_DMR_ZONE_ACTIVEFAULT_WMS/MapServer/0
+  access_method: Public ArcGIS REST MapServer (query supported)
+  format: Polyline features, 640 segments
+  source_crs: EPSG:32647 (service spatial reference)
+  coverage: Thailand; zones include Mae Chan, Mae Ing, Mae Tha, Phayao (in/near the AOI)
+  last_verified: '2026-10-15'
+  verification_evidence: Service and layer metadata inspected (fields F_ZONE_ID, F_ZONE_T/E, F_NAME_T/E,
+    TYPE, STRIKE, DIP, LENGTH_KM, MCE, TRENCHSITE, TRENCHLAT, TRENCHLONG, SLIP_RATE; count 640). Data
+    NOT downloaded or inspected; licence not stated on the service. A DMR 2023 presentation lists 14 active
+    fault zones (DMR 2012).
+  license_or_usage_notes: Not stated on the service; DMR open data catalogue uses CC BY - to confirm for
+    this layer
   confidence: UNKNOWN
-  known_limitations: []
-  local_raw_path: null
+  known_limitations:
+  - 'Fault traces alone are not an earthquake hazard model: distance-to-fault must NOT be used as an earthquake-risk
+    score without a documented methodology (ground motion, site effects, building code zones).'
+  - 'Related DMR services: T_ACTIVEFAULT = 1,329 sub-district points within 20 km of active faults (a
+    proximity listing, not a hazard surface); EQ_ZONE = 427 Modified Mercalli intensity zone polygons.'
+  analytical_suitability: Required before the Natural Hazard Resilience dimension can be considered complete
+    enough for suitability scoring.
   processing_status: NOT_ACQUIRED
-  notes: Northern Thailand has recorded damaging earthquakes; use as context/score signal, not an exclusion,
-    unless a meaningful fault-setback rule is found.
+  notes: Supersedes placeholder 'seismic-active-faults'. Not ingested in M1C.
+- id: seismic-intensity-zones-dmr
+  name: DMR earthquake intensity zones (Modified Mercalli)
+  category: seismic
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  evidence_role: SEISMIC_INTENSITY_ZONES
+  metadata_verified: true
+  data_verified: false
+  acquisition_status: DEFERRED
+  permitted_uses: []
+  publisher: Department of Mineral Resources (DMR)
+  landing_page: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/EQ_ZONE/MapServer
+  format: Polygons, 427 features (fields INTENSITY, INTEN_T)
+  source_crs: EPSG:32647 (service)
+  last_verified: '2026-10-15'
+  confidence: UNKNOWN
+  processing_status: NOT_ACQUIRED
+  notes: Methodology/vintage unknown; candidate input for a future seismic dimension.
 - id: rivers-osm
   name: OpenStreetMap waterways
   category: hydrology

@@ -25,6 +25,17 @@ provisional categorical interpretation, experimental exclusion candidates and
 threshold sensitivity. Next: hazard policy review (thresholds, which evidence
 may ever become definitive) - blocked on M1A.1 human visual sign-off.
 
+## M1C — Hydrogeomorphic hazard screening policy v0.1 (done, provisional)
+
+Corrected terminology (hazard-specific labels, `HIGH_SCREENING_CONCERN`,
+dataset-evaluated vs positive evidence), a regional screening ladder
+(`NO_MAJOR_CONCERN_DETECTED` … `REGIONAL_DEPRIORITIZE`, `UNRESOLVED`) with
+reason codes and explanations, three sensitivity profiles, fragmentation
+diagnostics and the Natural Hazard Resilience scope statement (hydrogeomorphic
+only; seismic required before scoring). No profile is selected. Next: human
+policy selection, after M1A.1 and M1B visual sign-off. See
+[m1c-hazard-policy-report.md](../research/m1c-hazard-policy-report.md).
+
 ## M1 — Regional hazard + infrastructure scan
 
 - Acquire and register: admin boundaries, DEM, flood history/hazard, landslide
