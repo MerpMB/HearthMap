@@ -23,7 +23,7 @@ POTENTIALLY_MATERIAL_OFFSET_M = 1000.0
 BORDER_PROXIMITY_M = 100.0
 
 
-def _segments_tree(geom: shapely.Geometry) -> shapely.STRtree:
+def segments_tree(geom: shapely.Geometry) -> shapely.STRtree:
     coords = [shapely.get_coordinates(g) for g in shapely.get_parts(geom)]
     segs = np.concatenate(
         [shapely.linestrings(np.stack([c[:-1], c[1:]], axis=1)) for c in coords if len(c) > 1]
@@ -31,7 +31,7 @@ def _segments_tree(geom: shapely.Geometry) -> shapely.STRtree:
     return shapely.STRtree(segs)
 
 
-def _sample_boundary(poly: shapely.Geometry, step: float) -> np.ndarray:
+def sample_boundary(poly: shapely.Geometry, step: float) -> np.ndarray:
     pts = []
     for ring in shapely.get_parts(shapely.line_merge(poly.boundary)):
         n = max(int(ring.length // step), 4)
@@ -92,14 +92,14 @@ def disagreement_zones(
                 f"{reference_name}: expected one feature for {p[key]}, got {len(match)}"
             )
         a, b = p.geometry, match.geometry.iloc[0]
-        tree = _segments_tree(a.boundary)
+        tree = segments_tree(a.boundary)
         others = primary[primary[key] != p[key]]
         others_union = shapely.union_all(others.geometry.values) if len(others) else None
         for kind, diff in (("primary_only", a.difference(b)), ("reference_only", b.difference(a))):
             for part in shapely.get_parts(diff):
                 if part.area < min_area_m2:
                     continue
-                pts = _sample_boundary(part, sample_step_m)
+                pts = sample_boundary(part, sample_step_m)
                 _, d = tree.query_nearest(pts, return_distance=True, all_matches=False)
                 far = d[d > 1.0]
                 border_type = "neighbour_province"
@@ -189,4 +189,47 @@ def uncertainty_cells(
         return out.iloc[0:0]
     out = out[(out[flags] > 0).any(axis=1)].copy()
     out["references_disagreeing"] = (out[flags] > 0).sum(axis=1)
+    return out
+
+
+def corroborate_zones(
+    zones: gpd.GeoDataFrame,
+    primary: gpd.GeoDataFrame,
+    references: dict[str, gpd.GeoDataFrame],
+    *,
+    key: str,
+    distance_m: float = 250.0,
+    sample_step_m: float = 50.0,
+    only: np.ndarray | None = None,
+) -> np.ndarray:
+    """Share of each zone's ALTERNATIVE edge lying within ``distance_m`` of the OTHER
+    reference's boundary (same province).
+
+    The alternative edge is the part of the zone outline not on the primary boundary,
+    i.e. the reference's own line. 1.0 = the other reference follows the same
+    alternative line; 0.0 = it does not. NaN where not computed. Evidence about which
+    source is the outlier, not proof (references may share lineage).
+    """
+    prim = {k: segments_tree(g.geometry.iloc[0].boundary) for k, g in primary.groupby(key)}
+    other = {
+        (n, k): segments_tree(g.geometry.iloc[0].boundary)
+        for n, gdf in references.items()
+        for k, g in gdf.groupby(key)
+    }
+    out = np.full(len(zones), np.nan)
+    for pos, (_, r) in enumerate(zones.iterrows()):
+        if only is not None and not only[pos]:
+            continue
+        others = [n for n in references if n != r["reference_source"]]
+        if not others or (others[0], r["province"]) not in other:
+            continue
+        pts = sample_boundary(r.geometry, sample_step_m)
+        _, d_p = prim[r["province"]].query_nearest(pts, return_distance=True, all_matches=False)
+        alt = pts[d_p > 1.0]
+        if len(alt) == 0:
+            continue
+        _, d_o = other[(others[0], r["province"])].query_nearest(
+            alt, return_distance=True, all_matches=False
+        )
+        out[pos] = float((d_o <= distance_m).mean())
     return out

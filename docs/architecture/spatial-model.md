@@ -109,6 +109,29 @@ but severe hazard (a 10 m channel along a cell edge) appears as
 (`hearthmap.spatial.overlay.polygon_cell_metrics`, tested). A fraction of 0
 means "no mapped feature", never "no hazard".
 
+### 4.2 Area terminology and invariant (M1A.1)
+
+Never call `cell_count × cell_area` "grid area" when edge cells exist:
+
+| Term | Definition |
+|---|---|
+| `raw_cell_footprint_area` | n_cells × cell area (includes overhang outside the boundary) |
+| `clipped_coverage_area` | Σ cell area × coverage_fraction |
+| `boundary_area` | area of the boundary polygon(s) |
+| `edge_overhang_area` | raw_cell_footprint_area − clipped_coverage_area |
+| `coverage_difference` | clipped_coverage_area − boundary_area |
+
+Invariant: `|coverage_difference| ≤ 1 m² + 1e-9 × boundary_area`
+(`hearthmap.qa.coverage_accounting`; the M1A build fails if it is violated).
+
+### 4.3 Boundary uncertainty (M1A.1)
+
+`boundary_uncertainty_review` marks cells intersecting zones where an
+independent reference departs from COD-AB by ≥ 250 m (half a cell). It is a
+**review layer** (`review_only`, `decision_use = NONE`): overlays refuse it and
+scores cannot cite it. It signals caution about a cell's administrative
+attribution, never a hazard or restriction. COD-AB remains unchanged.
+
 ## 5. Analysis units other than the grid
 
 | Operation | Natural unit |

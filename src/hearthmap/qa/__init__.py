@@ -4,7 +4,7 @@ Everything here is DESCRIPTIVE. Review layers produced with these helpers are
 marked ``review_only`` and are refused as inputs to overlays and scoring.
 """
 
-from hearthmap.qa.boundary import disagreement_zones, uncertainty_cells
+from hearthmap.qa.boundary import corroborate_zones, disagreement_zones, uncertainty_cells
 from hearthmap.qa.coverage import CoverageAccounting, coverage_accounting
 from hearthmap.qa.distribution import threshold_distribution
 from hearthmap.qa.overlaps import category_area_combinations, category_cell_combinations
@@ -26,6 +26,7 @@ __all__ = [
     "audit_repairs",
     "category_area_combinations",
     "category_cell_combinations",
+    "corroborate_zones",
     "coverage_accounting",
     "disagreement_zones",
     "is_review_layer",

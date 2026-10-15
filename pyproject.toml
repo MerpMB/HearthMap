@@ -48,3 +48,5 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF"]
 [tool.ruff.lint.per-file-ignores]
 # Markdown table rows in the generated report are long by nature.
 "scripts/m1a/package.py" = ["E501"]
+# Generated Markdown prose/tables (contains typographic symbols such as x and en dashes).
+"scripts/m1a1/write_readme.py" = ["E501", "RUF001"]

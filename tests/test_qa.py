@@ -19,6 +19,7 @@ from hearthmap.qa import (
     audit_repairs,
     category_area_combinations,
     category_cell_combinations,
+    corroborate_zones,
     coverage_accounting,
     disagreement_zones,
     is_review_layer,
@@ -260,3 +261,16 @@ def test_repair_audit_serialises_roundtrip():
 def test_repair_audit_of_valid_layer_is_empty():
     audit = audit_repairs(_gdf([box(X0, Y0, X0 + 1, Y0 + 1)], fid=[1]), id_column="fid")
     assert audit.empty and "source_feature_id" in audit.columns
+
+
+def test_corroboration_measures_line_agreement_not_area_overlap():
+    primary = _province(box(X0, Y0, X0 + 3000, Y0 + 3000))
+    ref_a = _province(box(X0, Y0, X0 + 3400, Y0 + 3000))  # east edge +400 m
+    ref_b = _province(box(X0, Y0, X0 + 3420, Y0 + 3000))  # same alternative line (+420 m)
+    ref_c = _province(box(X0, Y0, X0 + 5000, Y0 + 3000))  # zone overlaps, line far away
+    za = disagreement_zones(primary, ref_a, key="code", reference_name="a")
+    agree = corroborate_zones(za, primary, {"a": ref_a, "b": ref_b}, key="code")
+    disagree = corroborate_zones(za, primary, {"a": ref_a, "c": ref_c}, key="code")
+    assert agree[0] == pytest.approx(1.0)
+    # Area overlap alone must not count: only the short shared top/bottom edges agree.
+    assert disagree[0] < 0.5 < agree[0]
