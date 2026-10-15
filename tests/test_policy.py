@@ -29,10 +29,14 @@ S = RegionalSearchStatus
 def cell(**o) -> dict:
     base = {
         "flood_area_fraction": 0.0,
-        "flood_freq_ge2_area_fraction": 0.0,
-        "flood_freq_ge3_area_fraction": 0.0,
-        "flood_freq_ge5_area_fraction": 0.0,
+        "flood_years_ge2_area_fraction": 0.0,
+        "flood_years_ge3_area_fraction": 0.0,
+        "flood_years_ge4_area_fraction": 0.0,
+        "flood_years_ge5_area_fraction": 0.0,
         "flood_distance_m": 5000.0,
+        "flood_source_id": "flood-gistda-history",
+        "flood_evidence_period": "2011-2023",
+        "flood_record_years": 13,
         "landslide_assessed_fraction": 1.0,
         "landslide_class3_fraction": 0.0,
         "landslide_class4_fraction": 0.0,
@@ -61,10 +65,11 @@ def run(profile: str, *cells: dict) -> pd.DataFrame:
 # ======================================================== config / gates
 
 
-def test_policy_is_provisional_without_default_while_gates_pending():
+def test_policy_is_provisional_without_default_profile():
+    # gates PASSED (M1C.1) but no profile has been selected
     assert CFG.status == "PROVISIONAL" and CFG.default_profile is None
-    assert CFG.gates.m1a1_human_visual_signoff == "PENDING"
-    assert CFG.gates.m1b_human_visual_signoff == "PENDING"
+    assert CFG.gates.m1a1_human_visual_signoff == "PASSED"
+    assert CFG.gates.m1b_human_visual_signoff == "PASSED"
     assert CFG.scope == "HYDROGEOMORPHIC"
 
 
@@ -74,10 +79,12 @@ def _raw() -> dict:
 
 def test_default_profile_cannot_be_set_while_gates_pending():
     raw = _raw()
+    raw["gates"]["m1b_human_visual_signoff"] = "PENDING"
     raw["default_profile"] = "BALANCED"
     with pytest.raises(ValidationError, match="PENDING"):
         HazardPolicyConfig.model_validate(raw)
     raw = _raw()
+    raw["gates"]["m1a1_human_visual_signoff"] = "PENDING"
     raw["status"] = "ACCEPTED"
     with pytest.raises(ValidationError, match="PENDING"):
         HazardPolicyConfig.model_validate(raw)
@@ -93,7 +100,7 @@ def test_terrain_may_never_deprioritize_alone_in_config():
 def test_flood_cannot_claim_contemporary_completeness():
     raw = _raw()
     raw["source_requirements"]["flood"]["contemporary_complete"] = True
-    with pytest.raises(ValidationError, match="2016"):
+    with pytest.raises(ValidationError, match="contemporary_complete"):
         HazardPolicyConfig.model_validate(raw)
 
 
@@ -146,7 +153,7 @@ def test_positive_evidence_stays_visible_despite_incomplete_landslide():
         "BALANCED",
         cell(
             landslide_assessed_fraction=0.0,
-            flood_freq_ge3_area_fraction=0.3,
+            flood_years_ge3_area_fraction=0.3,
             flood_area_fraction=0.4,
         ),
     ).iloc[0]
@@ -219,14 +226,16 @@ def test_severe_single_hazard_is_not_averaged_away(profile):
 
 def test_multiple_strong_hazards_escalate_where_configured():
     c = cell(
-        flood_freq_ge3_area_fraction=0.2, flood_area_fraction=0.3, landslide_class5_fraction=0.3
+        flood_years_ge3_area_fraction=0.2, flood_area_fraction=0.3, landslide_class5_fraction=0.3
     )
     assert run("BALANCED", c).iloc[0]["regional_search_status"] == S.REGIONAL_DEPRIORITIZE
     assert "MULTIPLE_STRONG_HAZARD_SIGNALS" in run("BALANCED", c).iloc[0]["hazard_reason_codes"]
     perm = run(
         "PERMISSIVE",
         cell(
-            flood_freq_ge3_area_fraction=0.3, flood_area_fraction=0.3, landslide_class5_fraction=0.6
+            flood_years_ge3_area_fraction=0.3,
+            flood_area_fraction=0.3,
+            landslide_class5_fraction=0.6,
         ),
     ).iloc[0]
     assert perm["regional_search_status"] == S.STRONG_REGIONAL_CONCERN
@@ -254,7 +263,7 @@ def test_context_never_changes_policy(ctx, profile):
         cell(),
         cell(landslide_class5_fraction=0.6),
         cell(landslide_assessed_fraction=0),
-        cell(flood_freq_ge3_area_fraction=0.6, flood_area_fraction=0.6),
+        cell(flood_years_ge3_area_fraction=0.6, flood_area_fraction=0.6),
     ):
         pd.testing.assert_frame_equal(run(profile, base), run(profile, base | ctx))
 
@@ -314,7 +323,7 @@ def test_every_emitted_reason_code_has_a_template():
             landslide_inventory_distance_m=0,
             slope_p90_deg=50,
         ),
-        cell(flood_freq_ge3_area_fraction=0.8, flood_area_fraction=0.9),
+        cell(flood_years_ge3_area_fraction=0.8, flood_area_fraction=0.9),
         cell(landslide_assessed_fraction=0.2, terrain_support_px=0.5),
         cell(landslide_assessed_fraction=0.7, terrain_support_px=5),
     ]
@@ -334,10 +343,10 @@ def test_every_emitted_reason_code_has_a_template():
 def test_profiles_obey_configuration_thresholds():
     # flood recurrent fraction 0.15: CONSERVATIVE (strong .05, dep .25) STRONG;
     # BALANCED (strong .10) STRONG; PERMISSIVE (strong .25) only VERIFY
-    c = cell(flood_freq_ge3_area_fraction=0.15, flood_area_fraction=0.15)
+    c = cell(flood_years_ge3_area_fraction=0.15, flood_area_fraction=0.15)
     got = {p: run(p, c).iloc[0]["flood_policy_level"] for p in PROFILES}
     assert got == {"CONSERVATIVE": "STRONG", "BALANCED": "STRONG", "PERMISSIVE": "VERIFY"}
-    c2 = cell(flood_freq_ge3_area_fraction=0.3, flood_area_fraction=0.3)
+    c2 = cell(flood_years_ge3_area_fraction=0.3, flood_area_fraction=0.3)
     assert run("CONSERVATIVE", c2).iloc[0]["flood_policy_level"] == "DEPRIORITIZE"
 
 
@@ -345,7 +354,7 @@ def test_profiles_are_monotone_on_a_grid_of_cases():
     rng = np.random.default_rng(0)
     cases = [
         cell(
-            flood_freq_ge3_area_fraction=a,
+            flood_years_ge3_area_fraction=a,
             flood_area_fraction=a,
             landslide_class4_fraction=b,
             landslide_class5_fraction=c,

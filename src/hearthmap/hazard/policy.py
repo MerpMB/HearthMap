@@ -13,7 +13,10 @@ Decision ladder (``regional_search_status``):
 Exact rule (per profile, all thresholds in config/hazard-policy.yaml):
 
 1. Each hazard gets a concern level NONE < VERIFY < STRONG < DEPRIORITIZE:
-   flood      DEPRIORITIZE if recurrent-flood fraction >= deprioritize_min_fraction,
+   flood      recurrent-flood fraction = share of the cell observed flooded in >=
+              min_years_flooded of the primary record's years (source, period and
+              record length in source_requirements.flood; checked against the
+              evidence). DEPRIORITIZE if >= deprioritize_min_fraction,
               STRONG if >= strong_min_fraction, VERIFY if any observed flooding
               >= verify_min_fraction or within verify_distance_m.
    landslide  DEPRIORITIZE if Very High >= very_high_deprioritize or High+Very High
@@ -80,9 +83,10 @@ _STATUS_FOR_LEVEL = {
 
 POLICY_INPUTS = (
     "flood_area_fraction",
-    "flood_freq_ge2_area_fraction",
-    "flood_freq_ge3_area_fraction",
-    "flood_freq_ge5_area_fraction",
+    "flood_years_ge2_area_fraction",
+    "flood_years_ge3_area_fraction",
+    "flood_years_ge4_area_fraction",
+    "flood_years_ge5_area_fraction",
     "flood_distance_m",
     "landslide_assessed_fraction",
     "landslide_class3_fraction",
@@ -103,7 +107,8 @@ class _M(BaseModel):
 
 
 class FloodRule(_M):
-    recurrence_years: Literal[2, 3, 5]
+    # observed flooded in >= this many years of FloodSourceRequirement.record_years
+    min_years_flooded: Literal[2, 3, 4, 5]
     strong_min_fraction: float = Field(gt=0, le=1)
     deprioritize_min_fraction: float = Field(gt=0, le=1)
     verify_min_fraction: float = Field(gt=0, le=1)
@@ -164,9 +169,22 @@ class Unresolved(_M):
     terrain_low_support_px: float = Field(gt=0)
 
 
+class FloodSourceRequirement(_M):
+    """The flood record the thresholds refer to - stated, never implied."""
+
+    source_id: str
+    evidence_role: Literal["PRIMARY_HISTORICAL_FLOOD_EVIDENCE"]
+    period: str
+    record_years: int = Field(ge=1)
+    source_native_metric: str
+    derived_threshold_semantics: str
+    contemporary_complete: Literal[False]
+    corroborating_source: dict
+
+
 class PolicyGates(_M):
-    m1a1_human_visual_signoff: Literal["PENDING", "SIGNED_OFF"]
-    m1b_human_visual_signoff: Literal["PENDING", "SIGNED_OFF"]
+    m1a1_human_visual_signoff: Literal["PENDING", "PASSED"]
+    m1b_human_visual_signoff: Literal["PENDING", "PASSED"]
 
 
 class HazardPolicyConfig(_M):
@@ -203,13 +221,38 @@ class HazardPolicyConfig(_M):
             raise ValueError(f"unknown default_profile {self.default_profile}")
         if self.source_requirements.get("terrain", {}).get("may_deprioritize_alone") is not False:
             raise ValueError("DSM terrain may never deprioritize alone in v0.1")
-        if self.source_requirements.get("flood", {}).get("contemporary_complete") is not False:
-            raise ValueError("flood evidence ends in 2016; contemporary_complete must be false")
+        fl = self.flood_source  # validates the flood requirement block
+        for name, prof in self.profiles.items():
+            if prof.flood.min_years_flooded > fl.record_years:
+                raise ValueError(f"{name}: min_years_flooded exceeds the flood record length")
         for word in FORBIDDEN_OUTCOME_WORDS:
             for code in self.reason_codes:
                 if word in code.split("_") or code.startswith(word):
                     raise ValueError(f"reason code {code} uses forbidden wording {word}")
         return self
+
+    @property
+    def flood_source(self) -> FloodSourceRequirement:
+        return FloodSourceRequirement.model_validate(self.source_requirements.get("flood", {}))
+
+
+def check_flood_evidence(evidence: pd.DataFrame, cfg: HazardPolicyConfig) -> None:
+    """The evidence must come from the flood record the thresholds were written for."""
+    fl = cfg.flood_source
+    expected = {
+        "flood_source_id": fl.source_id,
+        "flood_evidence_period": fl.period,
+        "flood_record_years": fl.record_years,
+    }
+    for col, want in expected.items():
+        if col not in evidence.columns:
+            raise KeyError(f"evidence lacks flood semantic column {col}")
+        got = set(pd.unique(evidence[col]))
+        if got != {want}:
+            raise ValueError(
+                f"{col} = {sorted(map(str, got))} but the policy expects {want!r}; "
+                "refusing to reuse flood thresholds with a different meaning"
+            )
 
 
 def load_policy_config(path: Path | str = "config/hazard-policy.yaml") -> HazardPolicyConfig:
@@ -236,6 +279,7 @@ def apply_policy(
         raise KeyError(f"missing policy input columns: {missing}")
     if profile_name not in cfg.profiles:
         raise KeyError(f"unknown profile {profile_name}")
+    check_flood_evidence(evidence, cfg)
     p = cfg.profiles[profile_name]
     u = cfg.unresolved
     d = evidence.loc[:, list(POLICY_INPUTS)].astype(float)  # context columns are never read
@@ -246,7 +290,7 @@ def apply_policy(
     info_codes: list[list[str]] = [[] for _ in range(n)]
 
     # ---- flood
-    fr = d[f"flood_freq_ge{p.flood.recurrence_years}_area_fraction"].fillna(0).to_numpy()
+    fr = d[f"flood_years_ge{p.flood.min_years_flooded}_area_fraction"].fillna(0).to_numpy()
     fa = d["flood_area_fraction"].fillna(0).to_numpy()
     fd = d["flood_distance_m"].to_numpy()
     flood = np.full(n, Level.NONE, dtype=int)
@@ -376,14 +420,17 @@ _THIS_DOES_NOT_MEAN = (
 def explain(cell_id: str, evidence: pd.Series, policy: pd.Series, cfg: HazardPolicyConfig) -> str:
     """Deterministic explanation built only from structured reason codes and values."""
     p = cfg.profiles[policy["policy_profile"]]
+    fl = cfg.flood_source
     values = {
         k: (float(evidence[k]) if pd.notna(evidence.get(k)) else float("nan"))
         for k in POLICY_INPUTS
     }
     values |= {
-        "flood_years": p.flood.recurrence_years,
+        "flood_years": p.flood.min_years_flooded,
+        "flood_record_years": fl.record_years,
+        "flood_period": fl.period,
         "flood_recurrent_fraction": values[
-            f"flood_freq_ge{p.flood.recurrence_years}_area_fraction"
+            f"flood_years_ge{p.flood.min_years_flooded}_area_fraction"
         ],
         "landslide_high_plus_fraction": values["landslide_class4_fraction"]
         + values["landslide_class5_fraction"],
@@ -400,10 +447,10 @@ def explain(cell_id: str, evidence: pd.Series, policy: pd.Series, cfg: HazardPol
         return [f"- {cfg.reason_codes[c].format(**values)}  [{c}]" for c in codes]
 
     flood_line = (
-        "No strong historical recurrence detected in the 2005-2016 record "
+        f"No strong historical recurrence detected in the {fl.period} record "
         "(not evidence of no flood risk)"
         if policy["flood_policy_level"] in ("NONE", "VERIFY")
-        else "Strong historical recurrence in the 2005-2016 record"
+        else f"Strong historical recurrence in the {fl.period} record"
     )
     parts = [
         f"CELL: {cell_id}",
@@ -434,7 +481,7 @@ def explain(cell_id: str, evidence: pd.Series, policy: pd.Series, cfg: HazardPol
         "- terrain from Copernicus GLO-30 is a DSM (canopy/buildings), not ground slope",
         "- DMR susceptibility methodology is not published; it is susceptibility, not "
         "probability of failure",
-        "- flood evidence is satellite-observed 2005-2016 only",
+        f"- flood evidence is satellite-observed {fl.period} only ({fl.source_id})",
         "",
         _THIS_DOES_NOT_MEAN,
     ]

@@ -16,12 +16,15 @@ from hearthmap.qa.review import (
     is_review_layer,
     mark_review_only,
 )
+from hearthmap.qa.signoff import HumanQA, SignoffRecord, load_human_qa
 
 __all__ = [
     "REVIEW_SOURCE_PREFIX",
     "CoverageAccounting",
+    "HumanQA",
     "RepairAuditRecord",
     "ReviewLayerError",
+    "SignoffRecord",
     "assert_not_review_layer",
     "audit_repairs",
     "category_area_combinations",
@@ -30,6 +33,7 @@ __all__ = [
     "coverage_accounting",
     "disagreement_zones",
     "is_review_layer",
+    "load_human_qa",
     "mark_review_only",
     "threshold_distribution",
     "uncertainty_cells",

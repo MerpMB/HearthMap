@@ -40,9 +40,15 @@ def cell(**overrides) -> dict:
     """Baseline: assessed everywhere, no hazard evidence at all."""
     base = {
         "flood_area_fraction": 0.0,
-        "flood_freq_ge3_area_fraction": 0.0,
+        "flood_years_ge2_area_fraction": 0.0,
+        "flood_years_ge3_area_fraction": 0.0,
+        "flood_years_ge4_area_fraction": 0.0,
+        "flood_years_ge5_area_fraction": 0.0,
         "flood_distance_m": 5000.0,
         "flood_assessed": True,
+        "flood_source_id": "flood-gistda-history",
+        "flood_evidence_period": "2011-2023",
+        "flood_record_years": 13,
         "landslide_assessed_fraction": 1.0,
         "landslide_class3_fraction": 0.0,
         "landslide_class4_fraction": 0.0,
@@ -67,9 +73,10 @@ def run(*cells: dict) -> pd.DataFrame:
 # ======================================================== config / gate
 
 
-def test_config_is_provisional_and_gate_pending():
+def test_config_is_provisional_and_gates_passed():
     assert CFG.status == "PROVISIONAL"
-    assert CFG.gates.m1a1_human_visual_signoff == "PENDING"
+    assert CFG.gates.m1a1_human_visual_signoff == "PASSED"
+    assert CFG.gates.m1b_human_visual_signoff == "PASSED"
 
 
 # ======================================================== absence != safety
@@ -126,7 +133,7 @@ def test_severe_landslide_is_not_averaged_away_by_flood_absence():
 
 def test_each_hazard_kept_independently():
     r = run(
-        cell(flood_freq_ge3_area_fraction=0.5, flood_area_fraction=0.6, slope_p90_deg=25.0)
+        cell(flood_years_ge3_area_fraction=0.5, flood_area_fraction=0.6, slope_p90_deg=25.0)
     ).iloc[0]
     assert r["flood_tier"] == EvidenceTier.HIGH
     assert r["terrain_tier"] == EvidenceTier.CAUTION
@@ -149,7 +156,7 @@ def test_high_evidence_stays_visible_even_when_other_hazards_unresolved():
     r = run(
         cell(
             landslide_assessed_fraction=0.0,
-            flood_freq_ge3_area_fraction=0.3,
+            flood_years_ge3_area_fraction=0.3,
             flood_area_fraction=0.4,
         )
     ).iloc[0]
@@ -214,7 +221,7 @@ def test_boundary_uncertainty_layer_remains_review_only():
 
 def test_experimental_candidates_are_flagged_and_not_eligibility():
     df = pd.DataFrame([cell(landslide_class5_fraction=0.8, slope_p90_deg=50.0)] * 2)
-    df["flood_freq_ge3_area_fraction"] = [0.0, 0.6]
+    df["flood_years_ge3_area_fraction"] = [0.0, 0.6]
     df["evidence_completeness"] = [1.0, 0.5]
     ex = experimental_candidates(df, CFG)
     assert ex["experimental"].all() and not ex["affects_eligibility"].any()

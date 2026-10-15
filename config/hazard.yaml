@@ -8,10 +8,11 @@ schema_version: 1
 status: PROVISIONAL
 
 gates:
-  # Independent human visual sign-off of the M1A.1 review package.
-  # While PENDING, no hazard rule may be promoted to a DECISION_RULE.
-  m1a1_human_visual_signoff: PENDING
-  m1b_human_visual_signoff: PENDING
+  # Human visual sign-off of the M1A.1 / M1B review packages. PASSED does not by
+  # itself promote any hazard rule to a DECISION_RULE.
+  # Mirrors config/human-qa.yaml (project user, 2026-10-15: no blocking visual anomalies).
+  m1a1_human_visual_signoff: PASSED
+  m1b_human_visual_signoff: PASSED
 
 terrain:
   min_support_px: 1.0        # below: terrain statistics UNKNOWN (ADR-0009)
@@ -22,8 +23,28 @@ terrain:
     caution_slope_p90_deg: 20.0
 
 flood:
+  # M1C.1: the derived indicator always states WHICH record it counts years in.
+  # flood_years_ge{k}_area_fraction = share of the cell observed flooded in >= k
+  # years of primary_source.record_years (here: >= 3 of 13 years, 2011-2023).
+  primary_source:
+    source_id: flood-gistda-history
+    role: PRIMARY_HISTORICAL_FLOOD_EVIDENCE
+    evidence_period: "2011-2023"
+    record_years: 13
+    source_native_metric: total
+    source_native_semantics: "number of years 2011-2023 in which the area was observed flooded (sum of yearly detail.freq, each 0/1)"
+    used_for_interpretation: true
+  legacy_source:
+    source_id: flood-gistda-repeated-2005-2016
+    role: HISTORICAL_CORROBORATION
+    evidence_period: "2005-2016"
+    record_years: 12
+    source_native_metric: flood_freq
+    source_native_semantics: "number of years 2005-2016 with observed flooding (1:50k)"
+    used_for_interpretation: false   # kept as legacy_flood_* context columns only
   interpretation:
-    # HIGH: at least this share of the cell observed flooded in >= recurrence_years years
+    # HIGH: at least this share of the cell observed flooded in >= high_recurrence_years
+    # of the primary record's years (3 of 13 for 2011-2023; was 3 of 12 for 2005-2016)
     high_recurrence_years: 3
     high_min_area_fraction: 0.10
     # CAUTION: any observed flooding covering at least this share, or within this distance
@@ -46,7 +67,7 @@ experimental_exclusion_candidates:
     field: landslide_class5_fraction
     thresholds: [0.10, 0.25, 0.50, 0.75]
   STRONG_RECURRENT_FLOOD_EVIDENCE:
-    field: flood_freq_ge3_area_fraction
+    field: flood_years_ge3_area_fraction   # >= 3 of 13 years, 2011-2023
     thresholds: [0.05, 0.10, 0.25, 0.50]
   EXTREME_TERRAIN_EVIDENCE:
     field: slope_p90_deg

@@ -49,7 +49,8 @@ HAZARD_LABELS = {
     "flood": {
         EvidenceTier.HIGH: "STRONG_RECURRENT_FLOOD_EVIDENCE",
         EvidenceTier.CAUTION: "OBSERVED_FLOOD_EVIDENCE",
-        EvidenceTier.NONE_DETECTED: "NO_OBSERVED_FLOOD_IN_2005_2016_RECORD",
+        # period comes from config (flood.primary_source.evidence_period)
+        EvidenceTier.NONE_DETECTED: "NO_OBSERVED_FLOOD_IN_{period}_RECORD",
         EvidenceTier.UNRESOLVED: "FLOOD_NOT_EVALUATED",
     },
     "landslide": {
@@ -83,12 +84,16 @@ DEPRECATED_TERMS = {
 HAZARDS = ("flood", "landslide", "terrain")
 
 # Indicator columns each hazard interpretation may read. Nothing else.
+FLOOD_YEAR_KS = (2, 3, 4, 5)
 FLOOD_COLUMNS = (
     "flood_area_fraction",
-    "flood_freq_ge3_area_fraction",
+    *(f"flood_years_ge{k}_area_fraction" for k in FLOOD_YEAR_KS),
     "flood_distance_m",
     "flood_assessed",
 )
+# Columns stating what the flood indicators mean; must match config (no hidden
+# migration of threshold meaning between flood records).
+FLOOD_SEMANTIC_COLUMNS = ("flood_source_id", "flood_evidence_period", "flood_record_years")
 LANDSLIDE_COLUMNS = (
     "landslide_assessed_fraction",
     "landslide_class3_fraction",
@@ -127,9 +132,31 @@ def _states(conds: list[tuple[np.ndarray, EvidenceTier, str]], n: int):
     return state, reason
 
 
-def _label(hazard: str, tiers: np.ndarray) -> np.ndarray:
-    labels = HAZARD_LABELS[hazard]
+def _label(hazard: str, tiers: np.ndarray, period: str = "") -> np.ndarray:
+    labels = {
+        t: lab.format(period=period.replace("-", "_")) for t, lab in HAZARD_LABELS[hazard].items()
+    }
     return np.array([labels[EvidenceTier(t)] for t in tiers], dtype=object)
+
+
+def check_flood_semantics(indicators: pd.DataFrame, cfg: HazardConfig) -> None:
+    """Refuse flood indicators built from a different record than the config describes."""
+    src = cfg.flood.primary_source
+    missing = [c for c in FLOOD_SEMANTIC_COLUMNS if c not in indicators.columns]
+    if missing:
+        raise KeyError(f"flood indicators lack semantic columns {missing}")
+    expected = {
+        "flood_source_id": src.source_id,
+        "flood_evidence_period": src.evidence_period,
+        "flood_record_years": src.record_years,
+    }
+    for col, want in expected.items():
+        got = set(pd.unique(indicators[col]))
+        if got != {want}:
+            raise ValueError(
+                f"{col} = {sorted(map(str, got))} but config expects {want!r}: flood "
+                "thresholds would silently change meaning"
+            )
 
 
 def interpret(indicators: pd.DataFrame, cfg: HazardConfig) -> pd.DataFrame:
@@ -138,12 +165,16 @@ def interpret(indicators: pd.DataFrame, cfg: HazardConfig) -> pd.DataFrame:
     missing = [c for c in INTERPRETATION_INPUTS if c not in indicators.columns]
     if missing:
         raise KeyError(f"missing indicator columns: {missing}")
+    check_flood_semantics(indicators, cfg)
     d = indicators.loc[:, list(INTERPRETATION_INPUTS)]  # context columns are never read
     n = len(d)
     out = pd.DataFrame(index=indicators.index)
 
-    # ---------------- flood (historical observed, temporary evidence)
+    # ---------------- flood (historical observed; primary record from config)
     f = cfg.flood.interpretation
+    fs = cfg.flood.primary_source
+    rec = f"{fs.record_years} years ({fs.evidence_period})"
+    k = f.high_recurrence_years
     st, why = _states(
         [
             (
@@ -152,10 +183,9 @@ def interpret(indicators: pd.DataFrame, cfg: HazardConfig) -> pd.DataFrame:
                 "outside flood source extent",
             ),
             (
-                d["flood_freq_ge3_area_fraction"] >= f.high_min_area_fraction,
+                d[f"flood_years_ge{k}_area_fraction"] >= f.high_min_area_fraction,
                 EvidenceTier.HIGH,
-                f">= {f.high_min_area_fraction:.0%} of cell observed flooded in >= "
-                f"{f.high_recurrence_years} of 12 years (2005-2016)",
+                f">= {f.high_min_area_fraction:.0%} of cell observed flooded in >= {k} of {rec}",
             ),
             (
                 d["flood_area_fraction"] >= f.caution_min_area_fraction,
@@ -172,12 +202,12 @@ def interpret(indicators: pd.DataFrame, cfg: HazardConfig) -> pd.DataFrame:
     )
     why = np.where(
         st == EvidenceTier.NONE_DETECTED.value,
-        "no observed flooding 2005-2016 in or near cell (NOT evidence of no "
+        f"no observed flooding {fs.evidence_period} in or near cell (NOT evidence of no "
         "flood risk: flash floods and cloud-covered events are missed)",
         why,
     )
     out["flood_tier"], out["flood_reason"] = st, why
-    out["flood_state"] = _label("flood", st)
+    out["flood_state"] = _label("flood", st, fs.evidence_period)
     out["flood_confidence"] = np.select(
         [
             st == EvidenceTier.UNRESOLVED.value,

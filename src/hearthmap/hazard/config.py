@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from hearthmap.config.loader import ConfigError, load_yaml
 
@@ -27,14 +27,38 @@ class TerrainCfg(_M):
 
 
 class FloodInterp(_M):
-    high_recurrence_years: int = Field(ge=1, le=12)
+    high_recurrence_years: int = Field(ge=1)
     high_min_area_fraction: float = Field(gt=0, le=1)
     caution_min_area_fraction: float = Field(gt=0, le=1)
     caution_distance_m: float = Field(ge=0)
 
 
+class FloodSource(_M):
+    """What a flood indicator means: source, period and source-native metric."""
+
+    source_id: str
+    role: Literal["PRIMARY_HISTORICAL_FLOOD_EVIDENCE", "HISTORICAL_CORROBORATION"]
+    evidence_period: str
+    record_years: int = Field(ge=1)
+    source_native_metric: str
+    source_native_semantics: str
+    used_for_interpretation: bool
+
+
 class FloodCfg(_M):
+    primary_source: FloodSource
+    legacy_source: FloodSource
     interpretation: FloodInterp
+
+    @model_validator(mode="after")
+    def _semantics(self) -> FloodCfg:
+        if not self.primary_source.used_for_interpretation:
+            raise ValueError("the primary flood source must be the one interpreted")
+        if self.legacy_source.used_for_interpretation:
+            raise ValueError("the legacy flood source is corroboration/context only")
+        if self.interpretation.high_recurrence_years > self.primary_source.record_years:
+            raise ValueError("high_recurrence_years exceeds the primary record length")
+        return self
 
 
 class LandslideInterp(_M):
@@ -57,8 +81,8 @@ class ExperimentalRule(_M):
 
 
 class Gates(_M):
-    m1a1_human_visual_signoff: Literal["PENDING", "SIGNED_OFF"]
-    m1b_human_visual_signoff: Literal["PENDING", "SIGNED_OFF"] = "PENDING"
+    m1a1_human_visual_signoff: Literal["PENDING", "PASSED"]
+    m1b_human_visual_signoff: Literal["PENDING", "PASSED"] = "PENDING"
 
 
 class HazardConfig(_M):

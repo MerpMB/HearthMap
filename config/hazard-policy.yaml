@@ -5,22 +5,32 @@
 # visual gates are pending. Semantics: docs/product/hazard-screening-policy.md
 schema_version: 1
 policy_id: hydrogeomorphic-screening
-policy_version: 0.1.0
+policy_version: 0.2.0   # 0.2.0 (M1C.1): flood thresholds re-based on GISTDA 2011-2023
 status: PROVISIONAL
 scope: HYDROGEOMORPHIC   # flood (observed), landslide susceptibility, DSM terrain
-default_profile: null    # must stay null until gates are SIGNED_OFF and a profile is selected
+default_profile: null    # stays null until a profile is explicitly selected by the family
 
 gates:
-  m1a1_human_visual_signoff: PENDING
-  m1b_human_visual_signoff: PENDING
+  # Mirrors config/human-qa.yaml (project user, 2026-10-15: no blocking visual anomalies).
+  m1a1_human_visual_signoff: PASSED
+  m1b_human_visual_signoff: PASSED
 
 source_requirements:
   flood:
-    source_id: flood-gistda-repeated-2005-2016
-    evidence_role: TEMPORARY_HISTORICAL_EVIDENCE
-    period: "2005-2016"
-    contemporary_complete: false        # no flood policy may claim current completeness
-    intended_upgrade: flood-gistda-history   # 2011-2023, BLOCKED_CREDENTIAL_REQUIRED
+    # Every flood threshold below refers to THIS record (checked against the
+    # evidence columns flood_source_id / flood_evidence_period / flood_record_years).
+    source_id: flood-gistda-history
+    evidence_role: PRIMARY_HISTORICAL_FLOOD_EVIDENCE
+    period: "2011-2023"
+    record_years: 13
+    source_native_metric: "total = number of years 2011-2023 observed flooded (sum of yearly detail.freq, each 0/1)"
+    derived_threshold_semantics: "flood_years_ge{min_years_flooded}_area_fraction = share of the cell observed flooded in >= min_years_flooded of the 13 years; *_min_fraction thresholds apply to that share"
+    contemporary_complete: false        # ends 2023; no flood policy may claim current completeness
+    corroborating_source:
+      source_id: flood-gistda-repeated-2005-2016
+      role: HISTORICAL_CORROBORATION
+      period: "2005-2016"
+      use: context only (legacy_flood_2005_2016_* columns); never read by the policy
   landslide_susceptibility:
     source_id: landslide-susceptibility-dmr
     evidence_role: SUSCEPTIBILITY        # not a probability of failure
@@ -52,6 +62,8 @@ prohibited_evidence_columns:
   - waterway_river_length_m
   - waterway_canal_length_m
   - waterway_stream_length_m
+  - legacy_flood_2005_2016_area_fraction
+  - legacy_flood_2005_2016_years_ge3_area_fraction
 prohibited_source_prefixes: ["review:", "experimental:", "policy:"]
 
 unresolved:
@@ -63,7 +75,7 @@ unresolved:
 profiles:
   CONSERVATIVE:
     flood:
-      recurrence_years: 3
+      min_years_flooded: 3            # of 13 years (2011-2023)
       strong_min_fraction: 0.05
       deprioritize_min_fraction: 0.25
       verify_min_fraction: 0.01
@@ -85,7 +97,7 @@ profiles:
       escalate_flood_and_landslide_strong: true
   BALANCED:
     flood:
-      recurrence_years: 3
+      min_years_flooded: 3            # of 13 years (2011-2023)
       strong_min_fraction: 0.10
       deprioritize_min_fraction: 0.50
       verify_min_fraction: 0.01
@@ -107,7 +119,7 @@ profiles:
       escalate_flood_and_landslide_strong: true
   PERMISSIVE:
     flood:
-      recurrence_years: 3
+      min_years_flooded: 3            # of 13 years (2011-2023)
       strong_min_fraction: 0.25
       deprioritize_min_fraction: 0.75
       verify_min_fraction: 0.05
@@ -130,9 +142,9 @@ profiles:
 
 # Reason codes -> explanation templates (filled from structured cell values).
 reason_codes:
-  RECURRENT_FLOOD_SUBSTANTIAL_COVERAGE: "Observed flooding in >= {flood_years} of 12 years (2005-2016) covers {flood_recurrent_fraction:.0%} of the cell"
-  STRONG_RECURRENT_FLOOD_EVIDENCE: "Observed flooding in >= {flood_years} of 12 years (2005-2016) covers {flood_recurrent_fraction:.0%} of the cell"
-  OBSERVED_FLOOD_EVIDENCE: "Some observed flooding in or near the cell in 2005-2016 ({flood_area_fraction:.0%} of cell)"
+  RECURRENT_FLOOD_SUBSTANTIAL_COVERAGE: "Observed flooding in >= {flood_years} of {flood_record_years} years ({flood_period}) covers {flood_recurrent_fraction:.0%} of the cell"
+  STRONG_RECURRENT_FLOOD_EVIDENCE: "Observed flooding in >= {flood_years} of {flood_record_years} years ({flood_period}) covers {flood_recurrent_fraction:.0%} of the cell"
+  OBSERVED_FLOOD_EVIDENCE: "Some observed flooding in or near the cell in {flood_period} ({flood_area_fraction:.0%} of cell)"
   VERY_HIGH_LANDSLIDE_SUSCEPTIBILITY_DOMINANT: "DMR 'Very High' susceptibility covers {landslide_class5_fraction:.0%} of the cell"
   HIGH_VERY_HIGH_SUSCEPTIBILITY_DOMINANT: "DMR 'High'+'Very High' susceptibility covers {landslide_high_plus_fraction:.0%} of the cell"
   STRONG_LANDSLIDE_SUSCEPTIBILITY_EVIDENCE: "DMR 'Very High' {landslide_class5_fraction:.0%} / 'High'+'Very High' {landslide_high_plus_fraction:.0%} of the cell"
@@ -146,4 +158,4 @@ reason_codes:
   TERRAIN_SUPPORT_INSUFFICIENT: "Terrain support {terrain_support_px:.1f} pixel-equivalents (< 1)"
   LOW_TERRAIN_SUPPORT: "Terrain statistics rest on only {terrain_support_px:.1f} pixel-equivalents"
   PARTIAL_LANDSLIDE_COVERAGE: "DMR susceptibility covers {landslide_assessed_fraction:.0%} of the cell (partial)"
-  NO_OBSERVED_FLOOD_IN_RECORD: "No observed flooding in the 2005-2016 record (not evidence of no flood risk)"
+  NO_OBSERVED_FLOOD_IN_RECORD: "No observed flooding in the {flood_period} record (not evidence of no flood risk)"
