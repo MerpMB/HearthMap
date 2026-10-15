@@ -428,7 +428,7 @@ No review of the M1C, M1C.1, M1C.2 or M1C.3 map packs has been reported; none is
 |---|---:|
 | annual-source-ledger-summary.png | 157,210 |
 | flood-ledger-summary.parquet | 2,760,827 |
-| flood-ledger-summary.parquet.provenance.json | 1,984 |
+| flood-ledger-summary.parquet.provenance.json | 1,978 |
 | flood-policy-candidates.png | 235,845 |
 | flood-policy-comparison.csv | 4,610 |
 | lowland-policy-sensitivity.csv | 5,493 |
