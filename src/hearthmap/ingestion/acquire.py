@@ -16,8 +16,9 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from hearthmap.ingestion.secrets import is_sanitized
 from hearthmap.provenance.model import sha256_file
 
 MANIFEST_NAME = "manifest.json"
@@ -36,6 +37,13 @@ class RawArtifact(BaseModel):
     size_bytes: int
     sha256: str
     http_headers: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("source_url", "final_url")
+    @classmethod
+    def _no_credentials(cls, v: str | None) -> str | None:
+        if v is not None and not is_sanitized(v):
+            raise ValueError("URL carries a credential; record sanitize_url(url) instead")
+        return v
 
 
 class RawManifest(BaseModel):

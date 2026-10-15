@@ -101,5 +101,9 @@ Thumbs.db
 desktop.ini
 
 # --- Secrets ----------------------------------------------------------------
+# Local credentials (e.g. GISTDA_API_KEY in .env.local) never enter Git; only
+# the placeholder template .env.example is tracked.
 .env
 .env.*
+*.env.local
+!.env.example
