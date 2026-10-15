@@ -19,6 +19,7 @@ from hearthmap.provenance.registry import (
     ProcessingStatus,
     SourceCategory,
     SourceRole,
+    SourceState,
     load_registry,
 )
 
@@ -34,6 +35,7 @@ __all__ = [
     "SourceCategory",
     "SourceReference",
     "SourceRole",
+    "SourceState",
     "TransformationRecord",
     "TransformationStep",
     "current_code_version",

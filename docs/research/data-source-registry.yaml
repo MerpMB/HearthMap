@@ -14,6 +14,8 @@
 # acquisition_status: NOT_STARTED | ACQUIRED | DEFERRED | BLOCKED_CREDENTIAL_REQUIRED | BLOCKED_SIZE_GUARD
 # permitted_uses: REGIONAL_SCREENING | POTENTIAL_HARD_EXCLUSION | LEGAL_WARNING_ONLY |
 #                 PARCEL_LEGAL_VERIFICATION | VALIDATION_REFERENCE
+# source_state (M2A.2): SOURCE_EXISTS_AGENT_ACCESSIBLE | SOURCE_EXISTS_AGENT_BLOCKED | SOURCE_MANUALLY_ACQUIRED | SOURCE_UNAVAILABLE
+#   (a source the agent cannot reach is NOT unavailable; acquisition_path says how the project user can supply it)
 # priority: must_have | useful | later
 # processing_status: NOT_ACQUIRED | ACQUIRED | PROCESSING | PROCESSED | REJECTED
 # confidence: HIGH | MEDIUM | LOW | UNKNOWN  (quality of the dataset itself)
@@ -1150,13 +1152,15 @@ sources:
   priority: must_have
   verification_status: NEEDS_RESEARCH
   role: null
+  source_state: SOURCE_EXISTS_AGENT_BLOCKED
+  acquisition_path: 'Manual import by the project user: data/manual/moe-register-current/ + MANIFEST.yaml, then python scripts/m2a2/import_manual.py moe-register-current (schema, ids, coordinates, provinces, dates and coverage are validated before use)'
   acquisition_status: NOT_STARTED
   permitted_uses: []
   publisher: Ministry of Education (MOE) data catalogue
   landing_page: https://catalog.moe.go.th/
   access_method: Not reached (retried 2026-10-16 in M2A.1)
   last_verified: '2026-10-16'
-  verification_evidence: 'Retried in M2A.1: https://catalog.moe.go.th and data.moe.go.th refused or failed to resolve (Python, curl, fetch tool and the in-app browser); plain http on catalog.moe.go.th answers but lists zero datasets (a different, empty CKAN instance; package_show returns nothing); the MOE file server 203.159.172.49 timed out. A web-search index shows the live catalogue lists a 2568 institution statistics dataset (counts by level/affiliation/province, XLSX) and states the data-exchange API requires an inter-agency MOU. None of the live resources could be opened here, so NOTHING is verified. No authentication or access restriction was bypassed.'
+  verification_evidence: 'The source EXISTS (reported by the project user in the M2A.2 brief after independent verification: the live MOE catalogue lists a current school-register dataset; not confirmed by the agent) but the agent environment cannot reach it. Retried in M2A.1: https://catalog.moe.go.th and data.moe.go.th refused or failed to resolve (Python, curl, fetch tool and the in-app browser); plain http on catalog.moe.go.th answers but lists zero datasets (a different, empty CKAN instance; package_show returns nothing); the MOE file server 203.159.172.49 timed out. A web-search index shows the live catalogue lists a 2568 institution statistics dataset (counts by level/affiliation/province, XLSX) and states the data-exchange API requires an inter-agency MOU. None of the live resources could be opened here, so NOTHING is verified. No authentication or access restriction was bypassed.'
   confidence: UNKNOWN
   known_limitations:
   - The current register is the intended PRIMARY education source; until it is acquired the primary layer is the stale DOPA 2021 fallback.
@@ -1301,6 +1305,8 @@ sources:
   priority: must_have
   verification_status: NEEDS_RESEARCH
   role: null
+  source_state: SOURCE_EXISTS_AGENT_BLOCKED
+  acquisition_path: 'Manual import by the project user (no bot-challenge bypass): data/manual/moph-hcode-export/ + MANIFEST.yaml, then python scripts/m2a2/import_manual.py moph-hcode-export'
   acquisition_status: NOT_STARTED
   permitted_uses: []
   publisher: Ministry of Public Health (MOPH)
@@ -1314,12 +1320,84 @@ sources:
   local_raw_path: null
   processing_status: NOT_ACQUIRED
   notes: Request an HCODE export (facility, organisation type, service level, hospital level, coordinates, active status) from MOPH, or supply an authoritative list in config/healthcare-reference-levels.yaml.
+- id: facility-moph-hospital-update68
+  name: MoPH public hospital / health-facility point layer (Hospital_update68), HCODE-keyed
+  category: health
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  source_state: SOURCE_EXISTS_AGENT_ACCESSIBLE
+  acquisition_path: Automated public ArcGIS REST query (no key). HCODE itself stays manual.
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Ministry of Public Health (MoPH), public ArcGIS portal pherportal.moph.go.th
+  dataset_title: MOPH_DATA/Hospital_update68 (FeatureServer layer 32)
+  landing_page: https://pherportal.moph.go.th/arcgis/rest/services/MOPH_DATA
+  data_endpoint: https://pherportal.moph.go.th/arcgis/rest/services/MOPH_DATA/Hospital_update68/FeatureServer/32
+  access_method: Public ArcGIS REST FeatureServer, query enabled, no key; AOI provinces via changwat filter
+  format: Point features with 36 attributes (11,087 national records; 644 in the three provinces)
+  source_crs: EPSG:4326
+  coverage: National; 644 records in Chiang Mai, Chiang Rai, Phayao (574 primary units, 43 community hospitals, 7 general, 2 regional, 4 university, 4 non-service offices)
+  spatial_resolution: Point
+  temporal_coverage: Layer last edited 2026-09-09; record dates (Last_update_infile) 2023-2026, mostly 2023
+  last_update: 2026-09-09 (service edit timestamp)
+  last_verified: '2026-10-16'
+  verification_evidence: All 644 AOI records downloaded and profiled. Fields include maincode / oldcode / maincode_new (HCODE keys), typecode (facility type), level_ (hospital level codes A/S/M1/M2/F1-F3), minname/depname, status (all 'กำลังใช้งาน', no close_date), bed, lat/lon and a point geometry. Cross-checked against the sibling layer Hospital_update69_correct (638 shared ids, 2 coordinate conflicts, 0 class changes) and the 2020 CITIZENinfo file (80% name-matched). The point geometry and the lat/lon attributes disagree by more than 100 m for 129 records; the geometry agrees better with an independent source and is used (conflict flagged). Whether this layer is the same as the "Hospital Coordinates Service" listed on MoPH Open Data could NOT be confirmed.
+  license_or_usage_notes: No licence or terms statement on the service; used conservatively for regional screening and kept out of Git.
+  dataset_licence: Not stated
+  service_terms: None stated on the ArcGIS service
+  expected_update_frequency: Not stated
+  confidence: MEDIUM
+  known_limitations:
+  - 'A public GIS layer, not an HCODE export: no emergency, trauma, ICU or specialist capability fields; capability is never assigned.'
+  - Most records carry 2023 record dates although the service was edited in 2026.
+  - Geometry vs attribute coordinates conflict for about a fifth of records (flagged, never silently resolved).
+  analytical_suitability: Current facility location and source-stated facility type/level for accessibility evidence. A classification field is not a service guarantee.
+  local_raw_path: data/raw/facility-moph-hospital-update68/service-2026-10-16/
+  processing_status: PROCESSED
+- id: facility-moph-hospital-update69
+  name: MoPH public hospital point layer (Hospital_update69_correct) - cross-check
+  category: health
+  priority: useful
+  verification_status: VERIFIED
+  role: VALIDATION_ONLY
+  source_state: SOURCE_EXISTS_AGENT_ACCESSIBLE
+  acquisition_path: Automated public ArcGIS REST query (no key)
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: Ministry of Public Health (MoPH), public ArcGIS portal pherportal.moph.go.th
+  dataset_title: MOPH_DATA/Hospital_update69_correct (FeatureServer layer 35)
+  landing_page: https://pherportal.moph.go.th/arcgis/rest/services/MOPH_DATA
+  data_endpoint: https://pherportal.moph.go.th/arcgis/rest/services/MOPH_DATA/Hospital_update69_correct/FeatureServer/35
+  access_method: Public ArcGIS REST FeatureServer, query enabled, no key
+  format: Point features (6,581 national records; 640 in the three provinces)
+  source_crs: EPSG:4326
+  coverage: National; 640 records in the three provinces
+  spatial_resolution: Point
+  temporal_coverage: Layer last edited 2026-03-04
+  last_update: 2026-03-04 (service edit timestamp)
+  last_verified: '2026-10-16'
+  verification_evidence: All 640 AOI records downloaded and compared by official id with update68 (638 shared, 6 only in update68, 2 only in update69, 0 class changes, 2 coordinate conflicts).
+  license_or_usage_notes: No licence or terms statement on the service.
+  dataset_licence: Not stated
+  expected_update_frequency: Not stated
+  confidence: MEDIUM
+  known_limitations:
+  - Sibling layer of update68 with a shorter national list and short level codes; used only as a cross-check.
+  local_raw_path: data/raw/facility-moph-hospital-update69/service-2026-10-16/
+  processing_status: PROCESSED
 - id: health-citizeninfo-dga
   name: Government health-facility coordinates (CITIZENinfo)
   category: health
   priority: must_have
   verification_status: VERIFIED
-  role: PRIMARY
+  role: VALIDATION_ONLY
   metadata_verified: true
   data_verified: true
   acquisition_status: ACQUIRED

@@ -1,0 +1,10 @@
+# Copy to data/manual/<source_id>/MANIFEST.yaml and fill in every field (acquired_by names a person or tool, never a credential).
+publisher: ""                 # e.g. Ministry of Education, Education Data Center
+dataset_title: ""             # exact title on the catalogue page
+original_download_url: ""     # the URL you downloaded from (no tokens or session ids)
+download_date: "YYYY-MM-DD"
+file_name: ""                 # the file in this directory, exactly as downloaded
+file_sha256: ""               # sha256sum / Get-FileHash of that file (64 hex characters)
+licence: ""                   # as stated on the catalogue page
+acquired_by: ""               # person (role) or tool that acquired it, e.g. "project owner, Chrome"
+notes: ""                     # anything unusual: sheet used, filters applied (none should be), page date

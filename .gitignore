@@ -9,6 +9,10 @@
 
 # --- Data directories: keep structure + READMEs, ignore contents ----------
 data/raw/*
+# manually supplied sources (M2A.2): raw files stay local, only the contract files are tracked
+data/manual/*
+!data/manual/README.md
+!data/manual/MANIFEST.template.yaml
 data/interim/*
 data/processed/*
 !data/*/.gitkeep

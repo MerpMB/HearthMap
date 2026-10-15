@@ -62,6 +62,18 @@ class AcquisitionStatus(StrEnum):
     BLOCKED_SIZE_GUARD = "BLOCKED_SIZE_GUARD"
 
 
+class SourceState(StrEnum):
+    """Whether a source exists and whether the AGENT environment can reach it (M2A.2).
+
+    A source an agent cannot reach is not an unavailable source: do not conflate them.
+    """
+
+    SOURCE_EXISTS_AGENT_ACCESSIBLE = "SOURCE_EXISTS_AGENT_ACCESSIBLE"
+    SOURCE_EXISTS_AGENT_BLOCKED = "SOURCE_EXISTS_AGENT_BLOCKED"
+    SOURCE_MANUALLY_ACQUIRED = "SOURCE_MANUALLY_ACQUIRED"
+    SOURCE_UNAVAILABLE = "SOURCE_UNAVAILABLE"
+
+
 class PermittedUse(StrEnum):
     """What a source may be used for (docs/product/legal-vs-screening.md)."""
 
@@ -101,6 +113,9 @@ class DataSourceEntry(BaseModel):
     metadata_verified: bool = False
     data_verified: bool = False
     acquisition_status: AcquisitionStatus | None = None
+    # M2A.2: existence vs agent reachability, and the lawful way to obtain a blocked source.
+    source_state: SourceState | None = None
+    acquisition_path: str | None = None
     permitted_uses: list[PermittedUse] = Field(default_factory=list)
     publisher: str | None = None
     dataset_title: str | None = None
@@ -150,6 +165,20 @@ class DataSourceEntry(BaseModel):
             raise ValueError(f"{self.id}: data_verified requires metadata_verified")
         if self.data_verified and self.acquisition_status not in (None, AcquisitionStatus.ACQUIRED):
             raise ValueError(f"{self.id}: data_verified requires the data to be acquired")
+        if self.source_state is SourceState.SOURCE_MANUALLY_ACQUIRED and not (
+            self.local_raw_path and self.acquisition_status is AcquisitionStatus.ACQUIRED
+        ):
+            raise ValueError(
+                f"{self.id}: SOURCE_MANUALLY_ACQUIRED requires acquired data and local_raw_path"
+            )
+        if self.source_state is SourceState.SOURCE_EXISTS_AGENT_BLOCKED and self.data_verified:
+            raise ValueError(
+                f"{self.id}: a source the agent could not reach cannot be data_verified"
+            )
+        if self.source_state is SourceState.SOURCE_UNAVAILABLE and not self.verification_evidence:
+            raise ValueError(
+                f"{self.id}: SOURCE_UNAVAILABLE must cite the evidence that it does not exist"
+            )
         if PermittedUse.PARCEL_LEGAL_VERIFICATION in self.permitted_uses and (
             PermittedUse.LEGAL_WARNING_ONLY in self.permitted_uses
         ):

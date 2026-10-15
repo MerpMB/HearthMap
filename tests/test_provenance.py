@@ -144,6 +144,9 @@ def test_repository_registry_verification_state_m1a():
         # M2A.1 (2026-10-16): OBEC authoritative classification (2020) and OSM current validation
         "education-obec-school-list",
         "osm-facilities-aoi",
+        # M2A.2 (2026-10-16): public MoPH hospital point layers
+        "facility-moph-hospital-update68",
+        "facility-moph-hospital-update69",
     }
     # Every verified source was actually acquired and processed locally.
     assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)

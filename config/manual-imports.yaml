@@ -1,0 +1,61 @@
+# Manual-import contract (M2A.2). Aliases are looked up EXACTLY in the supplied header row: the importer never assumes
+# a workbook schema from catalogue metadata. If a required field is not found the import stops and prints the columns.
+import_dir: data/manual            # contents are git-ignored; only README.md and MANIFEST.template.yaml are tracked
+raw_dest: data/raw                 # a verified import is copied (unchanged) to data/raw/<source_id>/manual-<download_date>/
+
+sources:
+  moe-register-current:
+    description: Ministry of Education current school/institution register workbook (catalog.moe.go.th)
+    expected_files: ["*.xlsx", "*.csv"]
+    required: [id, name, lat, lon, province]
+    fields:
+      id: ["รหัสสถานศึกษา", "รหัสโรงเรียน", "รหัส 10 หลัก", "รหัส10หลัก", "school_id", "moe_code", "moecode", "institution_id"]
+      name: ["ชื่อสถานศึกษา", "ชื่อโรงเรียน", "ชื่อ", "school_name", "schoolname", "name"]
+      lat: ["ละติจูด", "latitude", "lat"]
+      lon: ["ลองจิจูด", "ลองติจูด", "longitude", "lon", "lng"]
+      province: ["จังหวัด", "province", "changwat"]
+      district: ["อำเภอ", "เขต", "อำเภอ/เขต", "amphoe", "district"]
+      subdistrict: ["ตำบล", "แขวง", "ตำบล/แขวง", "tambon", "subdistrict"]
+      affiliation: ["สังกัด", "affiliation", "department"]
+      institution_type: ["ประเภทสถานศึกษา", "ประเภท", "type", "school_type"]
+      status: ["สถานะ", "สถานะการเปิดสอน", "status"]
+      class_min: ["ระดับชั้นต่ำสุด", "ชั้นต่ำสุด", "classminlevel", "class_min"]
+      class_max: ["ระดับชั้นสูงสุด", "ชั้นสูงสุด", "classmaxlevel", "class_max"]
+      levels_text: ["ระดับการศึกษา", "ระดับที่เปิดสอน", "ระดับ", "education_level", "levels"]
+      updated: ["วันที่ปรับปรุง", "ปรับปรุงล่าสุด", "updated", "update_date", "ปีการศึกษา"]
+    qa:
+      thailand_bbox: [97.3, 5.6, 105.7, 20.5]
+      min_coordinate_coverage_pct: 80
+      max_invalid_coordinate_share: 0.05
+      stale_after_years: 3
+      national_min_records: 20000
+      national_min_provinces: 60
+      aoi_min_records: 1500            # OBEC alone lists 1,537 schools in Chiang Mai/Chiang Rai/Phayao
+      aoi_province_names: {"เชียงใหม่": "TH50", "พะเยา": "TH56", "เชียงราย": "TH57"}
+
+  moph-hcode-export:
+    description: MoPH HCODE facility export supplied by the project user (hcode.moph.go.th is browser-gated; never bypassed)
+    expected_files: ["*.xlsx", "*.csv"]
+    required: [id, name, province]
+    fields:
+      id: ["hcode", "รหัสหน่วยบริการ", "รหัส 9 หลัก", "รหัส9หลัก", "maincode", "รหัส 5 หลัก", "oldcode"]
+      name: ["ชื่อหน่วยบริการ", "ชื่อ", "name", "hname"]
+      lat: ["ละติจูด", "latitude", "lat"]
+      lon: ["ลองจิจูด", "ลองติจูด", "longitude", "lon", "lng"]
+      province: ["จังหวัด", "province", "changwat"]
+      facility_type: ["ประเภทหน่วยบริการ", "ประเภท", "typecode", "type"]
+      hospital_level: ["ระดับโรงพยาบาล", "ระดับสถานพยาบาล", "level", "level_", "hospital_level"]
+      service_level: ["ระดับการให้บริการ", "servicelevel", "service_level"]
+      organization_type: ["ประเภทองค์กร", "org_type"]
+      ministry: ["สังกัด", "minname", "ministry"]
+      status: ["สถานะ", "สถานะการใช้งาน", "status"]
+      updated: ["วันที่ปรับปรุง", "อัพเดตล่าสุด", "last_update", "updated", "date_upd"]
+    qa:
+      thailand_bbox: [97.3, 5.6, 105.7, 20.5]
+      min_coordinate_coverage_pct: 80
+      max_invalid_coordinate_share: 0.05
+      stale_after_years: 3
+      national_min_records: 5000
+      national_min_provinces: 60
+      aoi_min_records: 400
+      aoi_province_names: {"เชียงใหม่": "TH50", "พะเยา": "TH56", "เชียงราย": "TH57"}
