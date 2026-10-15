@@ -83,3 +83,59 @@ def polygon_cell_metrics(
         mx = pairs.groupby("cell")["value"].max()
         out.loc[grid.index[mx.index.values], f"{prefix}_max_{value_column}"] = mx.values
     return out
+
+
+def categorical_cell_fractions(
+    grid: gpd.GeoDataFrame,
+    features: gpd.GeoDataFrame,
+    *,
+    class_field: str,
+    classes: list,
+    prefix: str,
+    within: shapely.Geometry | None = None,
+    coverage: np.ndarray | None = None,
+) -> pd.DataFrame:
+    """Area share of each publisher class within each cell (no centroid sampling).
+
+    Classes keep the publisher's original codes (never renumbered). Fractions are
+    relative to the cell's in-``within`` area when ``within``/``coverage`` are
+    given, otherwise to the full cell. Returns per-class fractions,
+    ``<p>_assessed_fraction`` (sum), ``<p>_max_class`` (highest code present with
+    area > 0), ``<p>_dominant_class`` (largest area; ties -> higher code) and
+    ``<p>_class_distribution`` (compact "code:fraction" string).
+    """
+    from hearthmap.qa.review import assert_not_review_layer
+    from hearthmap.spatial.grid import cell_coverage
+
+    assert_not_review_layer(features, name=prefix)
+    crs = require_crs(grid, name="grid")
+    assert_metric_crs(crs, purpose="categorical overlay")
+    if not same_crs(crs, require_crs(features, name=prefix)):
+        raise ValueError(f"{prefix}: features CRS differs from grid CRS; reproject first")
+    cells = grid.geometry.values
+    size = float(np.sqrt(shapely.area(cells[0])))
+    base = np.ones(len(grid)) if coverage is None else np.asarray(coverage, float)
+    out = pd.DataFrame(index=grid.index)
+    fr = {}
+    for code in classes:
+        geom = shapely.union_all(features.loc[features[class_field] == code].geometry.values)
+        if within is not None:
+            geom = geom.intersection(within)
+        cov = cell_coverage(cells, geom, size) if not geom.is_empty else np.zeros(len(grid))
+        fr[code] = np.divide(cov, base, out=np.zeros(len(grid)), where=base > 0).clip(0, 1)
+        out[f"{prefix}_class{code}_fraction"] = fr[code]
+    mat = np.column_stack([fr[c] for c in classes])
+    out[f"{prefix}_assessed_fraction"] = mat.sum(axis=1).clip(0, 1)
+    present = mat > 1e-12
+    codes = np.array(classes)
+    any_present = present.any(axis=1)
+    max_idx = np.where(present, np.arange(len(classes)), -1).max(axis=1)
+    out[f"{prefix}_max_class"] = np.where(any_present, codes[np.maximum(max_idx, 0)], np.nan)
+    # ties -> higher code: reverse argmax
+    dom_idx = len(classes) - 1 - np.argmax(mat[:, ::-1], axis=1)
+    out[f"{prefix}_dominant_class"] = np.where(any_present, codes[dom_idx], np.nan)
+    out[f"{prefix}_class_distribution"] = [
+        ";".join(f"{c}:{v:.3f}" for c, v in zip(classes, row, strict=True) if v > 1e-12)
+        for row in mat
+    ]
+    return out

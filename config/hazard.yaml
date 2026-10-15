@@ -1,0 +1,55 @@
+# HearthMap M1B hazard evidence configuration.
+#
+# STATUS: PROVISIONAL. Every threshold below is a starting point for policy
+# review, chosen from source semantics (published class meanings, recurrence
+# counts, common slope bands) - NOT tuned to produce a convenient amount of
+# flagged land. Semantics: docs/product/hazard-evidence-model.md
+schema_version: 1
+status: PROVISIONAL
+
+gates:
+  # Independent human visual sign-off of the M1A.1 review package.
+  # While PENDING, no hazard rule may be promoted to a DECISION_RULE.
+  m1a1_human_visual_signoff: PENDING
+
+terrain:
+  min_support_px: 1.0        # below: terrain statistics UNKNOWN (ADR-0009)
+  low_support_px: 10.0       # below: LOW_SUPPORT, confidence capped at LOW
+  slope_thresholds_deg: [5, 15, 30]   # share-of-area bands reported per cell
+  interpretation:
+    high_slope_p90_deg: 35.0     # strong terrain concern (DSM slope - see limitations)
+    caution_slope_p90_deg: 20.0
+
+flood:
+  interpretation:
+    # HIGH: at least this share of the cell observed flooded in >= recurrence_years years
+    high_recurrence_years: 3
+    high_min_area_fraction: 0.10
+    # CAUTION: any observed flooding covering at least this share, or within this distance
+    caution_min_area_fraction: 0.01
+    caution_distance_m: 250.0
+
+landslide:
+  min_assessed_fraction: 0.5   # below: landslide UNRESOLVED (outside DMR coverage)
+  interpretation:
+    high_very_high_min_fraction: 0.25    # DMR class 5 (Very High)
+    high_high_or_above_min_fraction: 0.50   # DMR classes 4-5
+    caution_high_or_above_min_fraction: 0.01
+    caution_medium_or_above_min_fraction: 0.50
+    caution_inventory_points: 1    # mapped historical landslide scars in the cell
+
+# EXPERIMENTAL exclusion candidates: descriptive "what would a rule do" only.
+# They never change eligibility, never feed scores, never mean excluded land.
+experimental_exclusion_candidates:
+  SEVERE_LANDSLIDE_EVIDENCE:
+    field: landslide_class5_fraction
+    thresholds: [0.10, 0.25, 0.50, 0.75]
+  STRONG_RECURRENT_FLOOD_EVIDENCE:
+    field: flood_freq_ge3_area_fraction
+    thresholds: [0.05, 0.10, 0.25, 0.50]
+  EXTREME_TERRAIN_EVIDENCE:
+    field: slope_p90_deg
+    thresholds: [25, 30, 35, 40, 45]
+  INSUFFICIENT_HAZARD_DATA:
+    field: evidence_completeness
+    thresholds_below: [1.0, 0.67, 0.34]

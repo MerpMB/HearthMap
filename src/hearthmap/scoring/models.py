@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from hearthmap.enums import REVIEW_SOURCE_PREFIX, Confidence
+from hearthmap.enums import EXPERIMENTAL_SOURCE_PREFIX, REVIEW_SOURCE_PREFIX, Confidence
 
 
 class _Model(BaseModel):
@@ -45,6 +45,9 @@ def _no_review_sources(source_ids: list[str]) -> list[str]:
     bad = [s for s in source_ids if s.startswith(REVIEW_SOURCE_PREFIX)]
     if bad:
         raise ValueError(f"review artifacts cannot be cited as evidence: {bad}")
+    bad = [s for s in source_ids if s.startswith(EXPERIMENTAL_SOURCE_PREFIX)]
+    if bad:
+        raise ValueError(f"experimental hazard rules cannot be cited as evidence: {bad}")
     return source_ids
 
 
