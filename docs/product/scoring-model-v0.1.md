@@ -102,7 +102,7 @@ false`); thresholds require real datasets and family decisions.
 `hearthmap.scoring.render_explanation()` produces, per unit:
 
 ```text
-CELL: G500-E000958-N004102
+UNIT: G500-E000958-N004102
 STATUS      ELIGIBLE
 TOTAL       89.7 / 100
 COMPONENTS  ... per dimension, with confidence
