@@ -54,6 +54,14 @@ class SourceRole(StrEnum):
     VALIDATION_ONLY = "VALIDATION_ONLY"
 
 
+class AcquisitionStatus(StrEnum):
+    NOT_STARTED = "NOT_STARTED"
+    ACQUIRED = "ACQUIRED"
+    DEFERRED = "DEFERRED"
+    BLOCKED_CREDENTIAL_REQUIRED = "BLOCKED_CREDENTIAL_REQUIRED"
+    BLOCKED_SIZE_GUARD = "BLOCKED_SIZE_GUARD"
+
+
 class PermittedUse(StrEnum):
     """What a source may be used for (docs/product/legal-vs-screening.md)."""
 
@@ -86,6 +94,13 @@ class DataSourceEntry(BaseModel):
     priority: Literal["must_have", "useful", "later"]
     verification_status: VerificationStatus
     role: SourceRole | None = None
+    # Evidence role within a theme, e.g. TEMPORARY_HISTORICAL_EVIDENCE (current
+    # use) vs PRIMARY_HISTORICAL_FLOOD_EVIDENCE (intended once acquirable).
+    evidence_role: str | None = None
+    intended_role: str | None = None
+    metadata_verified: bool = False
+    data_verified: bool = False
+    acquisition_status: AcquisitionStatus | None = None
     permitted_uses: list[PermittedUse] = Field(default_factory=list)
     publisher: str | None = None
     dataset_title: str | None = None
@@ -120,6 +135,14 @@ class DataSourceEntry(BaseModel):
                 missing.append("permitted_uses")
             if missing:
                 raise ValueError(f"{self.id}: VERIFIED entries require {missing}")
+        if self.verification_status is VerificationStatus.VERIFIED and not (
+            self.metadata_verified and self.data_verified
+        ):
+            raise ValueError(f"{self.id}: VERIFIED requires metadata_verified and data_verified")
+        if self.data_verified and not self.metadata_verified:
+            raise ValueError(f"{self.id}: data_verified requires metadata_verified")
+        if self.data_verified and self.acquisition_status not in (None, AcquisitionStatus.ACQUIRED):
+            raise ValueError(f"{self.id}: data_verified requires the data to be acquired")
         if PermittedUse.PARCEL_LEGAL_VERIFICATION in self.permitted_uses and (
             PermittedUse.LEGAL_WARNING_ONLY in self.permitted_uses
         ):

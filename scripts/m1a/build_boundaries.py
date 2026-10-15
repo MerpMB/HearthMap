@@ -32,6 +32,7 @@ from common import (
 from hearthmap.config import load_project_config
 from hearthmap.enums import Confidence
 from hearthmap.ingestion.readers import read_esrijson_pages
+from hearthmap.qa.coverage import coverage_accounting
 from hearthmap.spatial import GridSpec, check_geometries, generate_grid
 from hearthmap.spatial.grid import cell_coverage
 from hearthmap.spatial.transform import reproject_recorded
@@ -358,33 +359,23 @@ def main() -> int:
         m = memb[memb["pcode"] == pcode]
         frac = m["frac"].to_numpy()
         prov_area = float(adm1_n.loc[adm1_n["adm1_pcode"] == pcode].geometry.area.iloc[0])
+        acc = coverage_accounting(frac, spec.cell_size_m, prov_area)
         grid_stats[pcode] = {
             "province": PROVINCE_NAMES[pcode],
-            "number_of_cells": len(m),
-            "full_cells": int((frac >= 1 - 1e-9).sum()),
-            "partial_cells": int((frac < 1 - 1e-9).sum()),
+            **acc.as_km2(),
             "cells_majority_in_province": int((grid["majority_pcode"] == pcode).sum()),
-            "total_grid_area_km2": round(len(m) * cell_area / 1e6, 2),
-            "boundary_area_km2": round(prov_area / 1e6, 2),
-            "coverage_difference_km2": round((len(m) * cell_area - prov_area) / 1e6, 2),
-            "covered_area_check_km2": round(float(m["area"].sum()) / 1e6, 4),
         }
     union_area = shapely.union_all(adm1_n.geometry.values).area
+    acc = coverage_accounting(grid["coverage_fraction"].to_numpy(), spec.cell_size_m, union_area)
     grid_stats["AOI"] = {
-        "number_of_cells": len(grid),
-        "full_cells": int((grid["coverage_fraction"] >= 1 - 1e-9).sum()),
-        "partial_cells": int((grid["coverage_fraction"] < 1 - 1e-9).sum()),
+        **acc.as_km2(),
         "cells_touching_two_provinces": int((grid["n_provinces"] > 1).sum()),
-        "total_grid_area_km2": round(len(grid) * cell_area / 1e6, 2),
-        "boundary_area_km2": round(union_area / 1e6, 2),
-        "coverage_difference_km2": round((len(grid) * cell_area - union_area) / 1e6, 2),
-        "sum_coverage_fraction_area_km2": round(
-            float(grid["coverage_fraction"].sum()) * cell_area / 1e6, 4
-        ),
         "cell_size_m": spec.cell_size_m,
         "selection": spec.selection,
         "cell_ids_unique": bool(grid["cell_id"].is_unique),
     }
+    if not all(v["invariant_ok"] for v in grid_stats.values()):
+        raise SystemExit(f"coverage invariant violated: {grid_stats}")
     write_json(grid_stats, VALIDATION / "grid.json")
     write_layer(
         grid,

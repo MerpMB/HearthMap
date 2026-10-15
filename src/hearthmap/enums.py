@@ -39,6 +39,11 @@ _CONFIDENCE_RANK = {
 }
 
 
+# Source ids with this prefix denote human-review artifacts (M1A.1). They may
+# never be cited as evidence for a score or a hard constraint.
+REVIEW_SOURCE_PREFIX = "review:"
+
+
 class VerificationStatus(StrEnum):
     """How far a fact (dataset, code, URL) has been checked by a human."""
 

@@ -10,6 +10,8 @@
 #
 # verification_status: VERIFIED | CANDIDATE | NEEDS_RESEARCH
 # role: PRIMARY | SECONDARY | VALIDATION_ONLY
+# metadata_verified / data_verified: catalogue/access checked vs data itself opened
+# acquisition_status: NOT_STARTED | ACQUIRED | DEFERRED | BLOCKED_CREDENTIAL_REQUIRED | BLOCKED_SIZE_GUARD
 # permitted_uses: REGIONAL_SCREENING | POTENTIAL_HARD_EXCLUSION | LEGAL_WARNING_ONLY |
 #                 PARCEL_LEGAL_VERIFICATION | VALIDATION_REFERENCE
 # priority: must_have | useful | later
@@ -24,6 +26,9 @@ sources:
   priority: must_have
   verification_status: VERIFIED
   role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
   permitted_uses:
   - REGIONAL_SCREENING
   - VALIDATION_REFERENCE
@@ -69,6 +74,9 @@ sources:
   priority: useful
   verification_status: VERIFIED
   role: SECONDARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
   permitted_uses:
   - VALIDATION_REFERENCE
   publisher: Geo-Informatics and Space Technology Development Agency (GISTDA)
@@ -102,6 +110,9 @@ sources:
   priority: useful
   verification_status: VERIFIED
   role: VALIDATION_ONLY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
   permitted_uses:
   - VALIDATION_REFERENCE
   publisher: 'William & Mary geoLab (geoBoundaries); ADM1 source: OpenStreetMap (Wambacher)'
@@ -161,6 +172,9 @@ sources:
   priority: must_have
   verification_status: VERIFIED
   role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
   permitted_uses:
   - REGIONAL_SCREENING
   publisher: ESA / Copernicus programme (TanDEM-X data, DLR & Airbus); AWS copy managed by Sinergise
@@ -201,6 +215,7 @@ sources:
   priority: useful
   verification_status: CANDIDATE
   role: VALIDATION_ONLY
+  acquisition_status: DEFERRED
   permitted_uses:
   - VALIDATION_REFERENCE
   publisher: University of Bristol
@@ -229,6 +244,10 @@ sources:
   priority: must_have
   verification_status: CANDIDATE
   role: null
+  intended_role: PRIMARY_HISTORICAL_FLOOD_EVIDENCE
+  metadata_verified: true
+  data_verified: false
+  acquisition_status: BLOCKED_CREDENTIAL_REQUIRED
   permitted_uses: []
   publisher: GISTDA
   dataset_title: ข้อมูลพื้นที่น้ำท่วมซ้ำซาก (disasters-01)
@@ -263,6 +282,10 @@ sources:
   priority: must_have
   verification_status: VERIFIED
   role: PRIMARY
+  evidence_role: TEMPORARY_HISTORICAL_EVIDENCE
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
   permitted_uses:
   - REGIONAL_SCREENING
   publisher: GISTDA
@@ -293,12 +316,16 @@ sources:
     exclusion on its own.
   local_raw_path: data/raw/flood-gistda-repeated-2005-2016/service-2026-10-15/
   processing_status: PROCESSED
+  notes: Usable now as TEMPORARY historical observed-flood evidence (ends 2016). Intended to be superseded
+    by flood-gistda-history (2011-2023) once a legitimate project API key exists.
 - id: flood-gistda-event
   name: GISTDA current/event flood extents (1/3/7/30-day) and STAC catalogs
   category: flood
   priority: later
   verification_status: CANDIDATE
   role: null
+  metadata_verified: true
+  acquisition_status: BLOCKED_CREDENTIAL_REQUIRED
   permitted_uses: []
   publisher: GISTDA
   landing_page: https://opendata.gistda.or.th/dataset/flood-disaster-data
@@ -430,6 +457,7 @@ sources:
   priority: must_have
   verification_status: CANDIDATE
   role: null
+  acquisition_status: BLOCKED_SIZE_GUARD
   permitted_uses: []
   publisher: OpenStreetMap contributors (extracts e.g. via Geofabrik)
   landing_page: https://download.geofabrik.de/asia/thailand.html
@@ -478,6 +506,7 @@ sources:
   priority: must_have
   verification_status: CANDIDATE
   role: null
+  acquisition_status: DEFERRED
   permitted_uses: []
   publisher: UNEP-WCMC / IUCN (Protected Planet)
   landing_page: https://www.protectedplanet.net/
@@ -526,6 +555,9 @@ sources:
   priority: must_have
   verification_status: VERIFIED
   role: SECONDARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
   permitted_uses:
   - REGIONAL_SCREENING
   - LEGAL_WARNING_ONLY
@@ -557,6 +589,9 @@ sources:
   priority: must_have
   verification_status: VERIFIED
   role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
   permitted_uses:
   - REGIONAL_SCREENING
   - LEGAL_WARNING_ONLY
@@ -597,6 +632,7 @@ sources:
   priority: later
   verification_status: CANDIDATE
   role: null
+  acquisition_status: DEFERRED
   permitted_uses: []
   publisher: Royal Forest Department
   landing_page: https://gdcc.data.go.th/dataset/forestarea_2562_wgs84
@@ -705,6 +741,7 @@ sources:
   priority: must_have
   verification_status: CANDIDATE
   role: null
+  acquisition_status: BLOCKED_SIZE_GUARD
   permitted_uses: []
   publisher: OpenStreetMap contributors
   landing_page: https://download.geofabrik.de/asia/thailand.html
@@ -730,6 +767,9 @@ sources:
   priority: must_have
   verification_status: VERIFIED
   role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
   permitted_uses:
   - REGIONAL_SCREENING
   publisher: OpenStreetMap contributors

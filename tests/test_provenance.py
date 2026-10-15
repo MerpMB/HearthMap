@@ -191,3 +191,30 @@ def test_load_registry_wraps_errors(tmp_path: Path):
     bad.write_text("schema_version: 1\nsources: [{id: X}]\n", encoding="utf-8")
     with pytest.raises(ConfigError):
         load_registry(bad)
+
+
+def test_flood_sources_have_explicit_temporal_roles():
+    reg = load_registry(REGISTRY_PATH)
+    current = reg.get("flood-gistda-repeated-2005-2016")
+    assert current.evidence_role == "TEMPORARY_HISTORICAL_EVIDENCE"
+    newer = reg.get("flood-gistda-history")
+    assert newer.metadata_verified and not newer.data_verified
+    assert newer.acquisition_status == "BLOCKED_CREDENTIAL_REQUIRED"
+    assert newer.intended_role == "PRIMARY_HISTORICAL_FLOOD_EVIDENCE"
+    assert newer.verification_status != VerificationStatus.VERIFIED
+
+
+def test_verified_requires_data_verified():
+    raw = _raw_registry()
+    entry = next(e for e in raw["sources"] if e["verification_status"] == "VERIFIED")
+    entry["data_verified"] = False
+    with pytest.raises(ValidationError, match="data_verified"):
+        DataSourceRegistry.model_validate(raw)
+
+
+def test_data_verified_requires_acquisition():
+    raw = _raw_registry()
+    entry = next(e for e in raw["sources"] if e["id"] == "flood-gistda-history")
+    entry["data_verified"] = True
+    with pytest.raises(ValidationError, match="acquired"):
+        DataSourceRegistry.model_validate(raw)

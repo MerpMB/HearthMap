@@ -9,9 +9,9 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from hearthmap.enums import Confidence
+from hearthmap.enums import REVIEW_SOURCE_PREFIX, Confidence
 
 
 class _Model(BaseModel):
@@ -41,6 +41,13 @@ class EvidenceClass(StrEnum):
     REQUIRES_LEGAL_VERIFICATION = "REQUIRES_LEGAL_VERIFICATION"
 
 
+def _no_review_sources(source_ids: list[str]) -> list[str]:
+    bad = [s for s in source_ids if s.startswith(REVIEW_SOURCE_PREFIX)]
+    if bad:
+        raise ValueError(f"review artifacts cannot be cited as evidence: {bad}")
+    return source_ids
+
+
 _FLAG_CLASSES = {EvidenceClass.SCREENING_WARNING, EvidenceClass.REQUIRES_LEGAL_VERIFICATION}
 
 
@@ -57,6 +64,8 @@ class HardConstraintResult(_Model):
     evidence_class: EvidenceClass | None = None
     confidence: Confidence = Confidence.UNKNOWN
     source_ids: list[str] = Field(default_factory=list)
+
+    _check_sources = field_validator("source_ids")(_no_review_sources)
 
     @model_validator(mode="after")
     def _outcome_matches_evidence(self) -> HardConstraintResult:
@@ -92,6 +101,8 @@ class ComponentScore(_Model):
     reasons: list[str] = Field(default_factory=list)
     concerns: list[str] = Field(default_factory=list)
     source_ids: list[str] = Field(default_factory=list)
+
+    _check_sources = field_validator("source_ids")(_no_review_sources)
 
 
 class Assessment(_Model):

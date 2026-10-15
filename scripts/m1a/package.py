@@ -178,24 +178,29 @@ def main() -> int:
     lines += [
         "## 2. Analysis grid (500 m, EPSG:32647)",
         "",
-        "| Province | Cells | Full | Partial | Majority-assigned | Grid area km² | Boundary area km² | Coverage diff km² |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "Terminology: *raw cell footprint* = cells x 0.25 km2 (includes overhang outside the "
+        "boundary); *clipped coverage* = sum(cell area x coverage_fraction); *edge overhang* = "
+        "raw - clipped; *coverage difference* = clipped - boundary area. Invariant: "
+        "|coverage difference| <= 1 m2 + 1e-9 x boundary area.",
+        "",
+        "| Province | Cells | Full | Partial | Majority-assigned | Raw cell footprint km2 | Clipped coverage km2 | Boundary area km2 | Edge overhang km2 | Coverage difference km2 | Invariant |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
-    for pc in ("TH50", "TH56", "TH57"):
+    for pc in ("TH50", "TH56", "TH57", "AOI"):
         r = g[pc]
+        name = f"{r['province']} ({pc})" if pc != "AOI" else "**AOI**"
         lines.append(
-            f"| {r['province']} ({pc}) | {r['number_of_cells']:,} | {r['full_cells']:,} | {r['partial_cells']:,} | "
-            f"{r['cells_majority_in_province']:,} | {r['total_grid_area_km2']:,} | {r['boundary_area_km2']:,} | "
-            f"{r['coverage_difference_km2']} |"
+            f"| {name} | {r['n_cells']:,} | {r['full_cells']:,} | {r['partial_cells']:,} | "
+            f"{r.get('cells_majority_in_province', '—')} | {r['raw_cell_footprint_area_km2']:,.2f} | "
+            f"{r['clipped_coverage_area_km2']:,.4f} | {r['boundary_area_km2']:,.4f} | "
+            f"{r['edge_overhang_area_km2']:,.2f} | {r['coverage_difference_km2']:.6f} | "
+            f"{'OK' if r['invariant_ok'] else 'FAIL'} |"
         )
     a = g["AOI"]
     lines += [
-        f"| **AOI** | {a['number_of_cells']:,} | {a['full_cells']:,} | {a['partial_cells']:,} | — | "
-        f"{a['total_grid_area_km2']:,} | {a['boundary_area_km2']:,} | {a['coverage_difference_km2']} |",
         "",
-        f"Cells touching two provinces: {a['cells_touching_two_provinces']} (counted in each province row). "
-        f"Sum of coverage_fraction * cell area = {a['sum_coverage_fraction_area_km2']:,} km² (equals boundary area). "
-        f"Cell ids unique: {a['cell_ids_unique']}.",
+        f"Cells touching two provinces: {a['cells_touching_two_provinces']} (counted in each "
+        f"province row). Cell ids unique: {a['cell_ids_unique']}.",
         "",
     ]
 

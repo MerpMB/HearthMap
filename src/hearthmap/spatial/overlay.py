@@ -34,12 +34,18 @@ def polygon_cell_metrics(
     prefix: str,
     value_column: str | None = None,
     id_column: str = "cell_id",
+    allow_review: bool = False,
 ) -> pd.DataFrame:
     """Area-based overlay of polygon ``features`` onto ``grid`` cells.
 
     Both layers must share one metric CRS. Returns a DataFrame indexed like
-    ``grid`` (one row per cell).
+    ``grid`` (one row per cell). Review-only layers (``review_only`` column,
+    M1A.1) are refused unless ``allow_review`` is set for QA diagnostics.
     """
+    from hearthmap.qa.review import assert_not_review_layer
+
+    if not allow_review:
+        assert_not_review_layer(features, name=prefix)
     crs = require_crs(grid, name="grid")
     assert_metric_crs(crs, purpose="overlay")
     if not same_crs(crs, require_crs(features, name=prefix)):
