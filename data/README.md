@@ -6,7 +6,7 @@ geospatial files or large files are ever tracked.
 
 | Directory | Contents | Rules |
 |---|---|---|
-| `raw/` | Datasets exactly as acquired | Never edited in place. One sub-directory per registry id: `raw/<source_id>/<version-or-date>/`. Record the acquisition in `docs/research/data-source-registry.yaml` (`local_raw_path`, `processing_status`). |
+| `raw/` | Datasets exactly as acquired + `manifest.json` (URL/endpoint, timestamps, size, SHA-256, licence, publisher metadata) | Never edited or overwritten. One sub-directory per registry id: `raw/<source_id>/<version-or-date>/`. Record the acquisition in `docs/research/data-source-registry.yaml`. See [data-lifecycle.md](../docs/architecture/data-lifecycle.md). |
 | `interim/` | Cleaned/reprojected intermediates | Reproducible from `raw/` + code. Safe to delete. |
 | `processed/` | Analysis-ready layers in the canonical CRS (EPSG:32647) | Every file has a `<file>.provenance.json` sidecar. |
 
