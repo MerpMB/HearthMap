@@ -136,6 +136,11 @@ def test_repository_registry_verification_state_m1a():
         "geohazard-events-dmr",
         "seismic-felt-events-tmd",
         "seismicity-usgs-comcat",
+        # M2A (2026-10-16), data opened; facility sources are STALE and levels derived
+        "roads-official-doh-drr",
+        "places-dopa-gis02",
+        "universities",
+        "health-citizeninfo-dga",
     }
     # Every verified source was actually acquired and processed locally.
     assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)

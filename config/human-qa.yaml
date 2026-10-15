@@ -57,3 +57,10 @@ gates:
     reviewer_role: null
     result: null
     reviewed_material: M1E natural hazard integration review maps (outputs/m1e-review/), not yet reviewed
+  m2a_human_visual_signoff:
+    # M2A family and infrastructure evidence is a separate future gate; nothing reviewed, nothing inferred.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M2A family and infrastructure review maps (outputs/m2a-review/), not yet reviewed
