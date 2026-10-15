@@ -11,7 +11,8 @@ from shapely.geometry import box
 
 from hearthmap.hazard import (
     CONTEXT_COLUMNS,
-    HazardState,
+    DEPRECATED_TERMS,
+    EvidenceTier,
     experimental_candidates,
     interpret,
     load_hazard_config,
@@ -76,7 +77,7 @@ def test_config_is_provisional_and_gate_pending():
 
 def test_flood_absence_is_not_safety():
     r = run(cell()).iloc[0]
-    assert r["flood_state"] == HazardState.NO_HIGH_HAZARD_EVIDENCE_DETECTED
+    assert r["flood_tier"] == EvidenceTier.NONE_DETECTED
     assert "NOT evidence of no flood risk" in r["flood_reason"]
     assert r["flood_confidence"] == "LOW"  # absence of observation is weak evidence
     # No state or reason may call a cell safe (the disclaimer note is checked separately).
@@ -86,12 +87,28 @@ def test_flood_absence_is_not_safety():
 
 
 def test_states_vocabulary_has_no_safe_or_low_risk():
-    assert {s.value for s in HazardState} == {
-        "HIGH_HAZARD_EVIDENCE",
-        "CAUTION",
-        "NO_HIGH_HAZARD_EVIDENCE_DETECTED",
-        "UNRESOLVED",
-    }
+    from hearthmap.hazard import HAZARD_LABELS, OVERALL_LABELS
+
+    labels = {v for m in HAZARD_LABELS.values() for v in m.values()} | set(OVERALL_LABELS.values())
+    for lab in labels:
+        assert "SAFE" not in lab and "LOW_RISK" not in lab and "NO_FLOOD_RISK" not in lab
+    assert OVERALL_LABELS[EvidenceTier.HIGH] == "HIGH_SCREENING_CONCERN"
+
+
+def test_deprecated_terms_never_appear_in_outputs():
+    out = run(cell(), cell(landslide_class5_fraction=0.9), cell(landslide_assessed_fraction=0))
+    text = " ".join(out.astype(str).to_numpy().ravel())
+    for term in DEPRECATED_TERMS:
+        assert term not in text
+
+
+def test_dataset_evaluated_is_distinct_from_positive_evidence():
+    r = run(cell()).iloc[0]
+    assert r["flood_dataset_evaluated"] and not r["flood_positive_evidence_present"]
+    r2 = run(cell(flood_area_fraction=0.2)).iloc[0]
+    assert r2["flood_dataset_evaluated"] and r2["flood_positive_evidence_present"]
+    r3 = run(cell(landslide_assessed_fraction=0.2)).iloc[0]
+    assert not r3["landslide_dataset_evaluated"] and r3["landslide_dataset_partial"]
 
 
 # ======================================================== severity not averaged
@@ -99,19 +116,21 @@ def test_states_vocabulary_has_no_safe_or_low_risk():
 
 def test_severe_landslide_is_not_averaged_away_by_flood_absence():
     r = run(cell(landslide_class5_fraction=0.9, landslide_class4_fraction=0.1)).iloc[0]
-    assert r["landslide_state"] == HazardState.HIGH_HAZARD_EVIDENCE
-    assert r["flood_state"] == HazardState.NO_HIGH_HAZARD_EVIDENCE_DETECTED
-    assert r["overall_state"] == HazardState.HIGH_HAZARD_EVIDENCE
+    assert r["landslide_tier"] == EvidenceTier.HIGH
+    assert r["flood_tier"] == EvidenceTier.NONE_DETECTED
+    assert r["overall_tier"] == EvidenceTier.HIGH
     assert r["high_hazards"] == "landslide"
+    assert r["landslide_state"] == "HIGH_LANDSLIDE_SUSCEPTIBILITY_EVIDENCE"
+    assert r["overall_state"] == "HIGH_SCREENING_CONCERN"
 
 
 def test_each_hazard_kept_independently():
     r = run(
         cell(flood_freq_ge3_area_fraction=0.5, flood_area_fraction=0.6, slope_p90_deg=25.0)
     ).iloc[0]
-    assert r["flood_state"] == HazardState.HIGH_HAZARD_EVIDENCE
-    assert r["terrain_state"] == HazardState.CAUTION
-    assert r["landslide_state"] == HazardState.NO_HIGH_HAZARD_EVIDENCE_DETECTED
+    assert r["flood_tier"] == EvidenceTier.HIGH
+    assert r["terrain_tier"] == EvidenceTier.CAUTION
+    assert r["landslide_tier"] == EvidenceTier.NONE_DETECTED
     assert r["high_hazards"] == "flood" and r["caution_hazards"] == "terrain"
 
 
@@ -120,8 +139,8 @@ def test_each_hazard_kept_independently():
 
 def test_unassessed_landslide_makes_cell_unresolved():
     r = run(cell(landslide_assessed_fraction=0.0)).iloc[0]
-    assert r["landslide_state"] == HazardState.UNRESOLVED
-    assert r["overall_state"] == HazardState.UNRESOLVED
+    assert r["landslide_tier"] == EvidenceTier.UNRESOLVED
+    assert r["overall_tier"] == EvidenceTier.UNRESOLVED
     assert r["evidence_completeness"] == pytest.approx(2 / 3)
     assert r["interpretation_confidence"] == "UNKNOWN"
 
@@ -134,25 +153,25 @@ def test_high_evidence_stays_visible_even_when_other_hazards_unresolved():
             flood_area_fraction=0.4,
         )
     ).iloc[0]
-    assert r["overall_state"] == HazardState.HIGH_HAZARD_EVIDENCE
+    assert r["overall_tier"] == EvidenceTier.HIGH
     assert r["unresolved_hazards"] == "landslide"
 
 
 def test_partially_assessed_cell_with_very_high_class_is_high_not_unresolved():
     r = run(cell(landslide_assessed_fraction=0.3, landslide_class5_fraction=0.3)).iloc[0]
-    assert r["landslide_state"] == HazardState.HIGH_HAZARD_EVIDENCE
+    assert r["landslide_tier"] == EvidenceTier.HIGH
 
 
 def test_terrain_without_support_is_unresolved():
     r = run(cell(terrain_support_px=0.4, slope_p90_deg=np.nan)).iloc[0]
-    assert r["terrain_state"] == HazardState.UNRESOLVED
+    assert r["terrain_tier"] == EvidenceTier.UNRESOLVED
     r2 = run(cell(terrain_support_px=5.0)).iloc[0]
     assert bool(r2["terrain_low_support"])
 
 
 def test_terrain_interpretation_always_states_dsm_limitation():
     r = run(cell(slope_p90_deg=40.0)).iloc[0]
-    assert r["terrain_state"] == HazardState.HIGH_HAZARD_EVIDENCE
+    assert r["terrain_tier"] == EvidenceTier.HIGH
     assert "DSM" in r["terrain_reason"] and r["terrain_confidence"] == "LOW"
 
 

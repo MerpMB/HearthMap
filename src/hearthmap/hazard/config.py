@@ -58,6 +58,7 @@ class ExperimentalRule(_M):
 
 class Gates(_M):
     m1a1_human_visual_signoff: Literal["PENDING", "SIGNED_OFF"]
+    m1b_human_visual_signoff: Literal["PENDING", "SIGNED_OFF"] = "PENDING"
 
 
 class HazardConfig(_M):

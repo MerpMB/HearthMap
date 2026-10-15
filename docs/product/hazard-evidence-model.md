@@ -68,10 +68,24 @@ exclusion, no weighting.
 
 ## 3. Provisional interpretation
 
-States per hazard: `HIGH_HAZARD_EVIDENCE`, `CAUTION`,
-`NO_HIGH_HAZARD_EVIDENCE_DETECTED`, `UNRESOLVED`. There is no "SAFE" or
-"LOW RISK" state: `NO_HIGH_HAZARD_EVIDENCE_DETECTED` only says the evidence
-used found nothing above the rule thresholds.
+**Terminology (corrected in M1C).** The model is *Hydrogeomorphic Hazard
+Screening v0.1* (flood, landslide susceptibility, DSM terrain) - not complete
+natural-hazard coverage (see [natural-hazard-scope.md](natural-hazard-scope.md)).
+Logic uses generic tiers `HIGH` / `CAUTION` / `NONE_DETECTED` / `UNRESOLVED`
+(`<hazard>_tier`); users see hazard-specific labels (`<hazard>_state`):
+
+| Tier | Flood | Landslide | Terrain | Composite (`overall_state`) |
+|---|---|---|---|---|
+| HIGH | `STRONG_RECURRENT_FLOOD_EVIDENCE` | `HIGH_LANDSLIDE_SUSCEPTIBILITY_EVIDENCE` | `STRONG_TERRAIN_STEEPNESS_CONCERN` | `HIGH_SCREENING_CONCERN` |
+| CAUTION | `OBSERVED_FLOOD_EVIDENCE` | `LANDSLIDE_SUSCEPTIBILITY_CAUTION` | `TERRAIN_STEEPNESS_CAUTION` | `SCREENING_CAUTION` |
+| NONE_DETECTED | `NO_OBSERVED_FLOOD_IN_2005_2016_RECORD` | `NO_HIGH_LANDSLIDE_SUSCEPTIBILITY_DETECTED` | `NO_STRONG_TERRAIN_STEEPNESS_DETECTED` | `NO_HIGH_SCREENING_CONCERN_DETECTED` |
+| UNRESOLVED | `FLOOD_NOT_EVALUATED` | `LANDSLIDE_SUSCEPTIBILITY_NOT_ASSESSED` | `TERRAIN_SUPPORT_INSUFFICIENT` | `UNRESOLVED` |
+
+The M1B terms `HIGH_HAZARD_EVIDENCE` / `NO_HIGH_HAZARD_EVIDENCE_DETECTED` are
+deprecated. DMR susceptibility is not a probability of failure; DSM slope is
+not ground slope; no observed flood polygon is not flood safety. Each hazard
+also exposes `<hazard>_dataset_evaluated` (the dataset covers the cell) separately
+from `<hazard>_positive_evidence_present` (it contains positive evidence there).
 
 | Hazard | HIGH | CAUTION | UNRESOLVED |
 |---|---|---|---|
@@ -84,7 +98,7 @@ landslide MEDIUM when ≥ 90% assessed else LOW; terrain always LOW (DSM).
 
 **Multi-hazard view (no averaging):** `overall_state` is categorical:
 HIGH if any hazard is HIGH → else UNRESOLVED if any is unresolved → else
-CAUTION if any is CAUTION → else NO_HIGH_HAZARD_EVIDENCE_DETECTED.
+CAUTION if any is CAUTION → else NONE_DETECTED (labels in the table above).
 `high_hazards`, `caution_hazards`, `unresolved_hazards` list which hazards
 drove the state, so a very-high landslide cell with no observed flooding stays
 HIGH (landslide). `evidence_completeness` = share of the three hazards

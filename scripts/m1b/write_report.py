@@ -62,7 +62,12 @@ def build(prefix: str) -> str:
             }
         )
     cov = pd.DataFrame(rows)
-    states = ("HIGH_HAZARD_EVIDENCE", "CAUTION", "UNRESOLVED", "NO_HIGH_HAZARD_EVIDENCE_DETECTED")
+    states = (
+        "HIGH_SCREENING_CONCERN",
+        "SCREENING_CAUTION",
+        "UNRESOLVED",
+        "NO_HIGH_SCREENING_CONCERN_DETECTED",
+    )
     ov = pd.DataFrame(
         [
             {"scope": NAMES[k], **{st: f"{s[k]['overall_state'].get(st, 0):,}" for st in states}}
@@ -118,7 +123,7 @@ def build(prefix: str) -> str:
         "**Status:** PROVISIONAL hazard *evidence* — not a decision. No exclusions, scores or "
         "rankings. `M1A1_HUMAN_VISUAL_SIGNOFF = PENDING` (only the builder has looked at the "
         "M1A.1 maps), so no rule here may be promoted to a DECISION_RULE. "
-        "`NO_HIGH_HAZARD_EVIDENCE_DETECTED` never means safe.",
+        "`NO_HIGH_SCREENING_CONCERN_DETECTED` never means safe.",
         "",
         "Model and field semantics: `docs/product/hazard-evidence-model.md`; terrain method: "
         "`docs/architecture/terrain-methods.md`; thresholds: `config/hazard.yaml`.",

@@ -433,6 +433,10 @@ def main() -> int:
         "coverage_fraction",
         "majority_pcode",
         "overall_state",
+        "overall_tier",
+        "flood_tier",
+        "landslide_tier",
+        "terrain_tier",
         "high_hazards",
         "caution_hazards",
         "unresolved_hazards",
@@ -514,18 +518,16 @@ def main() -> int:
                 "share_of_area": float(a[mask].sum() / a.sum()),
             }
 
-        hi = {
-            h: s[f"{h}_state"] == "HIGH_HAZARD_EVIDENCE" for h in ("flood", "landslide", "terrain")
-        }
+        hi = {h: s[f"{h}_tier"] == "HIGH" for h in ("flood", "landslide", "terrain")}
         stats[scope] = {
             "cells": n,
-            "complete_flood_evidence": share(s["flood_state"] != "UNRESOLVED"),
-            "complete_landslide_evidence": share(s["landslide_state"] != "UNRESOLVED"),
+            "complete_flood_evidence": share(s["flood_tier"] != "UNRESOLVED"),
+            "complete_landslide_evidence": share(s["landslide_tier"] != "UNRESOLVED"),
             "adequate_terrain_support": share(
                 s["terrain_support_px"] >= cfg.terrain.low_support_px
             ),
             "terrain_low_support": share(s["terrain_low_support"]),
-            "terrain_unresolved": share(s["terrain_state"] == "UNRESOLVED"),
+            "terrain_unresolved": share(s["terrain_tier"] == "UNRESOLVED"),
             "incomplete_evidence": share(s["evidence_completeness"] < 1),
             "high_flood_evidence": share(hi["flood"]),
             "high_landslide_evidence": share(hi["landslide"]),
@@ -539,7 +541,7 @@ def main() -> int:
             "terrain_state": s["terrain_state"].value_counts().to_dict(),
             "boundary_attribution_uncertain_cells": int(s["boundary_attribution_uncertain"].sum()),
         }
-    unassessed = wide["landslide_state"] == "UNRESOLVED"
+    unassessed = wide["landslide_tier"] == "UNRESOLVED"
     stats["landslide_unassessed_context"] = {
         "cells": int(unassessed.sum()),
         "median_slope_p90_deg": float(wide.loc[unassessed, "slope_p90_deg"].median()),

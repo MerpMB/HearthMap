@@ -11,6 +11,7 @@ gates:
   # Independent human visual sign-off of the M1A.1 review package.
   # While PENDING, no hazard rule may be promoted to a DECISION_RULE.
   m1a1_human_visual_signoff: PENDING
+  m1b_human_visual_signoff: PENDING
 
 terrain:
   min_support_px: 1.0        # below: terrain statistics UNKNOWN (ADR-0009)

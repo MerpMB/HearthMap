@@ -1,6 +1,6 @@
 """M1B review package: compact maps + README for human review of hazard evidence.
 
-Colour policy: NO_HIGH_HAZARD_EVIDENCE_DETECTED is neutral grey (never green -
+Colour policy: the NONE_DETECTED tier is neutral grey (never green -
 it is not "safe"); UNRESOLVED is a distinct light purple; CAUTION orange; HIGH
 dark red. Continuous indicators use sequential colormaps.
 """
@@ -31,12 +31,12 @@ TAG = (
     "HearthMap M1B hazard EVIDENCE review - provisional, not a decision; "
     "no-evidence != safe; M1A.1 human sign-off PENDING."
 )
-STATES = ["NO_HIGH_HAZARD_EVIDENCE_DETECTED", "CAUTION", "HIGH_HAZARD_EVIDENCE", "UNRESOLVED"]
+STATES = ["NONE_DETECTED", "CAUTION", "HIGH", "UNRESOLVED"]
 STATE_COLORS = ["#d9d9d9", "#fdae61", "#a50f15", "#bcbddc"]
 STATE_LABELS = [
     "no high-hazard evidence detected (NOT 'safe')",
     "caution",
-    "high hazard evidence",
+    "high concern (hazard-specific strong evidence)",
     "unresolved / insufficient evidence",
 ]
 
@@ -114,7 +114,7 @@ def main() -> int:
         0,
         1,
     )
-    state_map(ax[1], grid, w["flood_state"], "Provisional flood interpretation")
+    state_map(ax[1], grid, w["flood_tier"], "Provisional flood interpretation")
     for a in ax:
         outline(a, prov)
     save(
@@ -164,7 +164,7 @@ def main() -> int:
     state_map(
         ax[1],
         grid,
-        w["landslide_state"],
+        w["landslide_tier"],
         "Provisional landslide interpretation (susceptibility + mapped scars)",
     )
     for a in ax:
@@ -281,7 +281,7 @@ def main() -> int:
     state_map(
         ax[0],
         grid,
-        w["overall_state"],
+        w["overall_tier"],
         "Categorical multi-hazard view (worst state wins; no averaging)",
     )
     combos = [
