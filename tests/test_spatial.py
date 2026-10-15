@@ -8,6 +8,7 @@ from shapely.geometry import Point
 
 from hearthmap.spatial import (
     BBox,
+    DatumChangeError,
     MissingCRSError,
     NonMetricCRSError,
     assert_metric_crs,
@@ -16,6 +17,7 @@ from hearthmap.spatial import (
     is_metric_projected,
     repair_geometries,
     reproject,
+    reproject_recorded,
     require_crs,
     same_crs,
     within_envelope,
@@ -74,9 +76,12 @@ def test_indian_1975_is_not_silently_equal_to_wgs84_utm():
     # The classic Thai datum trap: same zone, different datum.
     assert not same_crs("EPSG:24047", "EPSG:32647")
     pt = gpd.GeoDataFrame(geometry=[Point(500_000, 2_000_000)], crs="EPSG:24047")
-    moved = reproject(pt, "EPSG:32647").geometry.iloc[0]
-    shift = moved.distance(Point(500_000, 2_000_000))
+    with pytest.raises(DatumChangeError, match="reproject_recorded"):
+        reproject(pt, "EPSG:32647")  # a datum change may never happen silently
+    moved, record = reproject_recorded(pt, "EPSG:32647")
+    shift = moved.geometry.iloc[0].distance(Point(500_000, 2_000_000))
     assert shift > 50  # datum shift is far larger than a rounding error
+    assert record.datum_change
 
 
 def test_crs_label():

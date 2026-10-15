@@ -26,7 +26,7 @@ sources:
     priority: must_have
     verification_status: CANDIDATE
     publisher: UN OCHA via Humanitarian Data Exchange (HDX); lineage from Thai government sources to be confirmed
-    source_url: https://data.humdata.org/
+    landing_page: https://data.humdata.org/
     access_method: Download
     format: Shapefile / GeoPackage (to confirm)
     coverage: Thailand
@@ -49,7 +49,7 @@ sources:
     priority: useful
     verification_status: CANDIDATE
     publisher: William & Mary geoLab (geoBoundaries)
-    source_url: https://www.geoboundaries.org/
+    landing_page: https://www.geoboundaries.org/
     access_method: Download / API
     format: GeoJSON / Shapefile
     coverage: Thailand
@@ -71,7 +71,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: null
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: Thailand
@@ -93,7 +93,7 @@ sources:
     priority: must_have
     verification_status: CANDIDATE
     publisher: European Space Agency / Copernicus programme
-    source_url: null
+    landing_page: null
     access_method: Download (several mirrors incl. public cloud buckets; to confirm)
     format: Cloud-optimised GeoTIFF tiles
     coverage: Global
@@ -116,7 +116,7 @@ sources:
     priority: useful
     verification_status: CANDIDATE
     publisher: University of Bristol
-    source_url: null
+    landing_page: null
     access_method: Download
     format: GeoTIFF tiles
     coverage: Global
@@ -139,7 +139,7 @@ sources:
     priority: must_have
     verification_status: CANDIDATE
     publisher: Geo-Informatics and Space Technology Development Agency (GISTDA)
-    source_url: null
+    landing_page: null
     access_method: To confirm (portal / WMS / download / request)
     format: null
     coverage: Thailand
@@ -162,7 +162,7 @@ sources:
     priority: useful
     verification_status: CANDIDATE
     publisher: European Commission Joint Research Centre
-    source_url: https://global-surface-water.appspot.com/
+    landing_page: https://global-surface-water.appspot.com/
     access_method: Download / Google Earth Engine
     format: GeoTIFF
     coverage: Global
@@ -184,7 +184,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: null
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -206,7 +206,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Department of Mineral Resources (DMR) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -227,7 +227,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: null
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -249,7 +249,7 @@ sources:
     priority: later
     verification_status: NEEDS_RESEARCH
     publisher: Department of Mineral Resources (DMR) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -271,7 +271,7 @@ sources:
     priority: must_have
     verification_status: CANDIDATE
     publisher: OpenStreetMap contributors (extracts e.g. via Geofabrik)
-    source_url: https://download.geofabrik.de/asia/thailand.html
+    landing_page: https://download.geofabrik.de/asia/thailand.html
     access_method: Download (PBF / Shapefile extract)
     format: OSM PBF
     coverage: Thailand
@@ -294,7 +294,7 @@ sources:
     priority: useful
     verification_status: CANDIDATE
     publisher: WWF / HydroSHEDS
-    source_url: null
+    landing_page: null
     access_method: Download
     format: Shapefile / GeoDatabase
     coverage: Global
@@ -317,7 +317,7 @@ sources:
     priority: must_have
     verification_status: CANDIDATE
     publisher: UNEP-WCMC / IUCN (Protected Planet)
-    source_url: https://www.protectedplanet.net/
+    landing_page: https://www.protectedplanet.net/
     access_method: Download
     format: Shapefile / GeoDatabase
     coverage: Global
@@ -340,7 +340,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Department of National Parks, Wildlife and Plant Conservation (DNP) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -361,7 +361,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Royal Forest Department (RFD) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -383,7 +383,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: null
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -404,7 +404,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Agricultural Land Reform Office (ALRO) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -426,7 +426,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Department of Public Works and Town & Country Planning (DPT) and local authorities - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -449,7 +449,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: Land Development Department (LDD) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -471,7 +471,7 @@ sources:
     priority: must_have
     verification_status: CANDIDATE
     publisher: OpenStreetMap contributors
-    source_url: https://download.geofabrik.de/asia/thailand.html
+    landing_page: https://download.geofabrik.de/asia/thailand.html
     access_method: Download (same extract as rivers-osm)
     format: OSM PBF
     coverage: Thailand
@@ -494,7 +494,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: Department of Highways (DOH) / Department of Rural Roads (DRR) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -516,7 +516,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Ministry of Education / OBEC / other bodies - to confirm (possibly via data.go.th)
-    source_url: https://data.go.th/
+    landing_page: https://data.go.th/
     access_method: null
     format: null
     coverage: null
@@ -539,7 +539,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: null
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -560,7 +560,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Ministry of Public Health (MOPH) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -583,7 +583,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: Provincial Electricity Authority (PEA) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -605,7 +605,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Provincial Waterworks Authority (PWA) and local/village systems - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -627,7 +627,7 @@ sources:
     priority: useful
     verification_status: CANDIDATE
     publisher: Ookla
-    source_url: null
+    landing_page: null
     access_method: Download (public cloud bucket; to confirm)
     format: Parquet / Shapefile tiles
     coverage: Global
@@ -650,7 +650,7 @@ sources:
     priority: must_have
     verification_status: NEEDS_RESEARCH
     publisher: Treasury Department - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -673,7 +673,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: Royal Thai Police - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -697,7 +697,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: State Railway of Thailand (SRT) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -719,7 +719,7 @@ sources:
     priority: later
     verification_status: NEEDS_RESEARCH
     publisher: null
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -741,7 +741,7 @@ sources:
     priority: useful
     verification_status: CANDIDATE
     publisher: NASA
-    source_url: https://firms.modaps.eosdis.nasa.gov/
+    landing_page: https://firms.modaps.eosdis.nasa.gov/
     access_method: Download / API (free key may be required)
     format: CSV / Shapefile points
     coverage: Global
@@ -763,7 +763,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: Pollution Control Department (PCD) - to confirm
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -785,7 +785,7 @@ sources:
     priority: useful
     verification_status: NEEDS_RESEARCH
     publisher: null
-    source_url: null
+    landing_page: null
     access_method: null
     format: null
     coverage: null
@@ -808,7 +808,7 @@ sources:
     priority: useful
     verification_status: CANDIDATE
     publisher: EC JRC (GHSL) / WorldPop - to confirm which
-    source_url: null
+    landing_page: null
     access_method: Download
     format: GeoTIFF
     coverage: Global

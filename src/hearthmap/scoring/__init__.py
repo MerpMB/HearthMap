@@ -7,6 +7,7 @@ from hearthmap.scoring.models import (
     ComponentScore,
     ConstraintOutcome,
     EligibilityStatus,
+    EvidenceClass,
     HardConstraintResult,
 )
 
@@ -15,6 +16,7 @@ __all__ = [
     "ComponentScore",
     "ConstraintOutcome",
     "EligibilityStatus",
+    "EvidenceClass",
     "HardConstraintResult",
     "ScoringInputError",
     "ScoringModel",

@@ -32,6 +32,7 @@ def make_scoring_config():
     def _make(
         weights: dict[str, float] | None = None,
         constraints: list[str] | None = None,
+        definitive: bool = True,
         **policies: Any,
     ) -> ScoringConfig:
         weights = weights if weights is not None else {"a": 50, "b": 30, "c": 20}
@@ -47,7 +48,12 @@ def make_scoring_config():
                 ],
                 "policies": policies,
                 "hard_constraints": [
-                    {"id": c, "label": c, "description": f"test constraint {c}"}
+                    {
+                        "id": c,
+                        "label": c,
+                        "description": f"test constraint {c}",
+                        "definitive_exclusion_allowed": definitive,
+                    }
                     for c in constraints
                 ],
             }

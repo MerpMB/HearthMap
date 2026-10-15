@@ -63,6 +63,37 @@ def cell_id(prefix: str, cell_size: float, col: int, row: int) -> str:
     return f"{prefix}{size}-E{col:06d}-N{row:06d}"
 
 
+def cell_coverage(
+    cells: np.ndarray, area: shapely.Geometry, cell_size: float, *, tile_factor: int = 20
+) -> np.ndarray:
+    """Exact share of each aligned square cell covered by ``area`` (0..1).
+
+    Interior cells are detected with a prepared ``contains_properly`` test
+    (fraction exactly 1). Edge cells are intersected with the boundary clipped
+    to small aligned tiles, so a highly detailed national/provincial polygon is
+    never intersected against every cell in full.
+    """
+    shapely.prepare(area)
+    frac = np.zeros(len(cells), dtype=float)
+    inside = shapely.contains_properly(area, cells)
+    frac[inside] = 1.0
+    edge = np.flatnonzero(~inside & shapely.intersects(area, cells))
+    if len(edge):
+        tile = cell_size * tile_factor
+        b = shapely.bounds(cells[edge])
+        tx = np.floor((b[:, 0] + cell_size / 2) / tile).astype(np.int64)
+        ty = np.floor((b[:, 1] + cell_size / 2) / tile).astype(np.int64)
+        order = np.lexsort((ty, tx))
+        edge, tx, ty = edge[order], tx[order], ty[order]
+        breaks = np.flatnonzero((np.diff(tx) != 0) | (np.diff(ty) != 0)) + 1
+        for grp in np.split(np.arange(len(edge)), breaks):
+            x, y = tx[grp[0]] * tile, ty[grp[0]] * tile
+            piece = shapely.intersection(area, shapely.box(x, y, x + tile, y + tile))
+            idx = edge[grp]
+            frac[idx] = shapely.area(shapely.intersection(cells[idx], piece)) / (cell_size**2)
+    return np.clip(frac, 0.0, 1.0)
+
+
 def generate_grid(boundary: gpd.GeoDataFrame, spec: GridSpec) -> gpd.GeoDataFrame:
     """Generate grid cells covering ``boundary``.
 
@@ -129,8 +160,6 @@ def generate_grid(boundary: gpd.GeoDataFrame, spec: GridSpec) -> gpd.GeoDataFram
         "row": rows,
     }
     if spec.compute_coverage:
-        data["coverage_fraction"] = np.clip(
-            shapely.area(shapely.intersection(cells, area)) / (size * size), 0.0, 1.0
-        )
+        data["coverage_fraction"] = cell_coverage(cells, area, size)
 
     return gpd.GeoDataFrame(data, geometry=cells, crs=spec.crs)

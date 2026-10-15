@@ -15,14 +15,24 @@ def render_explanation(assessment: Assessment, config: ScoringConfig | None = No
 
     total = "n/a" if a.suitability_score is None else f"{a.suitability_score:.1f} / 100"
     lines += ["TOTAL", f"  {total}"]
-    if a.coverage < 1:
-        lines.append(f"  (weight coverage {a.coverage:.0%})")
+    lines.append(f"  basis: {a.score_basis}; weight coverage {a.coverage:.0%}")
+    lines.append(
+        "  rankable: " + ("yes" if a.rankable else "no (not comparable with complete scores)")
+    )
     lines.append("")
 
     if a.exclusion_reasons:
-        lines.append("EXCLUDED BECAUSE")
+        basis = {"definitive": "definitive evidence", "conservative_policy": "conservative policy"}
+        lines.append(f"EXCLUDED BECAUSE ({basis.get(a.exclusion_basis or '', '?')})")
         for r in a.exclusion_reasons:
             lines.append(f"  x {r.constraint_id}: {r.reason} [confidence {r.confidence.value}]")
+        lines.append("")
+
+    if a.flags:
+        lines.append("REQUIRES VERIFICATION (not an exclusion)")
+        for r in a.flags:
+            ec = r.evidence_class.value if r.evidence_class else "?"
+            lines.append(f"  ! {r.constraint_id}: {r.reason} [{ec}]")
         lines.append("")
 
     lines.append("COMPONENTS")

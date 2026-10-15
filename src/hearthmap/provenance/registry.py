@@ -9,7 +9,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from hearthmap.config.loader import ConfigError, load_yaml
 from hearthmap.enums import Confidence, VerificationStatus
 
 DEFAULT_REGISTRY_PATH = Path("docs/research/data-source-registry.yaml")
@@ -47,6 +46,37 @@ class ProcessingStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+class SourceRole(StrEnum):
+    """Role of a source among alternatives for the same theme."""
+
+    PRIMARY = "PRIMARY"
+    SECONDARY = "SECONDARY"
+    VALIDATION_ONLY = "VALIDATION_ONLY"
+
+
+class PermittedUse(StrEnum):
+    """What a source may be used for (docs/product/legal-vs-screening.md)."""
+
+    REGIONAL_SCREENING = "REGIONAL_SCREENING"
+    POTENTIAL_HARD_EXCLUSION = "POTENTIAL_HARD_EXCLUSION"
+    LEGAL_WARNING_ONLY = "LEGAL_WARNING_ONLY"
+    PARCEL_LEGAL_VERIFICATION = "PARCEL_LEGAL_VERIFICATION"
+    VALIDATION_REFERENCE = "VALIDATION_REFERENCE"
+
+
+_VERIFIED_REQUIRED = (
+    "last_verified",
+    "publisher",
+    "dataset_title",
+    "landing_page",
+    "data_endpoint",
+    "format",
+    "source_crs",
+    "license_or_usage_notes",
+    "verification_evidence",
+)
+
+
 class DataSourceEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -55,14 +85,25 @@ class DataSourceEntry(BaseModel):
     category: SourceCategory
     priority: Literal["must_have", "useful", "later"]
     verification_status: VerificationStatus
+    role: SourceRole | None = None
+    permitted_uses: list[PermittedUse] = Field(default_factory=list)
     publisher: str | None = None
-    source_url: str | None = None
+    dataset_title: str | None = None
+    landing_page: str | None = None
+    data_endpoint: str | None = None
     access_method: str | None = None
+    access_restrictions: str | None = None
+    source_crs: str | None = None
     format: str | None = None
     coverage: str | None = None
     spatial_resolution: str | None = None
     temporal_coverage: str | None = None
+    last_update: str | None = None
     last_verified: dt.date | None = None
+    # What was actually inspected to verify (a working URL alone is not verification).
+    verification_evidence: str | None = None
+    redirects_or_changes: str | None = None
+    analytical_suitability: str | None = None
     license_or_usage_notes: str | None = None
     expected_update_frequency: str | None = None
     confidence: Confidence = Confidence.UNKNOWN
@@ -74,9 +115,15 @@ class DataSourceEntry(BaseModel):
     @model_validator(mode="after")
     def _state_rules(self) -> DataSourceEntry:
         if self.verification_status is VerificationStatus.VERIFIED:
-            missing = [f for f in ("last_verified", "source_url") if getattr(self, f) is None]
+            missing = [f for f in _VERIFIED_REQUIRED if not getattr(self, f)]
+            if not self.permitted_uses:
+                missing.append("permitted_uses")
             if missing:
                 raise ValueError(f"{self.id}: VERIFIED entries require {missing}")
+        if PermittedUse.PARCEL_LEGAL_VERIFICATION in self.permitted_uses and (
+            PermittedUse.LEGAL_WARNING_ONLY in self.permitted_uses
+        ):
+            raise ValueError(f"{self.id}: a LEGAL_WARNING_ONLY source cannot verify parcels")
         if self.confidence is not Confidence.UNKNOWN and (
             self.last_verified is None
             or self.verification_status is VerificationStatus.NEEDS_RESEARCH
@@ -119,11 +166,20 @@ class DataSourceRegistry(BaseModel):
     def __contains__(self, source_id: object) -> bool:
         return any(entry.id == source_id for entry in self.sources)
 
+    def permits(self, source_id: str, use: PermittedUse) -> bool:
+        entry = self.get(source_id)
+        return (
+            entry.verification_status is VerificationStatus.VERIFIED and use in entry.permitted_uses
+        )
+
     def by_status(self, status: VerificationStatus) -> list[DataSourceEntry]:
         return [s for s in self.sources if s.verification_status is status]
 
 
 def load_registry(path: Path | str = DEFAULT_REGISTRY_PATH) -> DataSourceRegistry:
+    # Imported lazily: config depends on spatial, which depends on provenance.
+    from hearthmap.config.loader import ConfigError, load_yaml
+
     try:
         return DataSourceRegistry.model_validate(load_yaml(Path(path)))
     except ValidationError as exc:

@@ -1,13 +1,17 @@
 """Two-stage scoring engine: hard exclusion, then weighted suitability.
 
-Contract (docs/product/scoring-model-v0.1.md, ADR-0003):
+Contract (docs/product/scoring-model-v0.1.md, ADR-0003, ADR-0007):
 
-    any hard constraint FAIL  -> EXCLUDED, suitability_score = None
-    else any UNKNOWN          -> UNRESOLVED (or EXCLUDED under strict policy)
+    any hard constraint FAIL  -> EXCLUDED (definitive), suitability_score = None
+    else UNKNOWN + strict     -> EXCLUDED (conservative_policy)
+    else any UNKNOWN or FLAG  -> UNRESOLVED
     else                      -> ELIGIBLE
 
-Exclusions are never converted into negative points. The engine does not
-compute components from geography; callers supply already-normalised scores.
+FAIL is only accepted for constraints configured with
+``definitive_exclusion_allowed``; screening or approximate legal evidence is a
+FLAG and can never become an exclusion. Exclusions are never converted into
+negative points. Only complete, eligible scores are rankable unless the
+experimental ``allow_incomplete_ranking`` policy is on.
 """
 
 from __future__ import annotations
@@ -26,7 +30,8 @@ from hearthmap.scoring.models import (
 
 
 class ScoringInputError(ValueError):
-    """Inputs reference unknown dimensions/constraints or are duplicated."""
+    """Inputs reference unknown dimensions/constraints, are duplicated, or claim
+    more authority than the constraint permits."""
 
 
 def _index_unique[T](items: Iterable[T], key: str, kind: str) -> dict[str, T]:
@@ -45,24 +50,30 @@ class ScoringModel:
     def __init__(self, config: ScoringConfig) -> None:
         self.config = config
         self.weights: dict[str, float] = config.normalized_weights()
-        self._constraint_ids = {c.id for c in config.hard_constraints}
+        self._constraints = {c.id: c for c in config.hard_constraints}
         self._enabled_constraints = [c.id for c in config.enabled_constraints]
 
     # ------------------------------------------------------------ stage A
 
-    def evaluate_constraints(
-        self, results: Iterable[HardConstraintResult]
-    ) -> tuple[
-        EligibilityStatus,
-        list[HardConstraintResult],
-        list[HardConstraintResult],
-        list[HardConstraintResult],
-    ]:
-        """Resolve eligibility. Returns (status, failed, unknown, all_considered)."""
+    def evaluate_constraints(self, results: Iterable[HardConstraintResult]) -> dict[str, object]:
+        """Resolve eligibility.
+
+        Returns a dict with ``status``, ``failed``, ``unknown``, ``flags``,
+        ``considered`` and ``basis``.
+        """
         by_id = _index_unique(results, "constraint_id", "hard-constraint result")
-        unknown_ids = sorted(set(by_id) - self._constraint_ids)
-        if unknown_ids:
-            raise ScoringInputError(f"results for undefined hard constraints: {unknown_ids}")
+        undefined = sorted(set(by_id) - set(self._constraints))
+        if undefined:
+            raise ScoringInputError(f"results for undefined hard constraints: {undefined}")
+        for r in by_id.values():
+            if (
+                r.outcome is ConstraintOutcome.FAIL
+                and not self._constraints[r.constraint_id].definitive_exclusion_allowed
+            ):
+                raise ScoringInputError(
+                    f"{r.constraint_id} does not permit definitive exclusion; evidence of this "
+                    "kind must be reported as FLAG (screening / legal verification)"
+                )
 
         considered: list[HardConstraintResult] = []
         for cid in self._enabled_constraints:
@@ -77,13 +88,24 @@ class ScoringModel:
 
         failed = [r for r in considered if r.outcome is ConstraintOutcome.FAIL]
         unknown = [r for r in considered if r.outcome is ConstraintOutcome.UNKNOWN]
-        if failed or (unknown and self.config.policies.unknown_hard_constraint == "exclude"):
-            status = EligibilityStatus.EXCLUDED
-        elif unknown:
+        flags = [r for r in considered if r.outcome is ConstraintOutcome.FLAG]
+        basis = None
+        if failed:
+            status, basis = EligibilityStatus.EXCLUDED, "definitive"
+        elif unknown and self.config.policies.unknown_hard_constraint == "exclude":
+            status, basis = EligibilityStatus.EXCLUDED, "conservative_policy"
+        elif unknown or flags:
             status = EligibilityStatus.UNRESOLVED
         else:
             status = EligibilityStatus.ELIGIBLE
-        return status, failed, unknown, considered
+        return {
+            "status": status,
+            "failed": failed,
+            "unknown": unknown,
+            "flags": flags,
+            "considered": considered,
+            "basis": basis,
+        }
 
     # ------------------------------------------------------------ stage B
 
@@ -122,7 +144,7 @@ class ScoringModel:
         score = sum(w * components[d].value for d, w in available.items()) / coverage  # type: ignore[operator]
         notes.append(
             f"score renormalised over {coverage:.0%} of weight; missing {missing} "
-            "(assumes missing dimensions resemble the others - exploratory only)"
+            "(assumes missing dimensions resemble the others - exploratory only, not rankable)"
         )
         return score, coverage, missing, notes
 
@@ -134,7 +156,12 @@ class ScoringModel:
         constraint_results: Iterable[HardConstraintResult] = (),
         component_scores: Iterable[ComponentScore] = (),
     ) -> Assessment:
-        status, failed, unknown, considered = self.evaluate_constraints(constraint_results)
+        ev = self.evaluate_constraints(constraint_results)
+        status: EligibilityStatus = ev["status"]  # type: ignore[assignment]
+        failed: list[HardConstraintResult] = ev["failed"]  # type: ignore[assignment]
+        unknown: list[HardConstraintResult] = ev["unknown"]  # type: ignore[assignment]
+        flags: list[HardConstraintResult] = ev["flags"]  # type: ignore[assignment]
+        considered: list[HardConstraintResult] = ev["considered"]  # type: ignore[assignment]
         components = _index_unique(component_scores, "dimension_id", "component score")
 
         notes: list[str] = []
@@ -145,7 +172,8 @@ class ScoringModel:
             _, coverage, _, _ = self.weighted_score(components)
             if not failed:
                 notes.append(
-                    "excluded because unevaluated hard constraints are treated as failures"
+                    "excluded by conservative policy: unevaluated hard constraints are treated "
+                    "as failures (not a definitive finding)"
                 )
             confidence = Confidence.weakest(r.confidence for r in (failed or unknown))
         else:
@@ -158,8 +186,23 @@ class ScoringModel:
             confidence = Confidence.weakest([*contributing, *(r.confidence for r in considered)])
             if status is EligibilityStatus.UNRESOLVED:
                 notes.append(
-                    "provisional: eligibility unresolved until every hard constraint is evaluated"
+                    "provisional: eligibility unresolved until every hard constraint is evaluated "
+                    "and every flag is verified"
                 )
+
+        if score is None:
+            score_basis = "none"
+        elif missing:
+            score_basis = "renormalized"
+        else:
+            score_basis = "complete"
+
+        if self.config.policies.allow_incomplete_ranking:
+            rankable = score is not None and status is not EligibilityStatus.EXCLUDED
+            if rankable and (score_basis != "complete" or status is not EligibilityStatus.ELIGIBLE):
+                notes.append("EXPERIMENTAL ranking mode: incomplete or unresolved score is ranked")
+        else:
+            rankable = status is EligibilityStatus.ELIGIBLE and score_basis == "complete"
 
         source_ids = sorted(
             {s for c in components.values() for s in c.source_ids}
@@ -175,9 +218,21 @@ class ScoringModel:
             weights=self.weights,
             coverage=coverage,
             exclusion_reasons=failed or (unknown if status is EligibilityStatus.EXCLUDED else []),
+            exclusion_basis=ev["basis"],  # type: ignore[arg-type]
             unresolved_constraints=unknown if status is EligibilityStatus.UNRESOLVED else [],
+            flags=flags,
             missing_components=missing,
             confidence=confidence,
             notes=notes,
             source_ids=source_ids,
+            score_basis=score_basis,
+            rankable=rankable,
         )
+
+    # ------------------------------------------------------------ ranking
+
+    def rank(self, assessments: Iterable[Assessment]) -> list[Assessment]:
+        """Rankable assessments, best first. Non-rankable units are omitted,
+        never mixed in with complete scores."""
+        ranked = [a for a in assessments if a.rankable and a.suitability_score is not None]
+        return sorted(ranked, key=lambda a: (-a.suitability_score, a.unit_id))  # type: ignore[operator]

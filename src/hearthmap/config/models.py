@@ -166,12 +166,18 @@ class HardConstraintConfig(_StrictModel):
     enabled: bool = True
     # False until a concrete, data-backed threshold has been agreed.
     rule_defined: bool = False
+    # Whether ANY evidence may definitively exclude for this constraint. False
+    # means results can only PASS / FLAG / UNKNOWN (screening, legal warning).
+    definitive_exclusion_allowed: bool = False
 
 
 class ScoringPolicies(_StrictModel):
     unknown_hard_constraint: Literal["unresolved", "exclude"] = "unresolved"
     missing_component: Literal["null_total", "renormalize"] = "null_total"
     min_component_coverage: float = Field(default=0.75, gt=0, le=1)
+    # Experimental mode: let incomplete / renormalised / unresolved scores take
+    # part in cross-unit ranking. Off by default (docs/product/scoring-model-v0.1.md §3).
+    allow_incomplete_ranking: bool = False
 
 
 class ScoringConfig(_StrictModel):

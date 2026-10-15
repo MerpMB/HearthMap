@@ -16,6 +16,10 @@ class MissingCRSError(ValueError):
     """A layer has no CRS metadata; we refuse to assume one."""
 
 
+class DatumChangeError(ValueError):
+    """A reprojection would change datum; it must go through ``reproject_recorded``."""
+
+
 class NonMetricCRSError(ValueError):
     """An operation that measures distance/area was given a non-metric CRS."""
 
@@ -61,14 +65,30 @@ def same_crs(a: CRS | str | int, b: CRS | str | int) -> bool:
     return as_crs(a).equals(as_crs(b))
 
 
+def datum_name(crs: CRS | str | int) -> str:
+    geod = as_crs(crs).geodetic_crs
+    return geod.datum.name if geod is not None and geod.datum is not None else "unknown"
+
+
 def reproject(
     gdf: gpd.GeoDataFrame, target: CRS | str | int, *, name: str = "layer"
 ) -> gpd.GeoDataFrame:
-    """Reproject to ``target``; returns a copy. Raises if the source CRS is missing."""
+    """Reproject within one datum (pure conversion); returns a copy.
+
+    Raises :class:`MissingCRSError` without a source CRS and
+    :class:`DatumChangeError` if the datum would change: datum
+    transformations must use :func:`hearthmap.spatial.transform.reproject_recorded`
+    so the chosen operation and its accuracy are recorded.
+    """
     source = require_crs(gdf, name=name)
     target_crs = as_crs(target)
     if source.equals(target_crs):
         return gdf.copy()
+    if datum_name(source) != datum_name(target_crs):
+        raise DatumChangeError(
+            f"{name}: {crs_label(source)} ({datum_name(source)}) -> {crs_label(target_crs)} "
+            f"({datum_name(target_crs)}) changes datum; use reproject_recorded()"
+        )
     return gdf.to_crs(target_crs)
 
 

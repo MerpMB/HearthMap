@@ -9,12 +9,12 @@ Implementation: `src/hearthmap/scoring/`.
 ## 1. Two-stage decision
 
 ```text
-Stage A — hard constraints            Stage B — suitability
----------------------------           ---------------------------------
-each constraint → PASS/FAIL/UNKNOWN   only for units not excluded
-any FAIL      → EXCLUDED (score=null) weighted mean of 0–100 components
-any UNKNOWN   → UNRESOLVED            confidence = weakest link
-all PASS      → ELIGIBLE
+Stage A — hard constraints                 Stage B — suitability
+---------------------------                ---------------------------------
+each → PASS / FAIL / FLAG / UNKNOWN        only for units not excluded
+any FAIL (definitive) → EXCLUDED, null     weighted mean of 0–100 components
+any UNKNOWN or FLAG   → UNRESOLVED         confidence = weakest link
+all PASS              → ELIGIBLE           rankable only if complete + ELIGIBLE
 ```
 
 ### Status semantics
@@ -23,7 +23,7 @@ all PASS      → ELIGIBLE
 |---|---|---|
 | `ELIGIBLE` | Every enabled hard constraint was evaluated and passed | Computed (may still be null if components are missing — see §3) |
 | `EXCLUDED` | At least one hard constraint failed | **Always null.** Exclusion reasons listed |
-| `UNRESOLVED` | No failures, but at least one constraint could not be evaluated | Computed but provisional; the unknown constraints are listed as concerns |
+| `UNRESOLVED` | No failures, but at least one constraint is `UNKNOWN` or `FLAG`ged (screening / legal-verification evidence) | Computed but provisional; not rankable; unknowns and flags listed |
 
 Policy `unknown_hard_constraint: exclude` (in config) turns `UNRESOLVED` into
 `EXCLUDED` for a strict, conservative run.
@@ -33,6 +33,14 @@ hard-constraint failure is a different kind of fact from a weak score.
 
 A hard constraint that receives **no evaluation at all** is treated as
 `UNKNOWN` — the engine never assumes a pass.
+
+**M0.1 refinement — definitive vs screening evidence.** `FAIL` now requires
+`evidence_class: DEFINITIVE_EXCLUSION` and a constraint configured with
+`definitive_exclusion_allowed: true`. Screening or approximate legal evidence
+is reported as `FLAG` (`SCREENING_WARNING` / `REQUIRES_LEGAL_VERIFICATION`)
+and can never become an exclusion. Strict-policy exclusions are labelled
+`exclusion_basis: conservative_policy`. See
+[legal-vs-screening.md](legal-vs-screening.md).
 
 ## 2. Dimensions and provisional weights
 
@@ -68,6 +76,17 @@ Config `missing_component`:
   missing dimension is "average of the others" — use it only for exploratory
   runs and always display coverage.
 
+### 3.1 Ranking comparability (M0.1)
+
+Every assessment exposes `coverage`, `score_basis` (`complete` /
+`renormalized` / `none`) and `rankable`. **A score built from fewer dimensions
+must not look equivalent to a complete score.** Normal cross-unit ranking
+(`ScoringModel.rank`) includes only units that are `ELIGIBLE` with
+`score_basis: complete`. Renormalised, incomplete or `UNRESOLVED` scores take
+part only when the explicit experimental policy
+`allow_incomplete_ranking: true` is set, and each such assessment carries an
+`EXPERIMENTAL` note. The repository config keeps it `false`.
+
 ## 4. Confidence
 
 Ordered levels `HIGH > MEDIUM > LOW > UNKNOWN`. Overall confidence of an
@@ -80,6 +99,19 @@ assessment is the **weakest** confidence among the evidence it depends on:
 
 Weakest-link is deliberately conservative and simple. A weighted or
 probabilistic scheme may replace it later (see open questions).
+
+**Future refinement (documented, not implemented):** uncertainty must not stay
+collapsed into one enum. It will be separated into:
+
+| Facet | Where it lives today | Question it answers |
+|---|---|---|
+| Source confidence | registry `confidence` | How good is the dataset itself? |
+| Transformation confidence | `TransformationRecord.accuracy_m`, provenance steps | Did normalisation add positional error? |
+| Coverage / completeness | `Assessment.coverage`, `score_basis`, overlay fractions | How much of the decision is backed by evidence at all? |
+| Decision confidence | `Assessment.confidence` (weakest link) | How far can this status/score be trusted? |
+
+The facets are already stored separately; only the *aggregate* is still a
+single weakest-link enum.
 
 ## 5. Provisional hard constraints
 

@@ -47,6 +47,41 @@ class ProcessingStep(_Model):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
 
+class TransformationStep(_Model):
+    """One PROJ coordinate-operation step (a conversion or a datum transformation)."""
+
+    name: str
+    kind: str  # "Conversion" | "Transformation" | ...
+    authority_code: str | None = None  # e.g. "EPSG:1812"
+    accuracy_m: float | None = None  # stated accuracy; None when not published
+    ballpark: bool = False  # True = no real datum shift (PROJ "ballpark" fallback)
+
+
+class TransformationRecord(_Model):
+    """Exactly how coordinates were moved between CRSs (datum contract, ADR-0006).
+
+    Every normalisation must record the source/destination CRS and datum, the
+    operation PROJ actually used (with authority codes and stated accuracy),
+    and which alternatives existed, so no datum choice is ever silent.
+    """
+
+    source_crs: str
+    source_datum: str
+    target_crs: str
+    target_datum: str
+    datum_change: bool
+    operation: str
+    steps: list[TransformationStep]
+    transformation_codes: list[str] = Field(default_factory=list)
+    accuracy_m: float | None = None
+    area_of_use: str | None = None
+    candidates: list[str] = Field(default_factory=list)
+    selection: Literal["only_candidate", "best_ranked", "pinned"]
+    proj_pipeline: str | None = None
+    pyproj_version: str
+    proj_version: str
+
+
 class ProvenanceRecord(_Model):
     schema_version: Literal[1] = 1
     artifact_id: str
@@ -62,6 +97,7 @@ class ProvenanceRecord(_Model):
     confidence: Confidence = Confidence.UNKNOWN
     limitations: list[str] = Field(default_factory=list)
     synthetic: bool = False
+    crs_transformations: list[TransformationRecord] = Field(default_factory=list)
 
     def with_step(self, operation: str, description: str, **parameters: Any) -> ProvenanceRecord:
         """Return a copy with one more processing step appended."""

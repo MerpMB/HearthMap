@@ -10,6 +10,7 @@ from hearthmap.scoring import (
     ComponentScore,
     ConstraintOutcome,
     EligibilityStatus,
+    EvidenceClass,
     HardConstraintResult,
     ScoringInputError,
     ScoringModel,
@@ -91,6 +92,7 @@ def test_failed_constraint_excludes_with_null_score(make_scoring_config):
         HardConstraintResult(
             constraint_id="flood",
             outcome=ConstraintOutcome.FAIL,
+            evidence_class=EvidenceClass.DEFINITIVE_EXCLUSION,
             reason="inside observed floodway",
             confidence=M,
             source_ids=["flood-src"],
@@ -110,7 +112,10 @@ def test_failed_constraint_excludes_with_null_score(make_scoring_config):
 def test_excluded_unit_keeps_components_for_explanation_only(make_scoring_config):
     model = ScoringModel(make_scoring_config())
     fail = HardConstraintResult(
-        constraint_id="slope", outcome=ConstraintOutcome.FAIL, reason="steep"
+        constraint_id="slope",
+        outcome=ConstraintOutcome.FAIL,
+        evidence_class=EvidenceClass.DEFINITIVE_EXCLUSION,
+        reason="steep",
     )
     a = model.assess("u", [fail, *passes("flood")], [comp("a", 90)])
     assert a.suitability_score is None
@@ -120,7 +125,12 @@ def test_excluded_unit_keeps_components_for_explanation_only(make_scoring_config
 def test_multiple_failures_all_reported(make_scoring_config):
     model = ScoringModel(make_scoring_config())
     fails = [
-        HardConstraintResult(constraint_id=c, outcome=ConstraintOutcome.FAIL, reason=c)
+        HardConstraintResult(
+            constraint_id=c,
+            outcome=ConstraintOutcome.FAIL,
+            evidence_class=EvidenceClass.DEFINITIVE_EXCLUSION,
+            reason=c,
+        )
         for c in ("flood", "slope")
     ]
     a = model.assess("u", fails, [])
@@ -147,7 +157,12 @@ def test_strict_policy_excludes_unknown_constraints(make_scoring_config):
 
 def test_failure_takes_precedence_over_unknown(make_scoring_config):
     model = ScoringModel(make_scoring_config())
-    fail = HardConstraintResult(constraint_id="flood", outcome=ConstraintOutcome.FAIL, reason="x")
+    fail = HardConstraintResult(
+        constraint_id="flood",
+        outcome=ConstraintOutcome.FAIL,
+        evidence_class=EvidenceClass.DEFINITIVE_EXCLUSION,
+        reason="x",
+    )
     a = model.assess("u", [fail], [])
     assert a.status is EligibilityStatus.EXCLUDED
     assert [r.constraint_id for r in a.exclusion_reasons] == ["flood"]
@@ -257,7 +272,10 @@ def test_explanation_contains_contract_sections(make_scoring_config):
 def test_explanation_for_excluded_unit_shows_no_total(make_scoring_config):
     cfg = make_scoring_config()
     fail = HardConstraintResult(
-        constraint_id="flood", outcome=ConstraintOutcome.FAIL, reason="floodway"
+        constraint_id="flood",
+        outcome=ConstraintOutcome.FAIL,
+        evidence_class=EvidenceClass.DEFINITIVE_EXCLUSION,
+        reason="floodway",
     )
     text = render_explanation(ScoringModel(cfg).assess("u", [fail], []), cfg)
     assert "EXCLUDED" in text
