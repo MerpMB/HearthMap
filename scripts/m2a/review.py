@@ -14,11 +14,11 @@ import geopandas as gpd
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
-import shapely  # noqa: E402
-from matplotlib.colors import BoundaryNorm, ListedColormap  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import shapely
+from matplotlib.colors import BoundaryNorm, ListedColormap
 
 PROC = Path("data/processed")
 REVIEW = Path("outputs/m2a-review")

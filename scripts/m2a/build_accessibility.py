@@ -9,6 +9,8 @@ Writes outputs/m2a/family-infrastructure-evidence.parquet (+ provenance) and rev
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 import time
 from pathlib import Path
@@ -35,6 +37,11 @@ from hearthmap.provenance import ProvenanceRecord, current_code_version
 DATA = Path("data/processed/m2a")
 OUT = Path("outputs/m2a")
 REVIEW = Path("outputs/m2a-review")
+# M2A.1: `--refreshed` reads data/processed/m2a1 facilities and writes outputs/m2a1/ (routing inputs unchanged)
+REFRESHED = "--refreshed" in sys.argv
+FAC = Path("data/processed/m2a1") if REFRESHED else DATA
+ART_DIR = Path("outputs/m2a1") if REFRESHED else OUT
+SNAP_CSV = Path("outputs/m2a1-review") if REFRESHED else REVIEW
 EDU_CATS = {"early_childhood_centre": "EARLY_CHILDHOOD", "kindergarten": "KINDERGARTEN", "primary_school": "PRIMARY", "secondary_school": ("LOWER_SECONDARY", "UPPER_SECONDARY"), "vocational_institution": "VOCATIONAL", "university": "UNIVERSITY_TERTIARY"}  # fmt: skip
 HOSPITAL_CLASSES = {
     "COMMUNITY_HOSPITAL",
@@ -92,8 +99,8 @@ def main() -> int:
     cell_node, cell_snap = snap(cen, net.xy, routable)
     # nodes of ANY component, to tell 'no road' from 'road only in an isolated fragment'
     _, cell_any_snap = snap(cen, net.xy, np.arange(len(net.xy)))
-    edu = gpd.read_file(DATA / "facilities.gpkg", layer="education_facilities")
-    hl = gpd.read_file(DATA / "facilities.gpkg", layer="health_facilities")
+    edu = gpd.read_file(FAC / "facilities.gpkg", layer="education_facilities")
+    hl = gpd.read_file(FAC / "facilities.gpkg", layer="health_facilities")
     edu_ok = edu[edu["coordinate_qa_status"] != "FAILED"].copy()
     hl_ok = hl[hl["coordinate_qa_status"] != "FAILED"].copy()
     cats: dict[str, gpd.GeoDataFrame] = {}
@@ -118,7 +125,7 @@ def main() -> int:
             )
             if o:
                 fac_node.setdefault(c, {})[fid] = int(n)
-    pd.DataFrame(fac_rows).to_csv(REVIEW / "facility-routing-snap.csv", index=False)
+    pd.DataFrame(fac_rows).to_csv(SNAP_CSV / "facility-routing-snap.csv", index=False)
     print(f"snapped in {time.time() - t0:.0f}s", {c: len(v) for c, v in fac_node.items()})
 
     out = pd.DataFrame(
@@ -256,14 +263,28 @@ def main() -> int:
     for k, v in {**el, **wt, **tc}.items():
         out[k] = v
     out["routing_basis"] = "BASELINE_DRIVE_TIME"
+    out["routing_config_fingerprint"] = hashlib.sha256(
+        json.dumps(cfg["travel_time"], sort_keys=True).encode()
+    ).hexdigest()[:16]
+    out["education_primary_source_vintage"] = (
+        "DOPA_2021_STALE_FALLBACK" if REFRESHED else "DOPA_2021_STALE"
+    )
+    out["healthcare_primary_source_vintage"] = (
+        "CITIZENINFO_2020_STALE_FALLBACK" if REFRESHED else "CITIZENINFO_2020_STALE"
+    )
+    out["hospital_level_status"] = (
+        "PARTIALLY_ASSESSED_NO_ACCESSIBLE_AUTHORITATIVE_LEVEL_FIELD"
+        if REFRESHED
+        else "NOT_ASSESSED"
+    )
     out["education_levels_basis"] = "DERIVED_FROM_NAME_AND_SOURCE_SUBCODE_CONFIDENCE_QUALIFIED"
     out["facility_data_freshness"] = "STALE_EDUCATION_2021_HEALTH_2020"
-    OUT.mkdir(parents=True, exist_ok=True)
-    pq = OUT / "family-infrastructure-evidence.parquet"
+    ART_DIR.mkdir(parents=True, exist_ok=True)
+    pq = ART_DIR / "family-infrastructure-evidence.parquet"
     out.to_parquet(pq, index=False)
     rec = ProvenanceRecord(
-        artifact_id="m2a-family-infrastructure-evidence", artifact_path=pq.as_posix(), code_version=current_code_version(),
-        sources=[source_ref("places-dopa-gis02", original_crs="EPSG:4326"), source_ref("health-citizeninfo-dga", original_crs="EPSG:4326"), source_ref("osm-overpass-aoi", original_crs="EPSG:4326"), source_ref("roads-drr-gis", original_crs="EPSG:32647")],
+        artifact_id="m2a1-family-infrastructure-evidence" if REFRESHED else "m2a-family-infrastructure-evidence", artifact_path=pq.as_posix(), code_version=current_code_version(),
+        sources=[source_ref("places-dopa-gis02", original_crs="EPSG:4326"), source_ref("health-citizeninfo-dga", original_crs="EPSG:4326"), source_ref("osm-overpass-aoi", original_crs="EPSG:4326"), source_ref("roads-drr-gis", original_crs="EPSG:32647")] + ([source_ref("education-obec-school-list", original_crs="EPSG:4326"), source_ref("osm-facilities-aoi", original_crs="EPSG:4326")] if REFRESHED else []),
         normalized_crs=CANONICAL,
         method="config/family-infrastructure.yaml: BASELINE_DRIVE_TIME multi-source Dijkstra on a directed OSM network; facility classes derived only from source fields; PEA/PWA/NBTC contribute evidence STATES, not data.",
         spatial_resolution="500 m cells (cell-centre routing)", confidence=Confidence.LOW,

@@ -58,3 +58,12 @@ nothing is applied implicitly.
 
 Principle carried into M2B: accessibility is not desirability, and no family or infrastructure
 score exists until these answers do.
+
+## F. Added in M2A.1 (still unfilled)
+
+| # | Question | Answer |
+|---|---|---|
+| F1 | Are authoritative-but-2020 school levels (OBEC) acceptable for M2B, or must the current MOE register be obtained first? | UNANSWERED |
+| F2 | Should the 211 OBEC-only schools (2020, no counterpart in the 2021 register) be included in school accessibility? (sensitivity in `obec-only-union-sensitivity.csv`) | UNANSWERED |
+| F3 | Is a government-only hospital list (no private hospitals, hospital level unassessed) acceptable, or is MoPH HCODE data a prerequisite? | UNANSWERED |
+| F4 | How should "derived" education levels (about half the schools, all non-school institutions) be treated in thresholds? | UNANSWERED |
