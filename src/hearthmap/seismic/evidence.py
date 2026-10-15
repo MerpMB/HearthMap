@@ -167,7 +167,13 @@ def seismic_input_columns(cfg: SeismicConfig) -> tuple[str, ...]:
 
 
 def interpret_seismic(evidence: pd.DataFrame, cfg: SeismicConfig) -> pd.DataFrame:
-    """Conservative, config-driven screening state per cell with structured reasons.
+    """Conservative, config-driven regional screening state with structured reasons.
+
+    * Modelled hazard (DMR EQ_ZONE) can reach STRONG on its own when the top MMI class
+      dominates the cell; a borderline share escalates only with positive corroboration.
+    * Fault proximity and historical events are corroborating context: each alone is capped
+      at REQUIRES_SEISMIC_VERIFICATION; their absence never lowers any state.
+    * The families are not treated as statistically independent observations.
 
     Reads only :func:`seismic_input_columns`; the input frame is not modified.
     """
@@ -183,33 +189,36 @@ def interpret_seismic(evidence: pd.DataFrame, cfg: SeismicConfig) -> pd.DataFram
     fd = d["fault_nearest_distance_km"].to_numpy()
     with np.errstate(invalid="ignore"):
         fault_t = np.where(
-            fd <= it.fault.strong_tier_within_km, 2, np.where(fd <= it.fault.verify_within_km, 1, 0)
+            fd <= it.fault.very_near_within_km, 2, np.where(fd <= it.fault.verify_within_km, 1, 0)
         )
 
     assessed = (
         d["shaking_assessed_fraction"].fillna(0).to_numpy() >= it.shaking.min_assessed_fraction
     )
-
-    def frac_at_or_above(cls: str) -> np.ndarray:
-        rank = classes.index(cls)
-        return sum(d[f"shaking_class{c}_fraction"].fillna(0).to_numpy() for c in classes[rank:])
-
-    f1, f2 = frac_at_or_above(it.shaking.class_tier1), frac_at_or_above(it.shaking.class_tier2)
-    shaking_t = np.where(
-        assessed & (f2 >= it.shaking.tier2_min_fraction),
+    rank = classes.index(it.shaking.class_name)
+    top = sum(d[f"shaking_class{c}_fraction"].fillna(0).to_numpy() for c in classes[rank:])
+    model_t = np.where(
+        assessed & (top >= it.shaking.strong_min_fraction),
         2,
-        np.where(assessed & (f1 >= it.shaking.tier1_min_fraction), 1, 0),
+        np.where(assessed & (top >= it.shaking.verify_min_fraction), 1, 0),
     )
 
     hd = d[f"hist_nearest_ge{it.history.magnitude:g}_km"].to_numpy()
     with np.errstate(invalid="ignore"):  # NaN (no event) compares False: never a signal
         hist_t = np.where(
-            hd <= it.history.tier2_within_km, 2, np.where(hd <= it.history.tier1_within_km, 1, 0)
+            hd <= it.history.corroborate_within_km,
+            2,
+            np.where(hd <= it.history.verify_within_km, 1, 0),
         )
 
-    tiers = np.vstack([fault_t, shaking_t, hist_t])
-    n2 = (tiers == 2).sum(axis=0)
-    level = np.where(n2 >= it.strong_requires_families, 2, np.where((tiers >= 1).any(axis=0), 1, 0))
+    corroborating = (fault_t == 2).astype(int) + (hist_t == 2).astype(int)
+    need = it.shaking.escalate_borderline_with_corroborating_signals
+    escalated = (model_t == 1) & (corroborating >= need) if need > 0 else np.zeros(n, dtype=bool)
+    level = np.where(
+        (model_t == 2) | escalated,
+        2,
+        np.where((fault_t >= 1) | (model_t >= 1) | (hist_t >= 1), 1, 0),
+    )
     unresolved = ~assessed & (level == 0)
     state = np.where(
         unresolved,
@@ -229,29 +238,31 @@ def interpret_seismic(evidence: pd.DataFrame, cfg: SeismicConfig) -> pd.DataFram
         for i in np.flatnonzero(mask):
             target[i].append(code)
 
+    add(reasons, model_t == 2, "MODELLED_HAZARD_TOP_CLASS_DOMINANT")
+    add(reasons, model_t == 1, "MODELLED_HAZARD_TOP_CLASS_PRESENT")
+    add(reasons, escalated, "BORDERLINE_ESCALATED_BY_CORROBORATING_SIGNALS")
     add(reasons, fault_t >= 1, "FAULT_TRACE_WITHIN_VERIFY_DISTANCE")
     add(reasons, fault_t == 2, "FAULT_TRACE_VERY_NEAR")
-    add(reasons, shaking_t >= 1, "SHAKING_ZONE_CLASS_VII_DOMINANT")
     add(reasons, hist_t >= 1, "HISTORICAL_EVENT_NEAR")
-    add(reasons, hist_t == 2, "HISTORICAL_EVENT_VERY_NEAR")
-    add(reasons, level == 2, "MULTIPLE_STRONG_TIER_SIGNALS")
+    add(reasons, hist_t == 2, "HISTORICAL_EVENT_CORROBORATES")
     add(unres, ~assessed, "SHAKING_ZONE_NOT_ASSESSED")
     add(info, np.ones(n, bool), "GROUND_RESPONSE_NOT_ASSESSED")
     add(info, hist_t == 0, "NO_NEARBY_HISTORICAL_EVENT_RECORDED")
-    add(info, assessed & (shaking_t == 0), "SHAKING_ZONE_BELOW_TIER")
+    add(info, assessed & (model_t == 0), "MODELLED_HAZARD_BELOW_TIER")
 
     out = pd.DataFrame(index=evidence.index)
     out["seismic_screening_interpretation"] = state
     out["fault_tier"] = [TIER_NAMES[int(v)] for v in fault_t]
-    out["shaking_tier"] = [TIER_NAMES[int(v)] for v in shaking_t]
+    out["modelled_hazard_tier"] = [TIER_NAMES[int(v)] for v in model_t]
     out["history_tier"] = [TIER_NAMES[int(v)] for v in hist_t]
-    out["strong_tier_families"] = n2
+    out["corroborating_signals"] = corroborating
     out["seismic_reason_codes"] = ["|".join(c) for c in reasons]
     out["seismic_informational_codes"] = ["|".join(c) for c in info]
     out["seismic_unresolved_reasons"] = ["|".join(c) for c in unres]
-    # fault, zones (if assessed), historical catalogues exist everywhere; ground response never
+    # regional completeness: fault + zones (if assessed) + catalogues; never site response
     out["seismic_evidence_completeness"] = (1 + assessed.astype(int) + 1 + 0) / 4.0
     out["seismic_decision_confidence"] = cfg.decision_confidence
+    out["seismic_scope"] = "REGIONAL_SCREENING_NOT_SITE_ASSESSMENT"
     out["seismic_policy_version"] = cfg.seismic_version
     out["seismic_policy_status"] = cfg.status
     return out
@@ -267,12 +278,14 @@ def explain_seismic(
     it = cfg.interpretation
     values = {
         "fault_verify_km": it.fault.verify_within_km,
-        "fault_strong_km": it.fault.strong_tier_within_km,
-        "shaking_min_fraction": it.shaking.tier1_min_fraction,
+        "fault_strong_km": it.fault.very_near_within_km,
+        "top_class": it.shaking.class_name,
+        "model_verify_fraction": it.shaking.verify_min_fraction,
+        "model_strong_fraction": it.shaking.strong_min_fraction,
         "history_magnitude": it.history.magnitude,
-        "history_tier1_km": it.history.tier1_within_km,
-        "history_tier2_km": it.history.tier2_within_km,
-        "strong_requires_families": it.strong_requires_families,
+        "history_tier1_km": it.history.verify_within_km,
+        "history_tier2_km": it.history.corroborate_within_km,
+        "escalation_signals": it.shaking.escalate_borderline_with_corroborating_signals,
     }
 
     def render(field: str) -> list[str]:
@@ -282,7 +295,7 @@ def explain_seismic(
     fd = evidence.get("fault_nearest_distance_km", np.nan)
     parts = [
         f"CELL: {cell_id}",
-        f"SEISMIC EVIDENCE v{cfg.seismic_version} ({cfg.status}, experimental)",
+        f"SEISMIC EVIDENCE v{cfg.seismic_version} ({cfg.status}, experimental, regional screening)",
         "",
         result["seismic_screening_interpretation"],
         f"evidence completeness: {result['seismic_evidence_completeness']:.2f} of 4 families "
@@ -307,6 +320,6 @@ def explain_seismic(
         "- the cell is earthquake-safe or has no seismic risk",
         "- distance to a fault, or the absence of recorded events, indicates low hazard",
         "- site conditions (ground material, sediment, amplification, liquefaction) were assessed",
-        "- construction is approved or impossible",
+        "- a parcel/site seismic assessment has been done, or construction is approved",
     ]
     return "\n".join(parts)

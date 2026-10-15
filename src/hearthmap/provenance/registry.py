@@ -120,6 +120,13 @@ class DataSourceEntry(BaseModel):
     redirects_or_changes: str | None = None
     analytical_suitability: str | None = None
     license_or_usage_notes: str | None = None
+    # Where terms differ, keep them apart (M1D): dataset licence, service terms, legal-use
+    # disclaimer, and the recorded discrepancy between catalogues.
+    dataset_licence: str | None = None
+    service_terms: str | None = None
+    legal_use_disclaimer: str | None = None
+    licence_discrepancy: str | None = None
+    methodology: str | None = None
     expected_update_frequency: str | None = None
     confidence: Confidence = Confidence.UNKNOWN
     known_limitations: list[str] = Field(default_factory=list)

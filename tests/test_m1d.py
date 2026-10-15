@@ -62,7 +62,8 @@ HIST = f"hist_nearest_ge{CFG.interpretation.history.magnitude:g}_km"
 
 def test_config_is_provisional_experimental_without_selected_policy():
     assert CFG.status == "PROVISIONAL" and CFG.experimental and CFG.default_policy is None
-    assert CFG.interpretation.single_family_max_level == "VERIFY"
+    assert CFG.interpretation.fault_alone_max_level == "VERIFY"
+    assert CFG.interpretation.history_alone_max_level == "VERIFY"
     assert (
         CFG.ground_response.status == "NOT_ASSESSED" and not CFG.ground_response.available_evidence
     )
@@ -135,29 +136,78 @@ def test_fault_distance_alone_cannot_create_strong_concern():
         r = run(sc(fault_nearest_distance_km=d)).iloc[0]
         assert r["seismic_screening_interpretation"] == "REQUIRES_SEISMIC_VERIFICATION"
         assert r["fault_tier"] == "STRONG_TIER" or d > 5
-        assert r["strong_tier_families"] <= 1
+        assert r["corroborating_signals"] <= 1
 
 
-def test_two_context_signals_are_not_enough_for_strong_concern():
-    two = run(
-        sc(
-            fault_nearest_distance_km=2.0,
-            shaking_classVII_fraction=1.0,
-            shaking_classV_fraction=0.0,
-        )
-    ).iloc[0]
-    assert two["seismic_screening_interpretation"] == "REQUIRES_SEISMIC_VERIFICATION"
-    assert two["strong_tier_families"] == 2
-    three = run(
-        sc(
-            fault_nearest_distance_km=2.0,
-            shaking_classVII_fraction=1.0,
-            shaking_classV_fraction=0.0,
-            **{HIST: 10.0},
-        )
-    ).iloc[0]
-    assert three["seismic_screening_interpretation"] == "STRONG_SEISMIC_SCREENING_CONCERN"
-    assert "MULTIPLE_STRONG_TIER_SIGNALS" in three["seismic_reason_codes"]
+def test_modelled_hazard_can_create_strong_concern_without_any_historical_event():
+    """History is corroborating only: STRONG never depends on a catalogue entry."""
+    dominant = sc(shaking_classVII_fraction=0.8, shaking_classV_fraction=0.2)
+    for hist in (np.nan, 999.0, 10.0):  # absent, far, or nearby: same state
+        r = run(dominant | {HIST: hist}).iloc[0]
+        assert r["seismic_screening_interpretation"] == "STRONG_SEISMIC_SCREENING_CONCERN"
+        assert "MODELLED_HAZARD_TOP_CLASS_DOMINANT" in r["seismic_reason_codes"]
+    # no fault nearby either: modelled hazard alone is enough
+    assert (
+        run(dominant | {"fault_nearest_distance_km": 80.0}).iloc[0][
+            "seismic_screening_interpretation"
+        ]
+        == "STRONG_SEISMIC_SCREENING_CONCERN"
+    )
+
+
+def test_fault_and_history_without_modelled_hazard_stay_verification():
+    r = run(sc(fault_nearest_distance_km=1.0, **{HIST: 5.0})).iloc[0]
+    assert r["seismic_screening_interpretation"] == "REQUIRES_SEISMIC_VERIFICATION"
+    assert r["corroborating_signals"] == 2  # corroborating, not independent confirmation
+    assert "STRONG" not in r["seismic_screening_interpretation"].split("_")[:1]
+
+
+def test_borderline_modelled_hazard_escalates_only_with_positive_corroboration():
+    border = sc(shaking_classVII_fraction=0.3, shaking_classV_fraction=0.7)
+    plain = run(border).iloc[0]
+    assert plain["modelled_hazard_tier"] == "NOTABLE"
+    assert plain["seismic_screening_interpretation"] == "REQUIRES_SEISMIC_VERIFICATION"
+    one = run(border | {"fault_nearest_distance_km": 2.0}).iloc[0]
+    assert one["seismic_screening_interpretation"] == "REQUIRES_SEISMIC_VERIFICATION"
+    two = run(border | {"fault_nearest_distance_km": 2.0, HIST: 10.0}).iloc[0]
+    assert two["seismic_screening_interpretation"] == "STRONG_SEISMIC_SCREENING_CONCERN"
+    assert "BORDERLINE_ESCALATED_BY_CORROBORATING_SIGNALS" in two["seismic_reason_codes"]
+    # absence of the corroborating signals never lowers the (already verified) state
+    assert plain["seismic_screening_interpretation"] == one["seismic_screening_interpretation"]
+
+
+def test_eq_zone_basis_records_publisher_semantics_and_unknowns():
+    basis = CFG.sources["intensity_zones"]["basis"]
+    assert basis["kind"] == "PROBABILISTIC_PGA_HAZARD_DISPLAYED_AS_MMI_ZONES"
+    assert basis["exceedance_probability"] == 0.10 and basis["exposure_period_years"] == 50
+    assert "Sadigh" in basis["ground_motion_relation"]
+    assert basis["pga_to_mmi_mapping_documented"] is False
+    assert basis["map_scale_documented"] is False
+    assert any("PGA to MMI" in u for u in basis["remaining_unknowns"])
+    # both facts preserved: PGA-based analysis AND MMI display classes
+    assert basis["displayed_classes"].startswith("MMI") and CLASSES == [
+        "I-III",
+        "IV",
+        "V",
+        "VI",
+        "VII",
+    ]
+
+
+def test_corroborating_signals_are_not_multiplied_or_called_independent():
+    text = (CONFIG_DIR / "seismic-evidence.yaml").read_text("utf-8").lower()
+    assert "not independent" in text and "corroborating" in text
+    r = run(sc(fault_nearest_distance_km=1.0, **{HIST: 5.0})).iloc[0]
+    assert "independent" not in str(r.to_dict()).lower().replace("not independent", "")
+    assert "probab" not in " ".join(c for c in r.index)
+
+
+def test_regional_scope_is_explicit_in_outputs_and_explanations():
+    inputs = pd.DataFrame([sc()])
+    res = interpret_seismic(inputs, CFG)
+    assert res["seismic_scope"].iloc[0] == "REGIONAL_SCREENING_NOT_SITE_ASSESSMENT"
+    text = explain_seismic("X", inputs.iloc[0], res.iloc[0], CFG)
+    assert "regional screening" in text and "parcel/site seismic assessment" in text
 
 
 def test_fault_context_is_descriptive_with_no_score_column():
@@ -314,8 +364,10 @@ def test_missing_ground_response_stays_explicit():
     missing = gr["ground_response_missing_evidence"].iloc[0].split("|")
     for needed in (
         "liquefaction_susceptibility",
-        "local_amplification",
-        "sediment_thickness_and_basin_geometry",
+        "site_amplification_and_vs30",
+        "sediment_thickness_and_basin_effects",
+        "local_geology_and_ground_material",
+        "parcel_level_geotechnical_conditions",
     ):
         assert needed in missing
     r = run(sc(), sc(fault_nearest_distance_km=1.0))

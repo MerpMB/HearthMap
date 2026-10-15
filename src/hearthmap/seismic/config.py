@@ -24,40 +24,51 @@ class _M(BaseModel):
 
 class FaultRule(_M):
     verify_within_km: float = Field(gt=0)
-    strong_tier_within_km: float = Field(gt=0)
+    very_near_within_km: float = Field(gt=0)  # corroborating signal; never strong alone
 
     @model_validator(mode="after")
     def _ordered(self) -> FaultRule:
-        if self.strong_tier_within_km > self.verify_within_km:
-            raise ValueError("fault strong-tier distance must not exceed the verify distance")
+        if self.very_near_within_km > self.verify_within_km:
+            raise ValueError("fault very-near distance must not exceed the verify distance")
         return self
 
 
-class ShakingRule(_M):
-    class_tier1: str
-    class_tier2: str
-    tier1_min_fraction: float = Field(gt=0, le=1)
-    tier2_min_fraction: float = Field(gt=0, le=1)
+class ModelledHazardRule(_M):
+    """DMR EQ_ZONE: probabilistic PGA hazard (10% in 50 years) displayed as MMI zones."""
+
+    class_name: str
+    verify_min_fraction: float = Field(gt=0, le=1)
+    strong_min_fraction: float = Field(gt=0, le=1)
     min_assessed_fraction: float = Field(gt=0, le=1)
+    # borderline cells (verify <= share < strong) become STRONG only when at least this many
+    # positive corroborating signals (fault very near, recorded event nearby) are present;
+    # their absence never lowers anything. 0 disables the escalation.
+    escalate_borderline_with_corroborating_signals: int = Field(ge=0, le=2)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> ModelledHazardRule:
+        if self.verify_min_fraction > self.strong_min_fraction:
+            raise ValueError("modelled-hazard verify share must not exceed the strong share")
+        return self
 
 
 class HistoryRule(_M):
     magnitude: float = Field(gt=0)
-    tier1_within_km: float = Field(gt=0)
-    tier2_within_km: float = Field(gt=0)
+    verify_within_km: float = Field(gt=0)
+    corroborate_within_km: float = Field(gt=0)  # corroborating signal; never strong alone
 
     @model_validator(mode="after")
     def _ordered(self) -> HistoryRule:
-        if self.tier2_within_km > self.tier1_within_km:
-            raise ValueError("history tier-2 distance must not exceed the tier-1 distance")
+        if self.corroborate_within_km > self.verify_within_km:
+            raise ValueError("history corroboration distance must not exceed the verify distance")
         return self
 
 
 class Interpretation(_M):
-    strong_requires_families: int = Field(ge=2, le=3)
-    single_family_max_level: Literal["VERIFY"]
+    fault_alone_max_level: Literal["VERIFY"]
+    history_alone_max_level: Literal["VERIFY"]
     fault: FaultRule
-    shaking: ShakingRule
+    shaking: ModelledHazardRule
     history: HistoryRule
 
 
@@ -89,9 +100,8 @@ class SeismicConfig(_M):
         if self.interpretation.history.magnitude not in self.history_magnitude_thresholds:
             raise ValueError("history.magnitude must be one of history_magnitude_thresholds")
         classes = self.sources["intensity_zones"]["classes"]
-        for c in (self.interpretation.shaking.class_tier1, self.interpretation.shaking.class_tier2):
-            if c not in classes:
-                raise ValueError(f"shaking class {c} is not a publisher MMI class")
+        if self.interpretation.shaking.class_name not in classes:
+            raise ValueError("modelled-hazard class is not a publisher MMI class")
         if self.ground_response.available_evidence:
             raise ValueError("ground-response evidence cannot be claimed in v0.1")
         for state in INTERPRETATION_STATES:
