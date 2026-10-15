@@ -80,11 +80,13 @@ healthcare:
     - PRIMARY_HEALTH_UNIT
     - COMMUNITY_HOSPITAL
     - GENERAL_HOSPITAL
+    - REGIONAL_REFERRAL_HOSPITAL
     - REGIONAL_OR_TERTIARY_HOSPITAL
     - UNIVERSITY_HOSPITAL
     - SPECIALISED_HOSPITAL
     - HOSPITAL_UNSPECIFIED_LEVEL
     - EMERGENCY_CAPABLE_FACILITY
+    - OTHER_NON_SERVICE_POINT
     - OTHER
     - UNKNOWN
 
@@ -111,3 +113,11 @@ reconcile:               # M2A.1 source comparison (flags and evidence only; nev
   match_radius_m: 300          # identical comparison name within this distance => MATCHED
   possible_radius_m: 150       # a different name within this distance => POSSIBLE_MATCH (not merged)
   same_name_far_m: 3000        # identical name farther than this is a different school with a common name
+
+moph_hospital_layers:    # M2A.2: public MoPH PHER ArcGIS point layers (not HCODE itself)
+  primary_layer: facility-moph-hospital-update68
+  crosscheck_layer: facility-moph-hospital-update69
+  location_basis: SERVICE_GEOMETRY          # the layer's point geometry; attribute lat/lon kept and compared
+  attribute_geometry_conflict_m: 100        # flag (never silently resolve) when the two coordinates disagree by more than this
+  higher_level_classes: [REGIONAL_REFERRAL_HOSPITAL]   # source typecode "โรงพยาบาลศูนย์" / level A; large general (S) is NOT included
+  active_status_value: "กำลังใช้งาน"

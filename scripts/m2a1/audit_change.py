@@ -16,7 +16,19 @@ import numpy as np
 import pandas as pd
 import shapely
 
-REVIEW = Path("outputs/m2a1-review")
+# M2A.2: `--m2a2` compares outputs/m2a1 (previous) with outputs/m2a2 and writes to outputs/m2a2-review
+M2A2 = "--m2a2" in sys.argv
+REVIEW = Path("outputs/m2a2-review") if M2A2 else Path("outputs/m2a1-review")
+OLD_PATH = (
+    "outputs/m2a1/family-infrastructure-evidence.parquet"
+    if M2A2
+    else "outputs/m2a/family-infrastructure-evidence.parquet"
+)
+NEW_PATH = (
+    "outputs/m2a2/family-infrastructure-evidence.parquet"
+    if M2A2
+    else "outputs/m2a1/family-infrastructure-evidence.parquet"
+)
 CATS = [
     "early_childhood_centre",
     "kindergarten",
@@ -26,6 +38,7 @@ CATS = [
     "university",
     "primary_health_unit",
     "hospital",
+    "higher_level_hospital",
 ]
 CENTRES = {"TH50": "Chiang Mai", "TH56": "Phayao", "TH57": "Chiang Rai"}
 
@@ -40,9 +53,31 @@ def wq(v: np.ndarray, w: np.ndarray, q: float) -> float | None:
     return float(v[o][min(np.searchsorted(cw, q), len(v) - 1)])
 
 
+def _coords(layer_dir: str) -> dict[str, tuple[float, float]]:
+    out: dict[str, tuple[float, float]] = {}
+    for lay in ("education_facilities", "health_facilities"):
+        g = gpd.read_file(f"{layer_dir}/facilities.gpkg", layer=lay)
+        out |= {i: (x, y) for i, x, y in zip(g["facility_id"], g["x"], g["y"], strict=True)}
+    return out
+
+
+# Facility ids are content hashes, so two sources give the same facility different ids. "Same nearest facility" therefore
+# means: same id, OR the two nearest facilities lie within 300 m of each other (the physical facility did not change).
+COORDS_OLD = _coords("data/processed/m2a1" if M2A2 else "data/processed/m2a")
+COORDS_NEW = _coords("data/processed/m2a2" if M2A2 else "data/processed/m2a1")
+
+
+def same_facility(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    same = a == b
+    for i in np.where(~same)[0]:
+        pa, pb = COORDS_OLD.get(a[i]), COORDS_NEW.get(b[i])
+        same[i] = bool(pa and pb and np.hypot(pa[0] - pb[0], pa[1] - pb[1]) <= 300)
+    return same
+
+
 def main() -> int:
-    old = pd.read_parquet("outputs/m2a/family-infrastructure-evidence.parquet")
-    new = pd.read_parquet("outputs/m2a1/family-infrastructure-evidence.parquet")
+    old = pd.read_parquet(OLD_PATH)
+    new = pd.read_parquet(NEW_PATH)
     assert (old["cell_id"].to_numpy() == new["cell_id"].to_numpy()).all()
     assert old["routing_basis"].eq(new["routing_basis"]).all()
     area = (0.25 * old["coverage_fraction"]).to_numpy()
@@ -78,7 +113,7 @@ def main() -> int:
         for name, mask in strata.items():
             m = both & mask
             a = area[m]
-            same = io[m] == inn[m]
+            same = same_facility(io[m], inn[m])
             rows.append({
                 "category": c, "stratum": name, "area_km2": round(float(area[mask].sum()), 1),
                 "resolved_both_km2": round(float(a.sum()), 1), "newly_resolved_km2": round(float(area[mask & ~np.isfinite(to) & np.isfinite(tn)].sum()), 1), "newly_unresolved_km2": round(float(area[mask & np.isfinite(to) & ~np.isfinite(tn)].sum()), 1),

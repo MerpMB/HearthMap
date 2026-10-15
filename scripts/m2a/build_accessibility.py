@@ -39,14 +39,22 @@ OUT = Path("outputs/m2a")
 REVIEW = Path("outputs/m2a-review")
 # M2A.1: `--refreshed` reads data/processed/m2a1 facilities and writes outputs/m2a1/ (routing inputs unchanged)
 REFRESHED = "--refreshed" in sys.argv
-FAC = Path("data/processed/m2a1") if REFRESHED else DATA
-ART_DIR = Path("outputs/m2a1") if REFRESHED else OUT
-SNAP_CSV = Path("outputs/m2a1-review") if REFRESHED else REVIEW
+# M2A.2: `--m2a2` reads data/processed/m2a2 (MoPH health layer; education unchanged) and writes outputs/m2a2/
+M2A2 = "--m2a2" in sys.argv
+REFRESHED = (
+    REFRESHED or M2A2
+)  # the m2a2 run also uses the M2A.1 education layer (OBEC classes) and its labels
+FAC = Path("data/processed/m2a2") if M2A2 else Path("data/processed/m2a1") if REFRESHED else DATA
+ART_DIR = Path("outputs/m2a2") if M2A2 else Path("outputs/m2a1") if REFRESHED else OUT
+SNAP_CSV = (
+    Path("outputs/m2a2-review") if M2A2 else Path("outputs/m2a1-review") if REFRESHED else REVIEW
+)
 EDU_CATS = {"early_childhood_centre": "EARLY_CHILDHOOD", "kindergarten": "KINDERGARTEN", "primary_school": "PRIMARY", "secondary_school": ("LOWER_SECONDARY", "UPPER_SECONDARY"), "vocational_institution": "VOCATIONAL", "university": "UNIVERSITY_TERTIARY"}  # fmt: skip
 HOSPITAL_CLASSES = {
     "COMMUNITY_HOSPITAL",
     "GENERAL_HOSPITAL",
     "REGIONAL_OR_TERTIARY_HOSPITAL",
+    "REGIONAL_REFERRAL_HOSPITAL",
     "UNIVERSITY_HOSPITAL",
     "HOSPITAL_UNSPECIFIED_LEVEL",
 }
@@ -103,15 +111,24 @@ def main() -> int:
     hl = gpd.read_file(FAC / "facilities.gpkg", layer="health_facilities")
     edu_ok = edu[edu["coordinate_qa_status"] != "FAILED"].copy()
     hl_ok = hl[hl["coordinate_qa_status"] != "FAILED"].copy()
+    if (
+        "is_service_point" in hl_ok
+    ):  # MoPH layer: administrative offices and inactive units are not service points
+        hl_ok = hl_ok[hl_ok["is_service_point"].astype(bool) & hl_ok["is_active"].astype(bool)]
     cats: dict[str, gpd.GeoDataFrame] = {}
     for c, lv in EDU_CATS.items():
         lv = (lv,) if isinstance(lv, str) else lv
         cats[c] = edu_ok[edu_ok["levels"].map(lambda s, lv=lv: any(x in s.split("|") for x in lv))]
     cats["primary_health_unit"] = hl_ok[hl_ok["facility_class"] == "PRIMARY_HEALTH_UNIT"]
     cats["hospital"] = hl_ok[hl_ok["facility_class"].isin(HOSPITAL_CLASSES)]
+    higher = (
+        cfg["moph_hospital_layers"]["higher_level_classes"]
+        if M2A2
+        else ["REGIONAL_OR_TERTIARY_HOSPITAL"]
+    )
     cats["higher_level_hospital"] = hl_ok[
-        hl_ok["facility_class"] == "REGIONAL_OR_TERTIARY_HOSPITAL"
-    ]  # empty unless an authoritative reference list is supplied
+        hl_ok["facility_class"].isin(higher)
+    ]  # empty unless a source-stated level exists
     # snap facilities
     fac_rows, fac_node = [], {}
     for c, g in cats.items():
@@ -256,7 +273,7 @@ def main() -> int:
         [~cell_ok, out["education_pathways_resolved"] == len(path_cols)], ["UNRESOLVED_NO_ROAD_ACCESS", "ALL_PATHWAYS_ROUTED"], "PARTIAL_SOME_PATHWAYS_UNREACHABLE"
     )  # fmt: skip
     out["healthcare_evidence_completeness"] = np.select(
-        [~cell_ok, out["route_available_hospital"] & out["route_available_primary_health_unit"]], ["UNRESOLVED_NO_ROAD_ACCESS", "HOSPITAL_AND_PRIMARY_UNIT_ROUTED_HIGHER_LEVEL_DEFERRED"], "PARTIAL"
+        [~cell_ok, out["route_available_hospital"] & out["route_available_primary_health_unit"]], ["UNRESOLVED_NO_ROAD_ACCESS", "HOSPITAL_AND_PRIMARY_UNIT_ROUTED_HIGHER_LEVEL_" + ("ROUTED_FROM_SOURCE_LEVEL" if M2A2 else "DEFERRED")], "PARTIAL"
     )  # fmt: skip
     # infrastructure context (no combined score)
     el, wt, tc = electricity_context(False), water_context(None), telecom_context(False)
@@ -270,21 +287,29 @@ def main() -> int:
         "DOPA_2021_STALE_FALLBACK" if REFRESHED else "DOPA_2021_STALE"
     )
     out["healthcare_primary_source_vintage"] = (
-        "CITIZENINFO_2020_STALE_FALLBACK" if REFRESHED else "CITIZENINFO_2020_STALE"
+        "MOPH_PHER_UPDATE68_2026_CURRENT_LOCATION_AND_SOURCE_CLASS"
+        if M2A2
+        else "CITIZENINFO_2020_STALE_FALLBACK"
+        if REFRESHED
+        else "CITIZENINFO_2020_STALE"
     )
     out["hospital_level_status"] = (
-        "PARTIALLY_ASSESSED_NO_ACCESSIBLE_AUTHORITATIVE_LEVEL_FIELD"
+        "AVAILABLE_FROM_PUBLIC_MOPH_POINT_LAYER_NOT_HCODE_NO_CAPABILITY_ASSESSED"
+        if M2A2
+        else "PARTIALLY_ASSESSED_NO_ACCESSIBLE_AUTHORITATIVE_LEVEL_FIELD"
         if REFRESHED
         else "NOT_ASSESSED"
     )
     out["education_levels_basis"] = "DERIVED_FROM_NAME_AND_SOURCE_SUBCODE_CONFIDENCE_QUALIFIED"
-    out["facility_data_freshness"] = "STALE_EDUCATION_2021_HEALTH_2020"
+    out["facility_data_freshness"] = (
+        "STALE_EDUCATION_2021_HEALTH_CURRENT_2026" if M2A2 else "STALE_EDUCATION_2021_HEALTH_2020"
+    )
     ART_DIR.mkdir(parents=True, exist_ok=True)
     pq = ART_DIR / "family-infrastructure-evidence.parquet"
     out.to_parquet(pq, index=False)
     rec = ProvenanceRecord(
-        artifact_id="m2a1-family-infrastructure-evidence" if REFRESHED else "m2a-family-infrastructure-evidence", artifact_path=pq.as_posix(), code_version=current_code_version(),
-        sources=[source_ref("places-dopa-gis02", original_crs="EPSG:4326"), source_ref("health-citizeninfo-dga", original_crs="EPSG:4326"), source_ref("osm-overpass-aoi", original_crs="EPSG:4326"), source_ref("roads-drr-gis", original_crs="EPSG:32647")] + ([source_ref("education-obec-school-list", original_crs="EPSG:4326"), source_ref("osm-facilities-aoi", original_crs="EPSG:4326")] if REFRESHED else []),
+        artifact_id="m2a2-family-infrastructure-evidence" if M2A2 else "m2a1-family-infrastructure-evidence" if REFRESHED else "m2a-family-infrastructure-evidence", artifact_path=pq.as_posix(), code_version=current_code_version(),
+        sources=[source_ref("places-dopa-gis02", original_crs="EPSG:4326"), source_ref("health-citizeninfo-dga", original_crs="EPSG:4326"), source_ref("osm-overpass-aoi", original_crs="EPSG:4326"), source_ref("roads-drr-gis", original_crs="EPSG:32647")] + ([source_ref("education-obec-school-list", original_crs="EPSG:4326"), source_ref("osm-facilities-aoi", original_crs="EPSG:4326")] if REFRESHED else []) + ([source_ref("facility-moph-hospital-update68", original_crs="EPSG:4326")] if M2A2 else []),
         normalized_crs=CANONICAL,
         method="config/family-infrastructure.yaml: BASELINE_DRIVE_TIME multi-source Dijkstra on a directed OSM network; facility classes derived only from source fields; PEA/PWA/NBTC contribute evidence STATES, not data.",
         spatial_resolution="500 m cells (cell-centre routing)", confidence=Confidence.LOW,
