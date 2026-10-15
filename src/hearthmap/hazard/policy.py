@@ -74,6 +74,20 @@ class Level(IntEnum):
     DEPRIORITIZE = 3
 
 
+class LandslideAssessment(StrEnum):
+    ASSESSED = "ASSESSED"
+    PARTIALLY_ASSESSED = "PARTIALLY_ASSESSED"
+    NOT_ASSESSED = "NOT_ASSESSED"  # outside DMR coverage - never "low susceptibility"
+
+
+# What the ASSESSED hazards indicate, independent of data completeness.
+_INTERPRETATION_FOR_LEVEL = {
+    Level.NONE: "NO_MAJOR_CONCERN_IN_ASSESSED_HAZARDS",
+    Level.VERIFY: "CONCERN_REQUIRING_VERIFICATION",
+    Level.STRONG: "STRONG_CONCERN",
+    Level.DEPRIORITIZE: "DEPRIORITIZATION_LEVEL_CONCERN",
+}
+
 _STATUS_FOR_LEVEL = {
     Level.NONE: RegionalSearchStatus.NO_MAJOR_CONCERN_DETECTED,
     Level.VERIFY: RegionalSearchStatus.REQUIRES_VERIFICATION,
@@ -382,10 +396,37 @@ def apply_policy(
         np.where(ls_critical | ter_unres, "UNRESOLVED_CRITICAL", "UNRESOLVED_PARTIAL"),
     )
 
+    # M1C.2: keep three things apart - what the ASSESSED hazards say, how complete
+    # the data is, and whether DMR assessed landslide susceptibility at all. A cell
+    # outside DMR coverage is NOT_ASSESSED for landslide (never "low"), while its
+    # flood/terrain interpretation stays available.
+    ls_status = np.where(
+        ls_unres,
+        LandslideAssessment.NOT_ASSESSED.value,
+        np.where(
+            partial,
+            LandslideAssessment.PARTIALLY_ASSESSED.value,
+            LandslideAssessment.ASSESSED.value,
+        ),
+    )
+    interp = np.array([_INTERPRETATION_FOR_LEVEL[Level(int(b))] for b in base], dtype=object)
+    assessed = [
+        "|".join(h for h, ok in (("flood", True), ("landslide", not a), ("terrain", not t)) if ok)
+        for a, t in zip(ls_unres, ter_unres, strict=True)
+    ]
+
     out = pd.DataFrame(index=evidence.index)
     out["regional_search_status"] = status
+    out["hazard_interpretation"] = interp
+    out["assessed_hazards"] = assessed
+    out["data_completeness"] = completeness
+    out["landslide_assessment_status"] = ls_status
     out["flood_policy_level"] = [Level(int(v)).name for v in flood]
-    out["landslide_policy_level"] = [Level(int(v)).name for v in ls]
+    out["landslide_policy_level"] = np.where(
+        ls_unres & (ls == Level.NONE),
+        "NOT_ASSESSED",
+        [Level(int(v)).name for v in ls],
+    )
     out["terrain_policy_level"] = [Level(int(v)).name for v in terrain]
     out["hazard_verification_required"] = base >= Level.VERIFY
     out["data_verification_required"] = low_sup | partial | unresolved
@@ -409,6 +450,13 @@ def apply_policy(
 
 # ---------------------------------------------------------------- explanation
 
+
+_LANDSLIDE_LINE = {
+    "NOT_ASSESSED": "Not assessed by DMR in this cell - this is missing evidence, NOT low "
+    "landslide susceptibility; flood/terrain interpretation still applies",
+    "PARTIALLY_ASSESSED": "DMR susceptibility covers only part of the cell",
+    "ASSESSED": "DMR susceptibility assessed",
+}
 
 _THIS_DOES_NOT_MEAN = (
     "THIS DOES NOT MEAN\n- the parcel is unsafe or safe\n- construction is impossible or "
@@ -472,6 +520,12 @@ def explain(cell_id: str, evidence: pd.Series, policy: pd.Series, cfg: HazardPol
         "",
         "FLOOD",
         flood_line,
+        "",
+        "LANDSLIDE",
+        _LANDSLIDE_LINE.get(
+            policy.get("landslide_assessment_status", ""),
+            "DMR susceptibility assessed",
+        ),
     ]
     if policy["data_reason_codes"] or policy["unresolved_reasons"]:
         parts += ["", "DATA TO VERIFY", *render("data_reason_codes"), *render("unresolved_reasons")]

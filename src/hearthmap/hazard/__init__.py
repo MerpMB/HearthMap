@@ -17,6 +17,7 @@ from hearthmap.hazard.evidence import (
 from hearthmap.hazard.policy import (
     POLICY_INPUTS,
     HazardPolicyConfig,
+    LandslideAssessment,
     RegionalSearchStatus,
     apply_policy,
     connected_components,
@@ -36,6 +37,7 @@ __all__ = [
     "EvidenceTier",
     "HazardConfig",
     "HazardPolicyConfig",
+    "LandslideAssessment",
     "RegionalSearchStatus",
     "apply_policy",
     "connected_components",

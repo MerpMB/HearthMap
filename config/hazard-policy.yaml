@@ -5,7 +5,7 @@
 # visual gates are pending. Semantics: docs/product/hazard-screening-policy.md
 schema_version: 1
 policy_id: hydrogeomorphic-screening
-policy_version: 0.2.0   # 0.2.0 (M1C.1): flood thresholds re-based on GISTDA 2011-2023
+policy_version: 0.2.1   # 0.2.0 (M1C.1): flood re-based on GISTDA 2011-2023; 0.2.1 (M1C.2): separate hazard_interpretation / data_completeness / landslide_assessment_status outputs (status rule unchanged)
 status: PROVISIONAL
 scope: HYDROGEOMORPHIC   # flood (observed), landslide susceptibility, DSM terrain
 default_profile: null    # stays null until a profile is explicitly selected by the family
