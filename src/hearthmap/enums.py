@@ -44,6 +44,8 @@ _CONFIDENCE_RANK = {
 REVIEW_SOURCE_PREFIX = "review:"
 # Experimental hazard rules (M1B) - likewise never citable as decision evidence.
 EXPERIMENTAL_SOURCE_PREFIX = "experimental:"
+# Provisional screening policy outcomes (M1C) - not citable as scoring evidence.
+POLICY_SOURCE_PREFIX = "policy:"
 
 
 class VerificationStatus(StrEnum):
