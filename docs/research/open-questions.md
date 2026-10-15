@@ -112,6 +112,21 @@ delete them here.
     to REQUIRES_VERIFICATION, separately from common-period legacy-only
     evidence (106 cells)?
 
+## Raised by M1C.3 (2026-10-15) — flood fusion
+
+40. Which flood-fusion policy for regional screening? FLOOD_ANY_SOURCE is
+    recommended provisionally; FLOOD_UNION_CONSERVATIVE puts 62% of low-slope
+    land into strong concern (driven by a few regional flood years) and would
+    need an explicit value judgement about single-event weighting.
+41. Reinstate a proximity ("within ~250 m of observed flooding") verification in
+    the fused ladder? Dropping it doubles the UNRESOLVED area under BALANCED
+    (468 → ~988 km2) because cells beside mapped flooding outside DMR landslide
+    coverage lose their flag.
+42. The slope strata (<= 5 deg, 5-15 deg) are reporting aids only. What
+    residential-suitability criteria will replace them in a later milestone?
+43. Should legacy-only older evidence (2005-2010) ever count toward recurrence
+    strength, or stay verification-only as in FLOOD_CURRENT_PRIMARY?
+
 ## Process
 
 21. Who validates outputs in QGIS, and against which known places?

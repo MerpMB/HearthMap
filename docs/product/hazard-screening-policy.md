@@ -81,6 +81,13 @@ dataset-evaluated/positive-evidence flags, waterway context). Explanations are
 rendered deterministically from reason-code templates (`reason_codes` in
 config) and always include "THIS DOES NOT MEAN".
 
+### Flood fusion (M1C.3)
+
+`apply_policy(..., flood_override=...)` lets a fused flood ladder
+(`config/flood-fusion.yaml`, [flood-fusion-policy.md](flood-fusion-policy.md))
+replace the profile's own flood rule; nothing else changes. Slope strata are
+reporting-only and prohibited as policy inputs.
+
 ### Separate completeness semantics (v0.2.1, M1C.2)
 
 `hazard_interpretation` (`NO_MAJOR_CONCERN_IN_ASSESSED_HAZARDS`,

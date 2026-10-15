@@ -14,6 +14,13 @@ priority over visually impressive output.
 
 ## Status
 
+**M1C.3 — Flood evidence fusion.** A source-aware 2005–2023 observation ledger
+(a raw observational record, not a homogeneous series), a positive-only flood
+ladder with three candidate policies, and the flood-policy × hydrogeomorphic-
+profile matrix. Flood-source choice mostly matters on low-slope land; profile
+choice mostly on steep land. **No flood candidate and no profile selected.** See
+[m1c3-flood-fusion-report.md](docs/research/m1c3-flood-fusion-report.md).
+
 **M1C.2 — Flood record reconciliation.** The two GISTDA flood products are
 identical for 2011–2013; the newer one lacks most 2014 and all 2016 flooding in
 the AOI, and most "legacy-only" flooding is 2005–2010. A conservative

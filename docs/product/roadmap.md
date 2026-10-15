@@ -55,6 +55,15 @@ reasons. Policy 0.2.1 separates hazard interpretation, data completeness and
 landslide assessment status. See
 [m1c2-flood-reconciliation-report.md](../research/m1c2-flood-reconciliation-report.md).
 
+## M1C.3 — Flood evidence fusion policy (done, provisional)
+
+Source-aware 2005-2023 flood observation ledger (raw observational, not a
+homogeneous series), positive-only flood ladder, three nested candidates and a
+flood x hydrogeomorphic-profile matrix. Flood-source choice and profile choice
+act on different land (lowlands vs steep land). No candidate or profile is
+selected. See [m1c3-flood-fusion-report.md](../research/m1c3-flood-fusion-report.md)
+and [flood-fusion-policy.md](flood-fusion-policy.md).
+
 ## M1 — Regional hazard + infrastructure scan
 
 - Acquire and register: admin boundaries, DEM, flood history/hazard, landslide
