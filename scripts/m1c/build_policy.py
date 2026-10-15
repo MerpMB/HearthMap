@@ -35,8 +35,8 @@ from hearthmap.hazard import (
 )
 from hearthmap.provenance import ProvenanceRecord, current_code_version
 
-M1B = Path("outputs/m1b")
-OUT = Path("outputs/m1c")
+M1B = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("outputs/m1b")
+OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("outputs/m1c")
 CELL_KM2 = 0.25
 STATUSES = [s.value for s in RegionalSearchStatus]
 SCOPES = ("AOI", "TH50", "TH56", "TH57")
@@ -166,18 +166,24 @@ def main() -> int:
     stats["transitions_changed_area_km2_vs_balanced"] = changed
 
     # ---------------- candidate threshold sensitivity (spec 4/5/7)
+    fl = cfg.flood_source
     hp = w["landslide_class4_fraction"] + w["landslide_class5_fraction"]
     ls_unres = w["landslide_assessed_fraction"] < cfg.unresolved.landslide_min_assessed_fraction
     ter_unres = w["terrain_support_px"] < cfg.unresolved.terrain_min_support_px
     others = {
-        "flood_recurrent_ge0.10": w["flood_freq_ge3_area_fraction"] >= 0.10,
+        "flood_recurrent_ge0.10": w["flood_years_ge3_area_fraction"] >= 0.10,
         "landslide_very_high_ge0.25": w["landslide_class5_fraction"] >= 0.25,
         "landslide_high_plus_ge0.50": hp >= 0.50,
         "terrain_p90_ge30": w["slope_p90_deg"] >= 30,
     }
     candidates = (
         [
-            ("FLOOD_RECURRENT_FRACTION (>=3 of 12 yrs)", w["flood_freq_ge3_area_fraction"], t)
+            (
+                f"FLOOD_YEARS_GE{k}_OF_{fl.record_years} ({fl.period}) FRACTION",
+                w[f"flood_years_ge{k}_area_fraction"],
+                t,
+            )
+            for k in (2, 3, 4, 5)
             for t in (0.05, 0.10, 0.25, 0.50)
         ]
         + [
@@ -363,7 +369,7 @@ def main() -> int:
         sources=[
             source_ref(s, original_crs=c)
             for s, c in (
-                ("flood-gistda-repeated-2005-2016", "EPSG:3857"),
+                ("flood-gistda-history", "EPSG:4326"),
                 ("landslide-susceptibility-dmr", "EPSG:32647"),
                 ("landslide-inventory-dmr", "EPSG:32647"),
                 ("dem-copernicus-glo30", "EPSG:4326+EPSG:3855"),
@@ -376,7 +382,10 @@ def main() -> int:
         confidence=Confidence.LOW,
         limitations=[
             "Regional screening only; hydrogeomorphic scope; no profile selected.",
-            "Human visual sign-off M1A.1 and M1B PENDING.",
+            f"Human visual sign-off M1A.1 {cfg.gates.m1a1_human_visual_signoff}, M1B "
+            f"{cfg.gates.m1b_human_visual_signoff}; M1C review pack not confirmed reviewed.",
+            f"Flood thresholds refer to {cfg.flood_source.source_id} {cfg.flood_source.period} "
+            f"({cfg.flood_source.record_years} years); 2005-2016 is context only.",
         ],
     )
     rec.write_sidecar(gpkg)

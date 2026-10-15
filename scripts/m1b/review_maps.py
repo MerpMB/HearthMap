@@ -107,10 +107,10 @@ def main() -> int:
         fig,
         ax[0],
         grid,
-        w["flood_freq_ge3_area_fraction"].where(w["flood_freq_ge3_area_fraction"] > 0),
-        "Share of cell observed flooded in >= 3 of 12 years (2005-2016)",
+        w["flood_years_ge3_area_fraction"].where(w["flood_years_ge3_area_fraction"] > 0),
+        "Share of cell observed flooded in >= 3 of 13 years (2011-2023)",
         "Blues",
-        "flood_freq_ge3_area_fraction (blank = none observed)",
+        "flood_years_ge3_area_fraction (blank = none observed)",
         0,
         1,
     )

@@ -41,13 +41,15 @@ from hearthmap.spatial import repair_geometries
 from hearthmap.spatial.overlay import categorical_cell_fractions
 from hearthmap.spatial.transform import reproject_recorded
 
-OUT = Path("outputs/m1b")
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("outputs/m1b")
 CACHE = Path("data/processed/m1b")
 CELL = 500.0
 REVIEW_GPKG = Path("outputs/m1a-review/hearthmap-m1a-review.gpkg")
 DMR_CLASSES = [1, 2, 3, 4, 5]
 DMR_LABELS = {1: "Very Low", 2: "Low", 3: "Medium", 4: "High", 5: "Very High"}
-FLOOD_K = (2, 3, 5)
+FLOOD_YEAR_KS = (2, 3, 4, 5)
+LEGACY_FLOOD = "legacy_flood_2005_2016"
+FLOOD_2011_2023 = Path("data/processed/m1c1/flood.gpkg")
 
 
 def log(msg: str) -> None:
@@ -64,14 +66,15 @@ def base():
     return grid, prov, aoi
 
 
-def flood_indicators(grid, aoi) -> pd.DataFrame:
-    """Single pass of (cell piece x flood polygon) intersections.
+def flood_metrics(grid, aoi, fl, *, years_col: str, record_years: int, prefix: str):
+    """Single pass of (cell piece x flood polygon) intersections for one flood record.
 
-    GISTDA flood polygons were verified not to overlap each other (total pairwise
-    overlap ~2e-5 m2 in the AOI), so per-cell sums of intersection areas equal the
-    area of their union. Cell pieces are clipped to the AOI for partial cells.
+    Requires polygons that do not overlap each other (checked per source: M1A for
+    2005-2016, outputs/m1c1/flood-2011-2023-qa.json for 2011-2023), so per-cell sums
+    of intersection areas equal the area of their union. Cell pieces are clipped
+    to the AOI for partial cells. ``{prefix}_years_ge{k}_area_fraction`` = share of
+    the cell observed flooded in >= k of ``record_years`` years.
     """
-    fl = gpd.read_file(PROCESSED / "layers.gpkg", layer="flood_recurrence", columns=["flood_freq"])
     cells = grid.geometry.values
     cov = grid["coverage_fraction"].to_numpy()
     pieces = cells.copy()
@@ -82,28 +85,56 @@ def flood_indicators(grid, aoi) -> pd.DataFrame:
     area = shapely.area(shapely.intersection(pieces[ci], fl.geometry.values[fi]))
     pos = area > 0
     ci, fi, area = ci[pos], fi[pos], area[pos]
-    freq = fl["flood_freq"].to_numpy()[fi].astype(int)
-    by_freq = np.zeros((len(grid), 13))
-    np.add.at(by_freq, (ci, freq), area)
+    years = fl[years_col].to_numpy()[fi].astype(int)
+    if years.max(initial=0) > record_years:
+        raise ValueError(f"{years_col} exceeds the record length {record_years}")
+    by_years = np.zeros((len(grid), record_years + 1))
+    np.add.at(by_years, (ci, years), area)
     clipped = cov * CELL**2
     frac = np.divide(
-        by_freq, clipped[:, None], out=np.zeros_like(by_freq), where=clipped[:, None] > 0
+        by_years, clipped[:, None], out=np.zeros_like(by_years), where=clipped[:, None] > 0
     )
     out = pd.DataFrame(index=grid.index)
-    out["flood_area_fraction"] = frac.sum(axis=1).clip(0, 1)
-    for k in FLOOD_K:
-        out[f"flood_freq_ge{k}_area_fraction"] = frac[:, k:].sum(axis=1).clip(0, 1)
+    out[f"{prefix}_area_fraction"] = frac[:, 1:].sum(axis=1).clip(0, 1)
+    for k in FLOOD_YEAR_KS:
+        out[f"{prefix}_years_ge{k}_area_fraction"] = frac[:, k:].sum(axis=1).clip(0, 1)
     flooded = frac[:, 1:].sum(axis=1) > 0
-    out["flood_dominant_freq"] = np.where(flooded, frac[:, 1:].argmax(axis=1) + 1, np.nan)
+    out[f"{prefix}_dominant_years"] = np.where(flooded, frac[:, 1:].argmax(axis=1) + 1, np.nan)
     present = frac[:, 1:] > 0
-    out["flood_max_freq"] = np.where(flooded, 12 - np.argmax(present[:, ::-1], axis=1), np.nan)
-    out["flood_feature_count"] = np.bincount(ci, minlength=len(grid))
+    out[f"{prefix}_max_years"] = np.where(
+        flooded, record_years - np.argmax(present[:, ::-1], axis=1), np.nan
+    )
+    out[f"{prefix}_feature_count"] = np.bincount(ci, minlength=len(grid))
     _, dist = tree.query_nearest(pieces, return_distance=True, all_matches=False)
-    out["flood_distance_m"] = np.round(dist, 1)  # 0 when the cell touches a flood polygon
-    out["flood_assessed"] = True  # source covers the full AOI provinces (observation, not safety)
-    out["flood_evidence_period"] = "2005-2016"
-    out["flood_source_role"] = "TEMPORARY_HISTORICAL_EVIDENCE"
+    out[f"{prefix}_distance_m"] = np.round(dist, 1)  # 0 when the cell touches a flood polygon
     return out
+
+
+def flood_indicators(grid, aoi, cfg) -> pd.DataFrame:
+    """Primary record (interpreted) + legacy record (corroboration/context only)."""
+    ps, ls_ = cfg.flood.primary_source, cfg.flood.legacy_source
+    raw_source(ps.source_id)  # re-verifies RAW checksums
+    new = gpd.read_file(FLOOD_2011_2023, layer="flood_recurrence_2011_2023", columns=["total"])
+    out = flood_metrics(
+        grid, aoi, new, years_col="total", record_years=ps.record_years, prefix="flood"
+    )
+    out["flood_assessed"] = True  # national source answered for every AOI tile (not safety)
+    out["flood_source_id"] = ps.source_id
+    out["flood_evidence_period"] = ps.evidence_period
+    out["flood_record_years"] = ps.record_years
+    out["flood_source_role"] = ps.role
+    old = gpd.read_file(PROCESSED / "layers.gpkg", layer="flood_recurrence", columns=["flood_freq"])
+    leg = flood_metrics(
+        grid,
+        aoi,
+        old,
+        years_col="flood_freq",
+        record_years=ls_.record_years,
+        prefix=LEGACY_FLOOD,
+    )
+    leg[f"{LEGACY_FLOOD}_source_id"] = ls_.source_id
+    leg[f"{LEGACY_FLOOD}_role"] = ls_.role
+    return pd.concat([out, leg], axis=1)
 
 
 def landslide_indicators(grid, aoi) -> tuple[pd.DataFrame, dict, dict]:
@@ -225,9 +256,17 @@ def data_dictionary(cols: list[str]) -> pd.DataFrame:
             "flood_",
             "flood",
             lv.DERIVED_INDICATOR,
+            "flood-gistda-history",
+            "PRIMARY: observed (satellite) flooding 2011-2023; years_ge{k} = share of the cell "
+            "observed flooded in >= k of 13 years; absence is not evidence of no risk",
+        ),
+        (
+            "legacy_flood_",
+            "flood (legacy, context)",
+            lv.DERIVED_INDICATOR,
             "flood-gistda-repeated-2005-2016",
-            "Observed (satellite) flooding 2005-2016; area fractions of the cell's in-AOI area; "
-            "absence is not evidence of no risk",
+            "HISTORICAL_CORROBORATION: observed flooding 2005-2016; years_ge{k} = share observed "
+            "flooded in >= k of 12 years; never read by interpretation or policy",
         ),
         (
             "landslide_class",
@@ -397,7 +436,7 @@ def main() -> int:
         )
         terrain.to_parquet(tcache)
     log("terrain done")
-    flood = flood_indicators(grid, aoi)
+    flood = flood_indicators(grid, aoi, cfg)
     log("flood done")
     landslide, ls_meta, _ls_paths = landslide_indicators(grid, aoi)
     log("landslide done")
@@ -450,8 +489,10 @@ def main() -> int:
         "terrain_reason",
         "terrain_low_support",
         "flood_area_fraction",
-        "flood_freq_ge3_area_fraction",
-        "flood_max_freq",
+        "flood_years_ge3_area_fraction",
+        "flood_max_years",
+        "flood_evidence_period",
+        "legacy_flood_2005_2016_years_ge3_area_fraction",
         "landslide_assessed_fraction",
         "landslide_max_class",
         "landslide_dominant_class_label",
@@ -557,6 +598,7 @@ def main() -> int:
     stats["sources"] = {"landslide": ls_meta}
     stats["gates"] = {
         "M1A1_HUMAN_VISUAL_SIGNOFF": cfg.gates.m1a1_human_visual_signoff,
+        "M1B_HUMAN_VISUAL_SIGNOFF": cfg.gates.m1b_human_visual_signoff,
         "decision_rules_active": False,
         "config_status": cfg.status,
     }
@@ -569,6 +611,7 @@ def main() -> int:
         source_ref(s, original_crs=c)
         for s, c in (
             ("dem-copernicus-glo30", "EPSG:4326+EPSG:3855"),
+            ("flood-gistda-history", "EPSG:4326"),
             ("flood-gistda-repeated-2005-2016", "EPSG:3857"),
             ("landslide-susceptibility-dmr", "EPSG:32647"),
             ("landslide-inventory-dmr", "EPSG:32647"),
@@ -586,12 +629,14 @@ def main() -> int:
         "(inventory), support-aware weighted DSM statistics (ADR-0009, Horn slope), "
         "distances/lengths to OSM waterways; provisional interpretation per "
         "config/hazard.yaml (PROVISIONAL) - categorical, no averaging.",
-        spatial_resolution="500 m cells; DMR susceptibility ~1 km lattice; DSM ~30 m; flood 1:50k",
+        spatial_resolution="500 m cells; DMR susceptibility ~1 km lattice; DSM ~30 m; "
+        "flood 2011-2023 20 m (legacy 2005-2016 1:50k)",
         confidence=Confidence.LOW,
         limitations=[
-            "Not a decision: no exclusions, scores or rankings. M1A.1 human sign-off "
-            f"{cfg.gates.m1a1_human_visual_signoff}.",
-            "Flood = observed 2005-2016 only (TEMPORARY_HISTORICAL_EVIDENCE).",
+            "Not a decision: no exclusions, scores or rankings. Human visual sign-off M1A.1 "
+            f"{cfg.gates.m1a1_human_visual_signoff}, M1B {cfg.gates.m1b_human_visual_signoff}.",
+            "Flood = observed 2011-2023 (PRIMARY_HISTORICAL_FLOOD_EVIDENCE); 2005-2016 kept as "
+            "legacy_flood_* context (HISTORICAL_CORROBORATION), never interpreted.",
             "DMR susceptibility is a ~1 km product, methodology not published; coverage partial.",
             "Terrain from a DSM: slope biased by canopy/buildings.",
             "Context columns (boundary uncertainty, legal screening) never affect states.",
