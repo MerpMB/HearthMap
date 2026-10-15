@@ -229,7 +229,7 @@ More examples: `outputs/m1c/example-explanations.md`.
 | example-explanations.md | 5,630 |
 | fragmentation-summary.csv | 798 |
 | hazard-screening-policy.gpkg | 120,987,648 |
-| hazard-screening-policy.gpkg.provenance.json | 2,212 |
+| hazard-screening-policy.gpkg.provenance.json | 2,206 |
 | largest-components.csv | 9,002 |
 | policy-results.parquet | 6,525,501 |
 | policy-statistics.json | 15,359 |
