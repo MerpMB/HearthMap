@@ -44,9 +44,18 @@ caution), against 28.9% on steep land: avoidance is mostly an upland/landslide m
 lowland flood evidence mostly gives caution and verification. Seismic evidence never enters
 this axis.
 
-**Verification burden.** 86.1% of the AOI calls for site verification for at least one
-family (0 families 19.1%, 1: 44.3%, 2: 30.4%, 3: 6.2%). The burden is broad, so it
-discriminates little on its own; its value is in naming *which* information is needed.
+**Verification burden (corrected in M1E.1).** 86.1% of the AOI (34,377 km²) is flagged
+`VERIFY_SITE_REQUIRED`. The M1E report quoted a trigger distribution that summed to 100% but
+implied only 80.9% with at least one trigger. Cause: the two numbers described different
+populations, both by area. The flag also fires where the seismic screening state alone
+requires verification (a nearby recorded M ≥ 5 event, which the history family reports as
+`CONTEXT_ONLY`): 8,502 cells, 2,072 km² (5.2% of the AOI), which the old count did not
+attribute to any trigger. Neither percentage was wrong; the count omitted a population. The
+count now includes that trigger (`seismic_state`), so *flag ⇔ triggers ≥ 1*. Policy
+semantics and every action area are unchanged. Corrected distribution (share of AOI area):
+0 triggers 13.9%, 1: 49.5%, 2: 30.4%, 3: 6.2%, 4: 0.03% (sums to 100%; ≥ 1 = 86.1%).
+The burden is broad, so it discriminates little on its own; its value is in naming *which*
+information is needed.
 
 **Engineering mitigation.** 21,436 km² (53.7%) requires seismic design (Chiang Rai 75.2%,
 Chiang Mai 50.7%, Phayao 24.0%; low-slope land 63.2%). This does not remove land from the
@@ -177,17 +186,18 @@ Per-family recommended actions (AOI, % of area):
 | fault_context | 54.8 | 0.0 | 45.2 | 0.0 | 0.0 | 0.0 |
 | historical_seismicity | 40.0 | 0.0 | 0.0 | 0.0 | 0.0 | 60.0 |
 
-Families requiring site verification per cell (% of scope area):
+Verification triggers per cell (% of scope area; triggers >= 1 equals the area flagged VERIFY_SITE_REQUIRED):
 
-| families_requiring_verification | AOI | Chiang Mai | Phayao | Chiang Rai |
+| verification_triggers | AOI | Chiang Mai | Phayao | Chiang Rai |
 |---|---|---|---|---|
-| 0 | 19.1 | 18.9 | 30.8 | 13.2 |
-| 1 | 44.3 | 45.4 | 48.8 | 39.8 |
+| 0 | 13.9 | 15.2 | 26.3 | 4.8 |
+| 1 | 49.5 | 49.1 | 53.3 | 48.1 |
 | 2 | 30.4 | 29.3 | 19.1 | 38.7 |
 | 3 | 6.2 | 6.4 | 1.3 | 8.3 |
 | 4 | 0.0 | 0.0 | 0.0 | 0.1 |
 | 5 | 0.0 | 0.0 | 0.0 | 0.0 |
 | 6 | 0.0 | 0.0 | 0.0 | 0.0 |
+| 7 | 0.0 | 0.0 | 0.0 | 0.0 |
 
 ![verification-burden.png](../../outputs/m1e-review/verification-burden.png)
 
@@ -332,7 +342,7 @@ No review of the M1C-M1E map packs has been reported; none is inferred.
 | province-action-areas.csv | 2,617 |
 | unresolved-evidence.csv | 1,164 |
 | unresolved-hazard-evidence.png | 114,539 |
-| verification-burden-distribution.csv | 736 |
-| verification-burden.png | 178,446 |
-| m1e/natural-hazard-actions.parquet | 2,572,285 |
+| verification-burden-distribution.csv | 798 |
+| verification-burden.png | 175,541 |
+| m1e/natural-hazard-actions.parquet | 2,569,524 |
 | m1e/natural-hazard-actions.parquet.provenance.json | 4,814 |
