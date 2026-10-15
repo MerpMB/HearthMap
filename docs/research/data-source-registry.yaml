@@ -1109,152 +1109,247 @@ sources:
   local_raw_path: data/raw/osm-overpass-aoi/2026-10-15/
   processing_status: PROCESSED
 - id: roads-official-doh-drr
-  name: Official national and rural road networks
+  name: Official rural road centrelines (DRR) and national highway context
   category: roads
   priority: useful
-  verification_status: NEEDS_RESEARCH
-  role: null
-  permitted_uses: []
-  publisher: Department of Highways (DOH) / Department of Rural Roads (DRR) - to confirm
-  landing_page: null
-  access_method: null
-  format: null
-  coverage: null
-  spatial_resolution: null
-  temporal_coverage: null
-  last_verified: null
-  license_or_usage_notes: null
-  expected_update_frequency: null
-  confidence: UNKNOWN
-  known_limitations: []
-  local_raw_path: null
-  processing_status: NOT_ACQUIRED
-  notes: Useful for road class/ownership; check data.go.th.
+  verification_status: VERIFIED
+  role: VALIDATION_ONLY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: Department of Rural Roads (DRR); Department of Highways (DOH) not reached
+  dataset_title: ทางหลวงชนบท (DRR_Feature FeatureServer layer 2) / data.go.th record dataset_41_011
+  landing_page: https://gis.drr.go.th/arcgis/rest/services/DRR_Feature/FeatureServer/2
+  data_endpoint: https://gis.drr.go.th/arcgis/rest/services/DRR_Feature/FeatureServer/2 (https; plain http refused)
+  access_method: Public ArcGIS REST FeatureServer (query supported, no key); AOI envelope query
+  format: Polyline features (390 LineString in the AOI envelope)
+  source_crs: EPSG:4326 service, requested outSR 32647
+  coverage: Thailand layer; 390 features intersect the three-province envelope (route-level links, not a complete road network)
+  spatial_resolution: 'Service description: 1:4000 in 110 cities, 1:20000 elsewhere'
+  temporal_coverage: Features carry survey_date / updated_date (updated 2025-01-22 on the sampled links)
+  last_update: Catalogue record modified 2026-01-25
+  last_verified: '2026-10-16'
+  verification_evidence: Service directory, layer metadata and all 390 envelope features inspected; geometry types, CRS and attributes (road_code, lane_count, lane_width, survey_date) checked.
+  license_or_usage_notes: data.go.th record licence Open Data Common; access condition none. Service itself states no terms.
+  dataset_licence: Open Data Common (data.go.th record dataset_41_011)
+  service_terms: None stated on the ArcGIS service
+  expected_update_frequency: Not stated
+  confidence: LOW
+  known_limitations:
+  - Only 390 links in the AOI envelope; it is NOT a connected, routable network and is not merged with OSM.
+  - DOH national-highway layers were not located as a machine-readable service in this milestone.
+  - Used as an independent corroboration of OSM road presence only; provenance is kept separate.
+  analytical_suitability: Context that an official rural highway exists within 1 km of a cell. Not used for routing.
+  local_raw_path: data/raw/roads-drr-gis/download-2026-10-16/
+  processing_status: PROCESSED
 - id: schools-official
-  name: School locations by level
+  name: Ministry of Education institution register (ฐานทะเบียนสถานศึกษา)
   category: education
   priority: must_have
   verification_status: NEEDS_RESEARCH
   role: null
+  acquisition_status: NOT_STARTED
   permitted_uses: []
-  publisher: Ministry of Education / OBEC / other bodies - to confirm (possibly via data.go.th)
-  landing_page: https://data.go.th/
-  access_method: null
-  format: null
+  publisher: Ministry of Education (MOE) data catalogue
+  landing_page: https://catalog.moe.go.th/
+  access_method: Not reached
   coverage: null
-  spatial_resolution: Point (if coordinates exist)
+  spatial_resolution: null
   temporal_coverage: null
-  last_verified: null
+  last_verified: '2026-10-16'
+  verification_evidence: catalog.moe.go.th and data.moe.go.th refused connections (curl, Python and the fetch tool) on 2026-10-16. data.go.th mirrors only expose province-level counts, not institution records. NOT verified.
   license_or_usage_notes: null
   expected_update_frequency: null
   confidence: UNKNOWN
   known_limitations:
-  - Coordinates may be missing or geocoded to sub-district centroids.
-  - Private and international schools may be in separate registries or absent.
+  - Authoritative level, affiliation and status fields were NOT obtained, so education levels are derived (see places-dopa-gis02).
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: Need level (kindergarten/primary/secondary/vocational) and ideally quality signals. Fallback
-    - OSM amenity=school (incomplete).
+  notes: Retry from another network or request the register from MOE; replacing the derived levels with authoritative ones is the main education upgrade path.
+- id: places-dopa-gis02
+  name: DOPA government places and important places (gis-02), education subset
+  category: education
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Provincial Administration (DOPA)
+  dataset_title: ข้อมูลสถานที่ราชการและสถานที่สำคัญใน 76 จังหวัด (gis-02)
+  landing_page: https://catalog.dopa.go.th/dataset/gis-02
+  data_endpoint: https://catalog.dopa.go.th/dataset/c0cddb04-4b6e-40bc-afb9-ea72d28324bb (per-province JSON resources)
+  access_method: Direct JSON download (no key)
+  format: JSON arrays, one per province (Chiang Mai 16,729; Chiang Rai 14,364; Phayao records)
+  source_crs: EPSG:4326 (oct_side01_lat/lon)
+  coverage: Chiang Mai, Chiang Rai, Phayao (all places; gov_office_id 2 = education)
+  spatial_resolution: Point
+  temporal_coverage: Budget year 2564 (BE) = 2021 on every sampled record
+  last_update: Catalogue metadata modified 2025-10-24; data vintage 2021
+  last_verified: '2026-10-16'
+  verification_evidence: All three provincial files downloaded and profiled. 5,450 records have gov_office_id 2. The published data dictionary (data_dictionary.json) lists field names only; sub-code meanings are NOT documented, so institution types are derived from names observed under each code. Exact duplicate rows exist and were merged deterministically.
+  license_or_usage_notes: Open Data Common; accessible_condition none
+  dataset_licence: Open Data Common
+  service_terms: null
+  expected_update_frequency: Annual (not met - data is 2021)
+  confidence: LOW
+  known_limitations:
+  - STALE (2021). Closures, new institutions and relocations since then are not reflected.
+  - No authoritative level/affiliation/status/id fields; levels derived from names and sub-codes (confidence-qualified).
+  - Coordinates are of the place point, not necessarily the school gate; some are outside the stated province (flagged, not corrected).
+  analytical_suitability: Presence and approximate position of education institutions for accessibility evidence. Not quality, capacity or enrolment.
+  local_raw_path: data/raw/places-dopa-gis02/download-2026-10-16/
+  processing_status: PROCESSED
 - id: universities
   name: Universities and higher-education campuses
   category: education
   priority: useful
-  verification_status: NEEDS_RESEARCH
-  role: null
-  permitted_uses: []
-  publisher: null
-  landing_page: null
-  access_method: null
-  format: null
-  coverage: null
-  spatial_resolution: Point
-  temporal_coverage: null
-  last_verified: null
-  license_or_usage_notes: null
-  expected_update_frequency: null
-  confidence: UNKNOWN
-  known_limitations: []
-  local_raw_path: null
-  processing_status: NOT_ACQUIRED
-  notes: Small number of sites; could be curated manually from official sources with each point cited.
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: DOPA gis-02 (see places-dopa-gis02)
+  dataset_title: Universities and colleges subset of DOPA gis-02
+  data_endpoint: https://catalog.dopa.go.th/dataset/c0cddb04-4b6e-40bc-afb9-ea72d28324bb
+  format: JSON subset
+  source_crs: EPSG:4326
+  landing_page: https://catalog.dopa.go.th/dataset/gis-02
+  access_method: Subset of places-dopa-gis02 (university keywords or sub-code 2010)
+  coverage: Three provinces
+  last_verified: '2026-10-16'
+  verification_evidence: Derived from the same verified files; counts reported in outputs/m2a-review.
+  license_or_usage_notes: Open Data Common
+  expected_update_frequency: Annual (not met)
+  confidence: LOW
+  known_limitations:
+  - Same 2021 vintage and name-derived typing as places-dopa-gis02.
+  local_raw_path: data/raw/places-dopa-gis02/download-2026-10-16/
+  processing_status: PROCESSED
 - id: health-facilities-moph
-  name: Health facility registry (hospitals, health centres)
+  name: MOPH hospital and health-facility service levels (authoritative)
   category: health
   priority: must_have
   verification_status: NEEDS_RESEARCH
   role: null
+  acquisition_status: NOT_STARTED
   permitted_uses: []
-  publisher: Ministry of Public Health (MOPH) - to confirm
+  publisher: Ministry of Public Health (MOPH)
   landing_page: null
   access_method: null
-  format: null
-  coverage: null
-  spatial_resolution: Point (if coordinates exist)
-  temporal_coverage: null
-  last_verified: null
-  license_or_usage_notes: null
-  expected_update_frequency: null
+  last_verified: '2026-10-16'
+  verification_evidence: No machine-readable, verified source of hospital service level (regional / general / community) or emergency capability was found on data.go.th; provincial mirrors only count facilities. NOT verified.
   confidence: UNKNOWN
   known_limitations:
-  - Facility level/capability (emergency, specialist) may not be encoded.
+  - Higher-level and emergency-capable hospitals cannot be identified from verified data, so higher_level_hospital accessibility is DEFERRED.
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: Distinguish emergency-capable hospitals from primary care.
+  notes: Supply an authoritative list in config/healthcare-reference-levels.yaml to enable higher-level accessibility.
+- id: health-citizeninfo-dga
+  name: Government health-facility coordinates (CITIZENinfo)
+  category: health
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Digital Government Development Agency (DGA), with MOPH, BMA, military and university hospitals
+  dataset_title: ข้อมูลพิกัดสถานพยาบาลของรัฐจากระบบ CITIZENinfo
+  landing_page: https://data.go.th/dataset/health-citizeninfo
+  data_endpoint: https://data.go.th/dataset/00170665-bda1-4f4a-ad7c-52dac7abc7a5/resource/2d45b0c6-75e9-4463-888d-ef364ad164fb/download/citizeninfo_health_20200314.csv
+  access_method: Direct CSV download (no key)
+  format: CSV, 10,714 rows (10,608 MOPH)
+  source_crs: EPSG:4326
+  coverage: Government facilities nationwide; 625 within the three provinces by stated province
+  spatial_resolution: Point
+  temporal_coverage: File dated 2020-03-14
+  last_update: Catalogue metadata modified 2021-10-31
+  last_verified: '2026-10-16'
+  verification_evidence: CSV downloaded and profiled (92 rows without coordinates nationally, a pin-ok flag, 13-digit unit codes whose family encodes hospital vs health-promoting hospital; 10 repeated codes nationally). Class is derived from name/ministry only.
+  license_or_usage_notes: CC BY 4.0
+  dataset_licence: Creative Commons Attribution 4.0
+  expected_update_frequency: Ad hoc (one-off programme)
+  confidence: LOW
+  known_limitations:
+  - STALE (2020). Private hospitals and clinics are absent (government only).
+  - No facility-level (regional/general/community), bed count, emergency or specialty capability fields.
+  analytical_suitability: Presence and position of government hospitals and primary health units for accessibility evidence only.
+  local_raw_path: data/raw/health-citizeninfo-dga/download-2026-10-16/
+  processing_status: PROCESSED
 - id: electricity-pea
-  name: Electricity distribution coverage / grid proximity
+  name: PEA Power Map (service potential for preliminary planning)
   category: electricity
   priority: useful
   verification_status: NEEDS_RESEARCH
   role: null
+  acquisition_status: NOT_STARTED
   permitted_uses: []
-  publisher: Provincial Electricity Authority (PEA) - to confirm
-  landing_page: null
-  access_method: null
-  format: null
-  coverage: null
-  spatial_resolution: null
-  temporal_coverage: null
-  last_verified: null
-  license_or_usage_notes: null
-  expected_update_frequency: null
+  publisher: Provincial Electricity Authority (PEA)
+  landing_page: https://www.pea.co.th/
+  access_method: No public machine-readable endpoint verified; no scraping or API reverse-engineering attempted
+  last_verified: '2026-10-16'
+  verification_evidence: Web searches and the data.go.th catalogue returned no PEA grid-capacity or service-potential dataset; powermap.pea.co.th did not connect and www.pea.co.th/powermap returned 404. PEA describes the Power Map as preliminary-planning information that creates no obligation to serve.
   confidence: UNKNOWN
   known_limitations:
-  - Public line-level data may not exist; proxies (OSM power lines, settlement presence) are weak.
+  - Classified as REGIONAL_SERVICE_POTENTIAL, never PARCEL_ELECTRICITY_AVAILABLE.
+  - 'Recorded as review/context evidence: electricity_service_potential = NOT_ASSESSED with parcel verification required in every cell.'
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: If unavailable, keep as UNKNOWN and push to parcel-level field check.
 - id: water-pwa-service
-  name: Piped water service areas
+  name: PWA service-area polygons
   category: water
   priority: must_have
   verification_status: NEEDS_RESEARCH
   role: null
+  acquisition_status: NOT_STARTED
   permitted_uses: []
-  publisher: Provincial Waterworks Authority (PWA) and local/village systems - to confirm
-  landing_page: null
-  access_method: null
-  format: null
-  coverage: null
-  spatial_resolution: null
-  temporal_coverage: null
-  last_verified: null
-  license_or_usage_notes: null
-  expected_update_frequency: null
+  publisher: Provincial Waterworks Authority (PWA)
+  landing_page: https://www.pwa.co.th/province/report
+  access_method: None found
+  last_verified: '2026-10-16'
+  verification_evidence: PWA publishes province-level user/capacity tables (pwa.co.th/province/report, Chiang Mai 223,355 users / Chiang Rai 89,879 per the table) and no service-area polygons, shapefiles or services were found on pwa.co.th or data.go.th. NOT usable as spatial evidence.
   confidence: UNKNOWN
   known_limitations:
-  - Many rural areas rely on village (local-authority) systems or wells, which may be unmapped.
+  - Every cell is NON_PWA_OR_UNKNOWN_SERVICE with water_service_verification_required; this never means 'no water' (wells, municipal and village systems exist).
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: Water must remain an explicit uncertainty if unmapped.
+- id: telecom-nbtc-coverage
+  name: NBTC mobile coverage statistics
+  category: telecom
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  metadata_verified: true
+  data_verified: false
+  acquisition_status: DEFERRED
+  permitted_uses: []
+  publisher: Office of the NBTC
+  landing_page: https://datacatalog.nbtc.go.th/dataset/mobile-coverage
+  last_verified: '2026-10-16'
+  verification_evidence: Catalogue records (mobile-coverage, 3G/4G/5G dataset68_12_23/24/25) describe the share of population living in covered areas - an aggregate statistic, not spatial coverage. Rejected for grid use.
+  confidence: UNKNOWN
+  known_limitations:
+  - Province-level or national shares are not grid coverage; telecom is DEFERRED in M2A.
+  local_raw_path: null
+  processing_status: REJECTED
 - id: telecom-ookla-open-data
   name: Ookla Open Data speed tiles (fixed and mobile)
   category: telecom
   priority: useful
   verification_status: CANDIDATE
   role: null
+  acquisition_status: DEFERRED
   permitted_uses: []
   publisher: Ookla
-  landing_page: null
   access_method: Download (public cloud bucket; to confirm)
   format: Parquet / Shapefile tiles
   coverage: Global
@@ -1265,10 +1360,10 @@ sources:
   expected_update_frequency: Quarterly
   confidence: UNKNOWN
   known_limitations:
-  - Only where tests were run; absence of tiles is not absence of service.
+  - Crowd-sourced; only where tests were run, so absence of tiles is not absence of service; not authoritative.
+  - Global files exceed the 250 MB acquisition guard; deferred beyond M2A.
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: null
 - id: land-value-treasury-appraisal
   name: Official assessed land values
   category: land_value

@@ -1,0 +1,108 @@
+# M2A - family & infrastructure EVIDENCE (accessibility, presence, context). No scoring.
+# Every threshold below is an exposed assumption, not product truth. M2B asks the owner to calibrate.
+version: "0.1.0"
+status: PROVISIONAL_EVIDENCE_ONLY
+
+concepts:   # never silently converted into each other
+  - PRESENCE
+  - ACCESSIBILITY
+  - CAPACITY_SERVICE_LEVEL
+  - QUALITY
+  - RELIABILITY
+forbidden_fields:
+  - school_quality_score
+  - best_school
+  - good_school
+  - family_score
+  - infrastructure_score
+  - total_family_score
+
+travel_time:
+  name: BASELINE_DRIVE_TIME          # NOT actual commute time (no traffic, weather, rainy-season or surface effects)
+  basis: OSM highway class free-flow assumptions
+  speeds_kmh:                         # exposed assumptions
+    motorway: 90
+    motorway_link: 50
+    trunk: 80
+    trunk_link: 45
+    primary: 65
+    primary_link: 40
+    secondary: 55
+    secondary_link: 35
+    tertiary: 45
+    tertiary_link: 30
+    unclassified: 35
+    residential: 25
+  sensitivity:                        # multipliers on every speed
+    SLOW: 0.75
+    BASE: 1.0
+    FAST: 1.25
+  bands_min: [15, 30, 60]
+  max_snap_distance_m: 1000           # facility/cell centre farther than this from the network is NOT routed
+  max_search_min: 120
+
+education:
+  # source-native sub-codes of DOPA gis-02 (no published dictionary: meaning inferred from the
+  # names observed under each code; every derived level is marked DERIVED with a confidence)
+  source_vintage_budget_year_be: 2564
+  school_name_keywords: ["โรงเรียน"]
+  early_childhood_keywords: ["ศูนย์พัฒนาเด็กเล็ก", "ศพด", "สถานรับเลี้ยงเด็ก", "ศูนย์เด็กเล็ก", "ศูนย์อบรมเด็กก่อนเกณฑ์", "เนอสเซอรี่"]
+  kindergarten_keywords: ["อนุบาล"]
+  secondary_keywords: ["วิทยาคม", "มัธยม", "วิทยาลัย"]          # "วิทยาลัย" handled below for tertiary/vocational
+  university_keywords: ["มหาวิทยาลัย", "มหาวิทยาเทคโนโลยี", "วิทยาเขต", "ราชภัฏ", "ราชมงคล"]
+  vocational_keywords: ["อาชีวศึกษา", "วิทยาลัยการอาชีพ", "วิทยาลัยเทคนิค", "วิทยาลัยเทคโนโลยี", "วิทยาลัยเกษตร", "วิทยาลัยอาชีวะ", "วิทยาลัยพณิชย", "วิทยาลัยช่าง", "วิทยาลัยสารพัดช่าง"]
+  non_schooling_keywords: ["กศน", "ห้องสมุด", "หอสมุด", "พิพิธภัณฑ์", "หอโบราณ", "ศูนย์การเรียนรู้", "บ้านศิลปะ", "สภาวัฒนธรรม", "โรงเรียนผู้สูงอายุ", "หอประวัติ"]
+  source_subcodes_non_institutional: ["2190", "2200", "2210"]
+  school_subcodes: ["2050", "2060", "2070", "2080", "2090", "2110", "2120", "2130", "2140", "2150", "2160", "2180"]
+  secondary_subcodes: ["2090"]       # observed: วิทยาคม-type names dominate this code (derived, MEDIUM)
+  early_childhood_subcodes: ["2170"]
+  university_subcodes: ["2010"]
+  vocational_subcodes: ["2030", "2040"]
+  pathways:        # categories reported as accessibility primitives (not a quality statement)
+    EARLY_CHILDHOOD: [EARLY_CHILDHOOD]
+    KINDERGARTEN: [KINDERGARTEN]
+    PRIMARY: [PRIMARY]
+    SECONDARY: [LOWER_SECONDARY, UPPER_SECONDARY]
+    VOCATIONAL: [VOCATIONAL]
+    UNIVERSITY: [UNIVERSITY_TERTIARY]
+
+healthcare:
+  # facility classes assigned only from source-supported fields (ministry, department, official id family,
+  # name keywords). No emergency/trauma/ICU capability is ever assigned from the word "hospital".
+  hospital_name_keyword: "โรงพยาบาล"
+  primary_unit_keywords: ["โรงพยาบาลส่งเสริมสุขภาพตำบล", "รพ.สต", "ศูนย์สุขภาพชุมชน", "สถานีอนามัย", "ศูนย์บริการสาธารณสุข", "สถานพยาบาลชุมชน"]
+  specialised_keywords: ["ประสาท", "สวนปรุง", "จิตเวช", "ธัญญารักษ์", "มะเร็ง", "ทันตกรรม", "โรคผิวหนัง", "โรคทรวงอก", "ราชประชาสมาสัย", "โรคติดต่อ"]
+  university_ministry_keywords: ["อุดมศึกษา"]
+  # Higher-level (regional/tertiary) hospitals need an authoritative reference list; none was verified
+  # in M2A. Fill config/healthcare-reference-levels.yaml (owner/authority supplied) to enable it.
+  higher_level_reference: config/healthcare-reference-levels.yaml
+  facility_classes:
+    - PRIMARY_HEALTH_UNIT
+    - COMMUNITY_HOSPITAL
+    - GENERAL_HOSPITAL
+    - REGIONAL_OR_TERTIARY_HOSPITAL
+    - UNIVERSITY_HOSPITAL
+    - SPECIALISED_HOSPITAL
+    - HOSPITAL_UNSPECIFIED_LEVEL
+    - EMERGENCY_CAPABLE_FACILITY
+    - OTHER
+    - UNKNOWN
+
+coordinate_qa:
+  thailand_bbox: [97.3, 5.6, 105.7, 20.5]          # lon_min, lat_min, lon_max, lat_max
+  duplicate_coordinate_min_distinct_names: 3       # >= N different institutions on one exact point
+  coarse_decimals_max: 2                           # lat/lon with <= N decimals are coarse placeholders
+  cluster_radius_m: 30
+
+dedup:
+  same_institution_radius_m: 100                   # identical normalised name within this radius
+  exact_duplicate_radius_m: 5
+
+freshness:
+  stale_after_years: 3
+  verification_date: "2026-10-16"
+  sources:
+    education_dopa_gis02: {source_date: "2021-12-31", basis: "budget year 2564 (BE) - record month_id 11", expected_update_frequency: "Annual (not met)"}
+    health_citizeninfo: {source_date: "2020-03-14", basis: "resource file date", expected_update_frequency: "Ad hoc (one-off programme)"}
+    roads_osm: {source_date: "2026-10-15", basis: "Overpass timestamp", expected_update_frequency: "Continuous"}
+    roads_drr: {source_date: "2026-10-16", basis: "service queried (feature survey_date varies)", expected_update_frequency: "Unknown"}
