@@ -45,3 +45,15 @@ gates:
     reviewer_role: null
     result: null
     reviewed_material: M1C.3 flood fusion review maps (outputs/m1c3-review/), not yet reviewed
+  m1d_human_visual_signoff:
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1D seismic evidence review maps (outputs/m1d-review/), not yet reviewed
+  m1e_human_visual_signoff:
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1E natural hazard integration review maps (outputs/m1e-review/), not yet reviewed

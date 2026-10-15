@@ -24,6 +24,14 @@ from hearthmap.hazard.flood_fusion import (
     slope_stratum,
     to_policy_override,
 )
+from hearthmap.hazard.integration import (
+    HazardDimensions,
+    IntegrationConfig,
+    integrate,
+    load_integration_config,
+    parcel_checklist,
+    to_suitability_dimensions,
+)
 from hearthmap.hazard.policy import (
     POLICY_INPUTS,
     FloodOverride,
@@ -50,7 +58,9 @@ __all__ = [
     "FloodLedger",
     "FloodOverride",
     "HazardConfig",
+    "HazardDimensions",
     "HazardPolicyConfig",
+    "IntegrationConfig",
     "LandslideAssessment",
     "RegionalSearchStatus",
     "apply_policy",
@@ -59,12 +69,16 @@ __all__ = [
     "evaluate_candidate",
     "experimental_candidates",
     "explain",
+    "integrate",
     "interpret",
     "ledger_summary",
     "load_fusion_config",
     "load_hazard_config",
+    "load_integration_config",
     "load_policy_config",
+    "parcel_checklist",
     "slope_stratum",
     "threshold_sensitivity",
     "to_policy_override",
+    "to_suitability_dimensions",
 ]
