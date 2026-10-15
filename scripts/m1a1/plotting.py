@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import textwrap
 from pathlib import Path
 
 import matplotlib
@@ -73,12 +74,9 @@ def save(
     source: str,
     tag: str = "HearthMap M1A.1 review - descriptive QA, not a suitability map.",
 ) -> None:
-    fig.text(
-        0.005,
-        0.003,
-        f"Source: {source}  |  {CRS_NOTE}  |  {tag}",
-        fontsize=6.5,
-        color="#333333",
-    )
+    # Wrap to the figure width so a long caption never widens the saved canvas.
+    width_chars = max(int(fig.get_figwidth() * 19), 80)
+    caption = textwrap.fill(f"Source: {source}  |  {CRS_NOTE}  |  {tag}", width=width_chars)
+    fig.text(0.005, 0.003, caption, fontsize=6.5, color="#333333", va="top")
     fig.savefig(path, dpi=110, bbox_inches="tight")
     plt.close(fig)
