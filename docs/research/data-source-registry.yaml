@@ -101,6 +101,8 @@ sources:
   confidence: LOW
   known_limitations:
   - No vintage date; licence not stated.
+  - 'M1A.1: 76 material zones vs COD-AB (216 km2), mostly on Chiang Mai''s borders with Mae Hong Son,
+    Tak and Myanmar; see docs/research/m1a1-spatial-qa-report.md.'
   analytical_suitability: Independent cross-check of COD-AB (Thai government agency).
   local_raw_path: data/raw/boundaries-gistda-50k/service-2026-10-15/
   processing_status: PROCESSED
@@ -138,6 +140,9 @@ sources:
     the primary.
   - 'Large divergence from COD-AB: symmetric difference 4.3-12.0% of province area; boundary offset p95
     3.5-12.6 km (2017 OSM boundaries).'
+  - 'M1A.1: material disagreement with COD-AB on 172 zones (3,491 km2); along the western Chiang Mai border
+    its line agrees with neither COD-AB nor GISTDA. Too divergent to drive boundary-caution flags on its
+    own.'
   analytical_suitability: Validation only; not suitable as AOI geometry.
   local_raw_path: data/raw/boundaries-geoboundaries/THA-ADM1-36821470/
   processing_status: PROCESSED

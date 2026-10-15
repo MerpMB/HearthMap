@@ -2,7 +2,7 @@
 
 > Committed copy of `outputs/m1a-review/README.md` (images live in the untracked review folder; regenerate with `python scripts/m1a1/build_review.py && python scripts/m1a1/write_readme.py`).
 
-Code version `1701e2a215fb`. **Descriptive QA only** — no boundary was modified, nothing is scored, ranked or excluded. Every review layer carries `review_only = true`, `decision_use = NONE`; overlays refuse such layers and scores cannot cite `review:` sources.
+Code version `b8ab73a9a32e6276cf70169918099f8fabee4cea`. **Descriptive QA only** — no boundary was modified, nothing is scored, ranked or excluded. Every review layer carries `review_only = true`, `decision_use = NONE`; overlays refuse such layers and scores cannot cite `review:` sources.
 
 Figures are PNG excerpts readable without QGIS; the optional `hearthmap-m1a-review.gpkg` holds review-only subsets for anyone who wants to pan around.
 
@@ -10,10 +10,10 @@ Figures are PNG excerpts readable without QGIS; the optional `hearthmap-m1a-revi
 
 ## 1. Boundary disagreements
 
-Zones = polygon parts of the symmetric difference between COD-AB (PRIMARY, unchanged) and each reference, per province. `max_offset_m` = largest distance from the zone outline to the COD-AB boundary (50 m sampling). A zone is **material** when that offset is ≥ 250 m (half a grid cell: enough to change an edge cell's majority province). `corroboration_fraction` = share of the zone where the *other* reference disagrees with COD-AB in the same direction. Classes are provisional, rule-labelled descriptions, not causes.
+Zones = polygon parts of the symmetric difference between COD-AB (PRIMARY, unchanged) and each reference, per province. `max_offset_m` = largest distance from the zone outline to the COD-AB boundary (50 m sampling). A zone is **material** when that offset is ≥ 250 m (half a grid cell: enough to change an edge cell's majority province). `corroboration_fraction` = share of the zone's alternative edge (the reference's own line) lying within 250 m of the *other* reference's line - i.e. whether both references follow the same alternative boundary. Classes are provisional, rule-labelled descriptions, not causes.
 
-- GISTDA 1:50k: **76 material zones, 216.3 km²**; 43 of them (120.6 km²) are corroborated ≥ 50% by geoBoundaries — i.e. both independent references place the line elsewhere than COD-AB.
-- geoBoundaries (OSM 2017): **172 material zones, 3490.7 km²**; only 32 zones (52.7 km²) are corroborated by GISTDA. Most of its divergence is unique to geoBoundaries.
+- GISTDA 1:50k: **76 material zones, 216.3 km²**; 31 of them (48.9 km²) are corroborated ≥ 50% by geoBoundaries — i.e. both independent references place the line elsewhere than COD-AB.
+- geoBoundaries (OSM 2017): **172 material zones, 3490.7 km²**; only 86 zones (83.9 km²) are corroborated by GISTDA. Most of its divergence is unique to geoBoundaries.
 
 GISTDA material-zone area by what lies on the other side of the edge (km²):
 
@@ -34,28 +34,35 @@ Largest GISTDA zones (full table: `boundary-disagreements.csv`):
 
 | zone_id | province | nearest_district | other_side | border_type | max_offset_m | median_offset_m | symmetric_difference_area_km2 | affected_grid_cells | corroboration_fraction | provisional_class |
 |---|---|---|---|---|---|---|---|---|---|---|
-| gistda-50k-0001 | TH50 | Mae Ai | Myanmar/Laos (international) | international | 4368 | 2393 | 34.94 | 182 | 0.04 | LIKELY_BORDER_INTERPRETATION |
-| gistda-50k-0002 | TH50 | Omkoi | Mae Hong Son | neighbour_province | 3346 | 1827 | 27.49 | 146 | 1.0 | POTENTIALLY_MATERIAL |
+| gistda-50k-0001 | TH50 | Mae Ai | Myanmar/Laos (international) | international | 4368 | 2393 | 34.94 | 182 | 0.08 | LIKELY_BORDER_INTERPRETATION |
+| gistda-50k-0002 | TH50 | Omkoi | Mae Hong Son | neighbour_province | 3346 | 1827 | 27.49 | 146 | 0.0 | POTENTIALLY_MATERIAL |
 | gistda-50k-0003 | TH50 | Omkoi | Tak | neighbour_province | 3773 | 1798 | 26.28 | 138 | 0.0 | POTENTIALLY_MATERIAL |
-| gistda-50k-0004 | TH50 | Omkoi | Mae Hong Son | neighbour_province | 2505 | 1852 | 24.77 | 40 | 1.0 | POTENTIALLY_MATERIAL |
-| gistda-50k-0005 | TH50 | Chiang Dao | Myanmar/Laos (international) | international | 4724 | 2118 | 17.37 | 98 | 0.85 | LIKELY_BORDER_INTERPRETATION |
+| gistda-50k-0004 | TH50 | Omkoi | Mae Hong Son | neighbour_province | 2505 | 1852 | 24.77 | 40 | 0.0 | POTENTIALLY_MATERIAL |
+| gistda-50k-0005 | TH50 | Chiang Dao | Myanmar/Laos (international) | international | 4724 | 2118 | 17.37 | 98 | 0.64 | LIKELY_BORDER_INTERPRETATION |
 | gistda-50k-0006 | TH50 | Hot | Mae Hong Son | neighbour_province | 2029 | 1453 | 10.32 | 64 | 0.0 | POTENTIALLY_MATERIAL |
-| gistda-50k-0007 | TH50 | Wiang Haeng | Mae Hong Son | neighbour_province | 1435 | 905 | 7.95 | 58 | 0.53 | POTENTIALLY_MATERIAL |
-| gistda-50k-0008 | TH57 | Wiang Pa Pao | Chiang Mai | aoi_internal | 1876 | 1112 | 5.0 | 36 | 0.92 | POTENTIALLY_MATERIAL |
-| gistda-50k-0009 | TH50 | Wiang Pa Pao | Chiang Rai | aoi_internal | 1873 | 1115 | 5.0 | 36 | 0.92 | POTENTIALLY_MATERIAL |
-| gistda-50k-0010 | TH50 | Wiang Haeng | Mae Hong Son | neighbour_province | 1341 | 369 | 3.9 | 35 | 0.88 | POTENTIALLY_MATERIAL |
-| gistda-50k-0011 | TH50 | Wiang Haeng | Mae Hong Son | neighbour_province | 1234 | 462 | 3.74 | 31 | 0.56 | POTENTIALLY_MATERIAL |
+| gistda-50k-0007 | TH50 | Wiang Haeng | Mae Hong Son | neighbour_province | 1435 | 905 | 7.95 | 58 | 0.12 | POTENTIALLY_MATERIAL |
+| gistda-50k-0008 | TH57 | Wiang Pa Pao | Chiang Mai | aoi_internal | 1876 | 1112 | 5.0 | 36 | 0.91 | POTENTIALLY_MATERIAL |
+| gistda-50k-0009 | TH50 | Wiang Pa Pao | Chiang Rai | aoi_internal | 1873 | 1115 | 5.0 | 36 | 0.91 | POTENTIALLY_MATERIAL |
+| gistda-50k-0010 | TH50 | Wiang Haeng | Mae Hong Son | neighbour_province | 1341 | 369 | 3.9 | 35 | 0.18 | POTENTIALLY_MATERIAL |
+| gistda-50k-0011 | TH50 | Wiang Haeng | Mae Hong Son | neighbour_province | 1234 | 462 | 3.74 | 31 | 0.17 | POTENTIALLY_MATERIAL |
 | gistda-50k-0012 | TH50 | Omkoi | Tak | neighbour_province | 1467 | 727 | 3.49 | 26 | 0.0 | POTENTIALLY_MATERIAL |
 
 ### Chiang Mai
 
 ![chiang-mai-boundary-disagreement.png](../../outputs/m1a-review/chiang-mai-boundary-disagreement.png)
 
-The Chiang Mai statistics (p95 offset 1.1 km, max 4.9 km vs GISTDA) come from a small number of **edge blocks**, not from a systematic shift: the median offset stays ~37 m. The blocks sit on three edges:
+The Chiang Mai statistics (p95 offset 1.1 km, max 4.9 km vs GISTDA) come from a small number of **edge blocks**, not from a systematic shift: the median offset stays ~37 m. GISTDA material zones in Chiang Mai, grouped by edge (corroboration = share of the GISTDA line within 250 m of the geoBoundaries line):
 
-1. **Western/south-western border with Mae Hong Son and Tak (Omkoi, Hot, Wiang Haeng)** — 2–3 km-wide blocks of 4–27 km². Several (e.g. `gistda-50k-0002`, `-0004`, `-0010`) are 88–100% corroborated by geoBoundaries, so here COD-AB is the outlier between three sources. Others (`-0003`, `-0006`, `-0012` toward Tak/Hot) are not corroborated.
-2. **International border with Myanmar (Mae Ai, Chiang Dao, Fang)** — up to 4.7 km offsets; delineation differences on international borders are common between sources (provisional class LIKELY_BORDER_INTERPRETATION). `gistda-50k-0005` is 85% corroborated, `-0001` (35 km², largest) is not.
-3. **Internal border with Chiang Rai near Wiang Pa Pao** — a 5.0 km² block (`-0008`/`-0009`) that COD-AB assigns to Chiang Mai while GISTDA (and, 92%, geoBoundaries) assign it to Chiang Rai. It is the largest disagreement that changes *which AOI province* an area belongs to.
+| edge | zones | area_km2 | max_offset_km | corroborated (>=50%) | not corroborated |
+|---|---|---|---|---|---|
+| Border with Mae Hong Son | 16 | 85.3 | 3.3 |  | 0002, 0004, 0006, 0007, 0010, 0011 ... |
+| International border (Myanmar) | 9 | 63.8 | 4.7 | 0005, 0013, 0016, 0035, 0040, 0043 ... | 0001, 0014 |
+| Border with Tak | 4 | 31.2 | 3.8 |  | 0003, 0012, 0027, 0130 |
+| Border with Chiang Rai | 11 | 11.5 | 1.9 | 0009, 0026, 0028, 0039, 0048, 0059 ... | 0032, 0044, 0063, 0075 |
+| Border with Lamphun | 8 | 5.5 | 1.1 |  | 0015, 0034, 0037, 0067, 0068, 0098 ... |
+| Border with Lampang | 1 | 0.7 | 0.4 | 0036 |  |
+
+The largest disagreement that changes *which AOI province* an area belongs to is on the Chiang Mai / Chiang Rai edge near Wiang Pa Pao (`gistda-50k-0009`, 5.0 km², primary only for Chiang Mai, max offset 1.9 km, corroboration 91%).
 
 No evidence was found to test a *vintage* explanation (no dated boundary editions are available), so no zone is classed LIKELY_SOURCE_VINTAGE_DIFFERENCE.
 
@@ -117,13 +124,13 @@ Cells (category present with fraction > 0):
 
 | combination | cells | share_of_cells |
 |---|---|---|
-| reserve | 86518.0 | 53.4% |
-| reserve+park | 33305.0 | 20.5% |
-| none | 29510.0 | 18.2% |
-| reserve+sanctuary | 9761.0 | 6.0% |
-| park | 2490.0 | 1.5% |
-| reserve+park+sanctuary | 334.0 | 0.2% |
-| sanctuary | 155.0 | 0.1% |
+| reserve | 86,518 | 53.4% |
+| reserve+park | 33,305 | 20.5% |
+| none | 29,510 | 18.2% |
+| reserve+sanctuary | 9,761 | 6.0% |
+| park | 2,490 | 1.5% |
+| reserve+park+sanctuary | 334 | 0.2% |
+| sanctuary | 155 | 0.1% |
 
 Reserve and national-park polygons overlap on 18.2% of the AOI. This is consistent with parks having been declared over reserve land while the RFD 2019 layer still draws both - not verified here. These are descriptive combinations; they must not be summed into a severity score. Rule unchanged: RFD/park/sanctuary geometry is SCREENING / REQUIRES_LEGAL_VERIFICATION and cannot create a definitive exclusion.
 
@@ -167,10 +174,10 @@ Rivers and major roads (OSM, independent) run along DSM valleys in all four wind
 
 | File | Bytes |
 |---|---:|
-| boundary-disagreements.csv | 674,452 |
+| boundary-disagreements.csv | 672,892 |
 | boundary-uncertainty-context.csv | 379 |
-| chiang-mai-boundary-disagreement.png | 250,792 |
-| chiang-rai-boundary-review.png | 174,716 |
+| chiang-mai-boundary-disagreement.png | 250,823 |
+| chiang-rai-boundary-review.png | 174,361 |
 | dem-edge-cells.csv | 6,200 |
 | flood-overview.png | 229,252 |
 | flood-repair-audit.csv | 67,094 |
@@ -180,10 +187,10 @@ Rivers and major roads (OSM, independent) run along DSM valleys in all four wind
 | forest-coverage-summary.csv | 2,612 |
 | forest-fraction-histogram.csv | 366 |
 | forest-overlap-examples.png | 70,219 |
-| hearthmap-m1a-review.gpkg | 65,290,240 |
+| hearthmap-m1a-review.gpkg | 65,282,048 |
 | overview.png | 245,932 |
-| phayao-boundary-review.png | 155,574 |
-| qa-summary.json | 25,273 |
+| phayao-boundary-review.png | 154,934 |
+| qa-summary.json | 25,267 |
 | terrain-review.png | 391,905 |
 
 Review GeoPackage layers: province_boundaries, reference_boundaries, boundary_disagreement_zones, boundary_uncertainty_review, forest_review, flood_repair_review, selected_grid_cells (all except province_boundaries are review_only).
