@@ -27,7 +27,6 @@ def main() -> int:
     td = pd.read_csv(R / "travel-time-distribution.csv")
     sens = pd.read_csv(R / "speed-sensitivity.csv")
     ctx = pd.read_csv(R / "infrastructure-context-statistics.csv")
-    cnt = pd.read_csv(R / "facility-counts-by-province.csv")
     art = pd.read_parquet("outputs/m2a/family-infrastructure-evidence.parquet")
     snap = pd.read_csv(R / "facility-routing-snap.csv")
     aoi = td[td.scope == "AOI"][

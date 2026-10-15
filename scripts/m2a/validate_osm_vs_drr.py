@@ -31,7 +31,7 @@ def main() -> int:
     _, d = tree.query_nearest(np.array(pts, dtype=object), return_distance=True, all_matches=False)
     out = {
         "drr_links_in_envelope": len(drr),
-        "drr_links_intersecting_aoi": int(len(clip)),
+        "drr_links_intersecting_aoi": len(clip),
         "drr_length_in_aoi_km": round(float(clip.length.sum() / 1000), 1),
         "sample_points": len(pts),
         "within_25m_pct": round(float((d <= 25).mean() * 100), 1),
