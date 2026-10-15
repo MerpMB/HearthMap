@@ -236,44 +236,44 @@ Legacy-only cells flagged per legacy year: 2005: 5,491, 2006: 143, 2007: 59, 200
 | CURRENT_ONLY_IN_COMMON_PERIOD | 9 | 0.76 | 6 | 5 | 6 | 0.54 | 1.0 |
 | MIXED_COMMON_PERIOD_DISAGREEMENT | 2229 | 556.31 | 192 | 74 | 131 | 185.0 | 0.7051 |
 
-| class | rank | area_km2 | cells | lon | lat | majority_province | legacy_flooded_km2_2011_2016_sum | current_flooded_km2_2011_2016_sum | median_elevation_m_dsm | median_slope_p90_deg_dsm | median_dist_major_waterway_m | share_landslide_not_assessed | cell_ids_first_last |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| AGREEMENT_FLOOD | 1 | 1787.5 | 7150 | 99.877 | 19.602 | Chiang Rai | 726.36 | 720.07 | 404.0 | 2.9 | 1318.0 | 0.751 | G500-E001220-N004200..G500-E001200-N004445 |
-| AGREEMENT_FLOOD | 2 | 880.5 | 3522 | 100.191 | 19.719 | Chiang Rai | 309.77 | 299.0 | 369.4 | 2.2 | 1476.0 | 0.737 | G500-E001250-N004258..G500-E001296-N004460 |
-| AGREEMENT_FLOOD | 3 | 447.03 | 1798 | 99.063 | 18.853 | Chiang Mai | 117.64 | 117.79 | 316.9 | 2.7 | 235.0 | 0.883 | G500-E001013-N004127..G500-E000984-N004235 |
-| AGREEMENT_FLOOD | 4 | 350.67 | 1427 | 99.972 | 20.319 | Chiang Rai | 144.38 | 141.11 | 376.3 | 1.8 | 696.0 | 0.821 | G500-E001201-N004456..G500-E001200-N004526 |
-| AGREEMENT_FLOOD | 5 | 298.25 | 1193 | 100.309 | 19.576 | Phayao | 90.4 | 90.41 | 402.4 | 5.6 | 1448.0 | 0.58 | G500-E001273-N004300..G500-E001278-N004374 |
-| AGREEMENT_FLOOD | 6 | 204.18 | 824 | 98.888 | 18.61 | Chiang Mai | 38.83 | 38.85 | 298.7 | 2.4 | 279.0 | 0.908 | G500-E000957-N004080..G500-E000993-N004142 |
-| AGREEMENT_FLOOD | 7 | 189.5 | 758 | 99.251 | 19.938 | Chiang Mai | 64.73 | 64.73 | 466.2 | 2.5 | 747.0 | 0.752 | G500-E001026-N004370..G500-E001076-N004434 |
-| AGREEMENT_FLOOD | 8 | 124.36 | 498 | 99.512 | 19.282 | Chiang Rai | 46.63 | 46.64 | 563.6 | 3.3 | 465.0 | 0.361 | G500-E001105-N004237..G500-E001106-N004291 |
-| AGREEMENT_FLOOD | 9 | 92.5 | 370 | 99.19 | 19.376 | Chiang Mai | 41.11 | 41.12 | 443.3 | 2.9 | 2558.0 | 0.573 | G500-E001038-N004264..G500-E001035-N004300 |
-| AGREEMENT_FLOOD | 10 | 73.25 | 293 | 99.991 | 19.496 | Chiang Rai | 13.07 | 12.37 | 382.2 | 1.5 | 892.0 | 0.788 | G500-E001211-N004300..G500-E001205-N004326 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 1 | 7.0 | 28 | 99.947 | 19.62 | Chiang Rai | 3.16 | 0.01 | 390.9 | 2.8 | 21.0 | 0.179 | G500-E001194-N004336..G500-E001200-N004343 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 2 | 6.75 | 27 | 99.921 | 19.652 | Chiang Rai | 4.29 | 0.0 | 392.9 | 7.1 | 2785.0 | 0.259 | G500-E001193-N004342..G500-E001193-N004349 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 3 | 5.25 | 21 | 99.889 | 19.348 | Phayao | 1.9 | 0.0 | 430.7 | 9.2 | 6121.0 | 0.0 | G500-E001185-N004275..G500-E001186-N004282 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 4 | 5.0 | 20 | 100.262 | 19.076 | Phayao | 1.22 | 0.0 | 288.9 | 5.7 | 0.0 | 0.0 | G500-E001262-N004214..G500-E001266-N004223 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 5 | 2.75 | 11 | 100.017 | 19.454 | Chiang Rai | 0.4 | 0.0 | 379.5 | 3.7 | 0.0 | 0.545 | G500-E001212-N004300..G500-E001213-N004306 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 6 | 1.75 | 7 | 100.06 | 19.42 | Phayao | 0.11 | 0.0 | 442.6 | 24.6 | 979.0 | 0.0 | G500-E001221-N004294..G500-E001223-N004296 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 7 | 1.5 | 6 | 99.894 | 19.624 | Chiang Rai | 0.3 | 0.0 | 395.4 | 4.8 | 0.0 | 0.667 | G500-E001186-N004339..G500-E001188-N004341 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 8 | 1.5 | 6 | 100.072 | 19.443 | Phayao | 0.36 | 0.0 | 420.5 | 28.3 | 254.0 | 0.0 | G500-E001223-N004299..G500-E001225-N004302 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 9 | 1.5 | 6 | 100.402 | 19.14 | Phayao | 0.14 | 0.0 | 329.5 | 16.6 | 0.0 | 0.0 | G500-E001293-N004233..G500-E001296-N004234 |
-| LEGACY_ONLY_IN_COMMON_PERIOD | 10 | 1.5 | 6 | 99.863 | 19.207 | Phayao | 0.75 | 0.0 | 392.8 | 1.5 | 0.0 | 1.0 | G500-E001181-N004246..G500-E001181-N004249 |
-| CURRENT_ONLY_IN_COMMON_PERIOD | 1 | 0.54 | 4 | 99.053 | 18.666 | Chiang Mai | 0.0 | 0.07 | 295.8 | 2.8 | 959.0 | 1.0 | G500-E001010-N004127..G500-E001010-N004128 |
-| CURRENT_ONLY_IN_COMMON_PERIOD | 2 | 0.12 | 1 | 98.699 | 18.344 | Chiang Mai | 0.0 | 0.0 | 273.2 | 9.9 | 0.0 | 1.0 | G500-E000936-N004056..G500-E000936-N004056 |
-| CURRENT_ONLY_IN_COMMON_PERIOD | 3 | 0.08 | 1 | 99.064 | 18.66 | Chiang Mai | 0.0 | 0.01 | 295.0 | 3.4 | 0.0 | 1.0 | G500-E001013-N004126..G500-E001013-N004126 |
-| CURRENT_ONLY_IN_COMMON_PERIOD | 4 | 0.01 | 1 | 98.922 | 18.534 | Chiang Mai | 0.0 | 0.0 | 285.0 | 1.4 | 0.0 | 1.0 | G500-E000983-N004098..G500-E000983-N004098 |
-| CURRENT_ONLY_IN_COMMON_PERIOD | 5 | 0.01 | 1 | 98.699 | 18.421 | Chiang Mai | 0.0 | 0.0 | 269.5 | 4.1 | 0.0 | 1.0 | G500-E000936-N004073..G500-E000936-N004073 |
-| CURRENT_ONLY_IN_COMMON_PERIOD | 6 | 0.0 | 1 | 99.116 | 18.678 | Chiang Mai | 0.0 | 0.0 | 301.4 | 0.3 | 0.0 | 1.0 | G500-E001024-N004130..G500-E001024-N004130 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 1 | 185.0 | 740 | 100.03 | 19.349 | Phayao | 265.13 | 110.65 | 380.2 | 1.4 | 168.0 | 0.903 | G500-E001199-N004239..G500-E001242-N004323 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 2 | 46.0 | 184 | 99.827 | 19.531 | Chiang Rai | 41.82 | 24.29 | 399.8 | 2.3 | 295.0 | 0.908 | G500-E001164-N004304..G500-E001184-N004342 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 3 | 37.0 | 148 | 100.164 | 19.633 | Chiang Rai | 56.24 | 33.04 | 365.8 | 1.1 | 474.0 | 0.784 | G500-E001242-N004329..G500-E001247-N004352 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 4 | 35.75 | 143 | 99.842 | 19.258 | Phayao | 30.82 | 15.11 | 394.7 | 1.4 | 65.0 | 1.0 | G500-E001179-N004237..G500-E001173-N004277 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 5 | 28.0 | 112 | 100.038 | 20.12 | Chiang Rai | 28.57 | 11.83 | 374.4 | 4.8 | 164.0 | 0.312 | G500-E001208-N004438..G500-E001228-N004460 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 6 | 17.75 | 71 | 99.943 | 19.819 | Chiang Rai | 20.33 | 11.26 | 389.7 | 3.4 | 2067.0 | 0.887 | G500-E001196-N004376..G500-E001198-N004391 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 7 | 17.25 | 69 | 100.181 | 19.576 | Phayao | 18.59 | 10.56 | 367.9 | 0.9 | 175.0 | 0.942 | G500-E001244-N004322..G500-E001247-N004338 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 8 | 10.5 | 42 | 100.279 | 19.138 | Phayao | 6.82 | 3.06 | 295.1 | 4.1 | 0.0 | 0.81 | G500-E001266-N004224..G500-E001270-N004239 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 9 | 7.75 | 31 | 100.273 | 18.98 | Phayao | 3.62 | 1.24 | 269.1 | 4.0 | 0.0 | 0.742 | G500-E001264-N004192..G500-E001270-N004203 |
-| MIXED_COMMON_PERIOD_DISAGREEMENT | 10 | 7.25 | 29 | 99.99 | 20.345 | Chiang Rai | 10.57 | 6.58 | 372.4 | 0.9 | 0.0 | 0.69 | G500-E001207-N004496..G500-E001206-N004503 |
+| class | rank | area_km2 | cells | lon | lat | majority_province | legacy_flooded_km2_2011_2016_sum | current_flooded_km2_2011_2016_sum | median_elevation_m_dsm | median_slope_p90_deg_dsm | median_dist_major_waterway_m | share_landslide_not_assessed |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| AGREEMENT_FLOOD | 1 | 1787.5 | 7150 | 99.877 | 19.602 | Chiang Rai | 726.36 | 720.07 | 404.0 | 2.9 | 1318.0 | 0.751 |
+| AGREEMENT_FLOOD | 2 | 880.5 | 3522 | 100.191 | 19.719 | Chiang Rai | 309.77 | 299.0 | 369.4 | 2.2 | 1476.0 | 0.737 |
+| AGREEMENT_FLOOD | 3 | 447.03 | 1798 | 99.063 | 18.853 | Chiang Mai | 117.64 | 117.79 | 316.9 | 2.7 | 235.0 | 0.883 |
+| AGREEMENT_FLOOD | 4 | 350.67 | 1427 | 99.972 | 20.319 | Chiang Rai | 144.38 | 141.11 | 376.3 | 1.8 | 696.0 | 0.821 |
+| AGREEMENT_FLOOD | 5 | 298.25 | 1193 | 100.309 | 19.576 | Phayao | 90.4 | 90.41 | 402.4 | 5.6 | 1448.0 | 0.58 |
+| AGREEMENT_FLOOD | 6 | 204.18 | 824 | 98.888 | 18.61 | Chiang Mai | 38.83 | 38.85 | 298.7 | 2.4 | 279.0 | 0.908 |
+| AGREEMENT_FLOOD | 7 | 189.5 | 758 | 99.251 | 19.938 | Chiang Mai | 64.73 | 64.73 | 466.2 | 2.5 | 747.0 | 0.752 |
+| AGREEMENT_FLOOD | 8 | 124.36 | 498 | 99.512 | 19.282 | Chiang Rai | 46.63 | 46.64 | 563.6 | 3.3 | 465.0 | 0.361 |
+| AGREEMENT_FLOOD | 9 | 92.5 | 370 | 99.19 | 19.376 | Chiang Mai | 41.11 | 41.12 | 443.3 | 2.9 | 2558.0 | 0.573 |
+| AGREEMENT_FLOOD | 10 | 73.25 | 293 | 99.991 | 19.496 | Chiang Rai | 13.07 | 12.37 | 382.2 | 1.5 | 892.0 | 0.788 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 1 | 7.0 | 28 | 99.947 | 19.62 | Chiang Rai | 3.16 | 0.01 | 390.9 | 2.8 | 21.0 | 0.179 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 2 | 6.75 | 27 | 99.921 | 19.652 | Chiang Rai | 4.29 | 0.0 | 392.9 | 7.1 | 2785.0 | 0.259 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 3 | 5.25 | 21 | 99.889 | 19.348 | Phayao | 1.9 | 0.0 | 430.7 | 9.2 | 6121.0 | 0.0 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 4 | 5.0 | 20 | 100.262 | 19.076 | Phayao | 1.22 | 0.0 | 288.9 | 5.7 | 0.0 | 0.0 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 5 | 2.75 | 11 | 100.017 | 19.454 | Chiang Rai | 0.4 | 0.0 | 379.5 | 3.7 | 0.0 | 0.545 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 6 | 1.75 | 7 | 100.06 | 19.42 | Phayao | 0.11 | 0.0 | 442.6 | 24.6 | 979.0 | 0.0 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 7 | 1.5 | 6 | 99.894 | 19.624 | Chiang Rai | 0.3 | 0.0 | 395.4 | 4.8 | 0.0 | 0.667 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 8 | 1.5 | 6 | 100.072 | 19.443 | Phayao | 0.36 | 0.0 | 420.5 | 28.3 | 254.0 | 0.0 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 9 | 1.5 | 6 | 100.402 | 19.14 | Phayao | 0.14 | 0.0 | 329.5 | 16.6 | 0.0 | 0.0 |
+| LEGACY_ONLY_IN_COMMON_PERIOD | 10 | 1.5 | 6 | 99.863 | 19.207 | Phayao | 0.75 | 0.0 | 392.8 | 1.5 | 0.0 | 1.0 |
+| CURRENT_ONLY_IN_COMMON_PERIOD | 1 | 0.54 | 4 | 99.053 | 18.666 | Chiang Mai | 0.0 | 0.07 | 295.8 | 2.8 | 959.0 | 1.0 |
+| CURRENT_ONLY_IN_COMMON_PERIOD | 2 | 0.12 | 1 | 98.699 | 18.344 | Chiang Mai | 0.0 | 0.0 | 273.2 | 9.9 | 0.0 | 1.0 |
+| CURRENT_ONLY_IN_COMMON_PERIOD | 3 | 0.08 | 1 | 99.064 | 18.66 | Chiang Mai | 0.0 | 0.01 | 295.0 | 3.4 | 0.0 | 1.0 |
+| CURRENT_ONLY_IN_COMMON_PERIOD | 4 | 0.01 | 1 | 98.922 | 18.534 | Chiang Mai | 0.0 | 0.0 | 285.0 | 1.4 | 0.0 | 1.0 |
+| CURRENT_ONLY_IN_COMMON_PERIOD | 5 | 0.01 | 1 | 98.699 | 18.421 | Chiang Mai | 0.0 | 0.0 | 269.5 | 4.1 | 0.0 | 1.0 |
+| CURRENT_ONLY_IN_COMMON_PERIOD | 6 | 0.0 | 1 | 99.116 | 18.678 | Chiang Mai | 0.0 | 0.0 | 301.4 | 0.3 | 0.0 | 1.0 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 1 | 185.0 | 740 | 100.03 | 19.349 | Phayao | 265.13 | 110.65 | 380.2 | 1.4 | 168.0 | 0.903 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 2 | 46.0 | 184 | 99.827 | 19.531 | Chiang Rai | 41.82 | 24.29 | 399.8 | 2.3 | 295.0 | 0.908 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 3 | 37.0 | 148 | 100.164 | 19.633 | Chiang Rai | 56.24 | 33.04 | 365.8 | 1.1 | 474.0 | 0.784 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 4 | 35.75 | 143 | 99.842 | 19.258 | Phayao | 30.82 | 15.11 | 394.7 | 1.4 | 65.0 | 1.0 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 5 | 28.0 | 112 | 100.038 | 20.12 | Chiang Rai | 28.57 | 11.83 | 374.4 | 4.8 | 164.0 | 0.312 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 6 | 17.75 | 71 | 99.943 | 19.819 | Chiang Rai | 20.33 | 11.26 | 389.7 | 3.4 | 2067.0 | 0.887 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 7 | 17.25 | 69 | 100.181 | 19.576 | Phayao | 18.59 | 10.56 | 367.9 | 0.9 | 175.0 | 0.942 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 8 | 10.5 | 42 | 100.279 | 19.138 | Phayao | 6.82 | 3.06 | 295.1 | 4.1 | 0.0 | 0.81 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 9 | 7.75 | 31 | 100.273 | 18.98 | Phayao | 3.62 | 1.24 | 269.1 | 4.0 | 0.0 | 0.742 |
+| MIXED_COMMON_PERIOD_DISAGREEMENT | 10 | 7.25 | 29 | 99.99 | 20.345 | Chiang Rai | 10.57 | 6.58 | 372.4 | 0.9 | 0.0 | 0.69 |
 
 ![largest-disagreement-regions.png](../../outputs/m1c2-review/largest-disagreement-regions.png)
 
@@ -394,7 +394,7 @@ Policy outputs now carry `hazard_interpretation` (what the assessed hazards say)
 | common-period-agreement.png | 163,250 |
 | common-period-cell-comparison.parquet | 3,622,259 |
 | current-only-common-period.png | 82,857 |
-| largest-disagreement-regions.csv | 5,154 |
+| largest-disagreement-regions.csv | 3,586 |
 | largest-disagreement-regions.png | 480,060 |
 | legacy-only-breakdown.csv | 651 |
 | legacy-only-common-period.png | 95,674 |
