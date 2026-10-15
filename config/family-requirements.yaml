@@ -1,0 +1,122 @@
+# HearthMap family REQUIREMENTS v0.1 (M2B.0) - USER_REQUIREMENT only.
+#
+# Populated ONLY with explicit user decisions. No user decision has been given yet, so every value is UNSET.
+# UNSET is not a default: it means "the owner has not decided". Nothing here is product truth, and no geographic
+# scoring exists (family_suitability_scoring.allowed is false). Fill values in with the owner, then run
+#   python scripts/m2b0/build_matrix.py
+# which validates them (contradictions are errors, never silently repaired) and refreshes the evidence matrix.
+#
+# importance values (use these instead of numeric weights during calibration):
+#   MUST | STRONG_PREFERENCE | PREFERENCE | NICE_TO_HAVE | IRRELEVANT
+# minutes are BASELINE_DRIVE_TIME (free-flow class speeds), not real commute time.
+schema_version: 1
+version: "0.1.0"
+status: AWAITING_USER_INPUT
+
+project_state:
+  family_infrastructure_evidence:
+    healthcare: adequate_for_calibration
+    education: partial_and_stale
+    routing: adequate_for_calibration
+  requirement_calibration:
+    allowed: true
+  family_suitability_scoring:
+    allowed: false
+  reason: current education register remains incomplete
+
+education:
+  kindergarten:
+    importance: UNSET
+    preferred_max_drive_minutes: UNSET
+    absolute_max_drive_minutes: UNSET
+    minimum_choices_within_preferred_time: UNSET
+  primary:
+    importance: UNSET
+    preferred_max_drive_minutes: UNSET
+    absolute_max_drive_minutes: UNSET
+    minimum_choices_within_preferred_time: UNSET
+  lower_secondary:
+    importance: UNSET
+    preferred_max_drive_minutes: UNSET
+    absolute_max_drive_minutes: UNSET
+    minimum_choices_within_preferred_time: UNSET
+  upper_secondary:
+    importance: UNSET
+    preferred_max_drive_minutes: UNSET
+    absolute_max_drive_minutes: UNSET
+    minimum_choices_within_preferred_time: UNSET
+  vocational:
+    importance: UNSET
+  university:
+    importance: UNSET
+    preferred_max_drive_minutes: UNSET
+
+healthcare:   # no trauma/emergency capability is requested here: that is a future facility-verification question
+  primary_healthcare:
+    importance: UNSET
+    preferred_max_drive_minutes: UNSET
+  hospital:
+    importance: UNSET
+    preferred_max_drive_minutes: UNSET
+    absolute_max_drive_minutes: UNSET
+  regional_or_referral_hospital:
+    importance: UNSET
+    preferred_max_drive_minutes: UNSET
+    absolute_max_drive_minutes: UNSET
+
+redundancy:   # resilience should not depend only on the nearest facility; a requirement, not a score
+  number_of_primary_schools_within_time:
+    importance: UNSET
+    minimum_count: UNSET
+    within_minutes: UNSET
+  number_of_secondary_schools_within_time:
+    importance: UNSET
+    minimum_count: UNSET
+    within_minutes: UNSET
+  number_of_hospitals_within_time:
+    importance: UNSET
+    minimum_count: UNSET
+    within_minutes: UNSET
+
+road_access:
+  major_road:
+    importance: UNSET
+    maximum_baseline_drive_time_to_major_road: UNSET
+  tolerate_unpaved_local_access: UNSET          # true | false
+  minimum_all_weather_access_expectation: UNSET # NOT_REQUIRED | DRY_SEASON_ONLY | ALL_WEATHER_REQUIRED
+  route_redundancy_importance: UNSET
+
+utilities:    # tolerance for uncertainty, not a claim that utility evidence is complete
+  electricity:
+    must_be_verified_before_purchase: UNSET
+    tolerate_regional_uncertainty_during_screening: UNSET
+  water:
+    accept_non_PWA_system_if_field_verified: UNSET
+    require_municipal_or_PWA_service: UNSET
+    well_water_acceptable: UNSET
+  telecom:
+    minimum_requirement: UNSET     # NONE | MOBILE_VOICE | MOBILE_DATA | FIXED_BROADBAND
+    verification_stage: UNSET      # SCREENING | SHORTLIST | PARCEL_PURCHASE
+
+urban_access:
+  preferred_drive_time_to_town_services: UNSET
+  absolute_max_drive_time_to_major_city_services: UNSET
+  airport_importance: UNSET
+  shopping_daily_services_importance: UNSET
+
+livability:   # placeholders for later livability modelling; not evaluated in M2B.0
+  preferred_population_density: UNSET        # REMOTE | RURAL | PERI_URBAN | SUBURBAN | URBAN
+  avoid_dense_urban_core: UNSET
+  tolerate_tourism_activity: UNSET           # NONE | LOW | MODERATE | HIGH
+  tolerate_nightlife: UNSET
+  industrial_nuisance_tolerance: UNSET
+  agricultural_surroundings_preference: UNSET
+
+land:         # will later interact with parcel screening
+  budget_thb: UNSET
+  preferred_area_rai: UNSET
+  minimum_area_rai: UNSET
+  maximum_area_rai: UNSET
+  terrain_tolerance: UNSET                   # FLAT_ONLY | GENTLE | MODERATE | STEEP_ACCEPTABLE
+  willingness_to_improve_drainage: UNSET
+  willingness_to_build_retaining_structures: UNSET

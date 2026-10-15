@@ -1,0 +1,222 @@
+# DATA_CAPABILITY (M2B.0): can the CURRENT M2A evidence evaluate each requirement? Status vocabulary:
+#   SUPPORTED | SUPPORTED_WITH_LIMITATIONS | PARTIALLY_SUPPORTED | NOT_SUPPORTED
+# This file never changes what the family wants and activates no evaluation rule (EVALUATION_RULE is NOT_ACTIVE everywhere).
+# evidence_columns name columns of outputs/m2a2/family-infrastructure-evidence.parquet (checked by a test when the artifact exists).
+schema_version: 1
+version: "0.1.0"
+evidence_artifact: outputs/m2a2/family-infrastructure-evidence.parquet
+evaluation_rule: NOT_ACTIVE_UNTIL_SCORING_MILESTONE
+
+capabilities:
+  education.kindergarten:
+    status: PARTIALLY_SUPPORTED
+    reason: Baseline drive time and 15/30-minute counts to classified kindergartens exist, but the facility register is stale and levels are only partly authoritative.
+    evidence_columns: [drive_time_to_nearest_kindergarten_min, kindergarten_count_within_15min, kindergarten_count_within_30min]
+    limitations: ["DOPA 2021 + OBEC 2020 class ranges (about half of schools authoritative); counts exist for the 15 and 30 minute bands only; early-childhood centres are a separate category."]
+  education.primary:
+    status: PARTIALLY_SUPPORTED
+    reason: Baseline drive time and band counts to primary-level schools exist; register freshness is incomplete.
+    evidence_columns: [drive_time_to_nearest_primary_school_min, primary_school_count_within_15min, primary_school_count_within_30min]
+    limitations: ["Stale 2021/2020 sources; unstated levels default to PRIMARY at low confidence; band counts only (15/30)."]
+  education.lower_secondary:
+    status: PARTIALLY_SUPPORTED
+    reason: The artifact pools lower and upper secondary into one secondary-school category, and the register is stale.
+    evidence_columns: [drive_time_to_nearest_secondary_school_min, secondary_school_count_within_15min, secondary_school_count_within_30min, secondary_school_count_within_60min]
+    limitations: ["Lower and upper secondary are not separated in the artifact; authoritative class ranges could separate them in a later refresh."]
+  education.upper_secondary:
+    status: PARTIALLY_SUPPORTED
+    reason: Same pooled secondary-school evidence as lower secondary; separation needs a rebuild.
+    evidence_columns: [drive_time_to_nearest_secondary_school_min, secondary_school_count_within_30min, secondary_school_count_within_60min]
+    limitations: ["Pooled with lower secondary; stale register."]
+  education.vocational:
+    status: PARTIALLY_SUPPORTED
+    reason: Drive time to name/sub-code-derived vocational institutions exists; no authoritative current vocational register.
+    evidence_columns: [drive_time_to_nearest_vocational_institution_min, vocational_institution_count_within_60min]
+    limitations: ["Derived classification; stale; no programme/field information."]
+  education.university:
+    status: PARTIALLY_SUPPORTED
+    reason: Drive time to derived university/college institutions exists; stale register and no faculty/programme data.
+    evidence_columns: [drive_time_to_nearest_university_min, university_count_within_60min]
+    limitations: ["Derived classification; stale 2021 source."]
+  healthcare.primary_healthcare:
+    status: SUPPORTED_WITH_LIMITATIONS
+    reason: Current MoPH public facility layer (2026 edit) with source-stated primary-unit type; baseline drive time exists.
+    evidence_columns: [drive_time_to_nearest_primary_health_unit_min, primary_health_unit_count_within_15min, primary_health_unit_count_within_30min]
+    limitations: ["Most records dated 2023; government facilities only (no private clinics); location conflicts flagged; presence is not service hours or quality."]
+  healthcare.hospital:
+    status: SUPPORTED_WITH_LIMITATIONS
+    reason: Current MoPH layer with source-stated hospital types; baseline drive time and band counts exist.
+    evidence_columns: [drive_time_to_nearest_hospital_min, hospital_count_within_15min, hospital_count_within_30min, hospital_count_within_60min]
+    limitations: ["Government hospitals only; hospital type is not emergency/trauma/ICU capability; specialised hospitals excluded."]
+  healthcare.regional_or_referral_hospital:
+    status: SUPPORTED_WITH_LIMITATIONS
+    reason: Source typecode 'regional hospital' identifies two hospitals; baseline drive time exists.
+    evidence_columns: [drive_time_to_nearest_higher_level_hospital_min, route_available_higher_level_hospital]
+    limitations: ["Only the source's regional class (2 hospitals); large general and university hospitals are not promoted; no capability stated; cells beyond the 120 minute search limit stay unresolved."]
+  redundancy.number_of_primary_schools_within_time:
+    status: PARTIALLY_SUPPORTED
+    reason: Counts within 15 and 30 minutes exist, but only for those bands and from a stale register.
+    evidence_columns: [primary_school_count_within_15min, primary_school_count_within_30min]
+    limitations: ["Arbitrary time thresholds are not available; only the configured bands."]
+  redundancy.number_of_secondary_schools_within_time:
+    status: PARTIALLY_SUPPORTED
+    reason: Counts within 15, 30 and 60 minutes exist from a stale, pooled-secondary register.
+    evidence_columns: [secondary_school_count_within_15min, secondary_school_count_within_30min, secondary_school_count_within_60min]
+    limitations: ["Configured bands only; stale register."]
+  redundancy.number_of_hospitals_within_time:
+    status: SUPPORTED_WITH_LIMITATIONS
+    reason: Counts within 15, 30 and 60 minutes exist from the current MoPH layer.
+    evidence_columns: [hospital_count_within_15min, hospital_count_within_30min, hospital_count_within_60min]
+    limitations: ["Configured bands only; government hospitals only; a count is not a capability."]
+  road_access.major_road:
+    status: PARTIALLY_SUPPORTED
+    reason: Distance and class of the nearest major road exist, but a baseline drive TIME to a major road was not computed.
+    evidence_columns: [nearest_major_road_distance_m, nearest_major_road_class, road_access_context]
+    limitations: ["Straight-line distance, not drive time; a drive-time-to-major-road layer would need an extra routing run."]
+  road_access.tolerate_unpaved_local_access:
+    status: NOT_SUPPORTED
+    reason: Road surface is not in the OSM extract used (tracks and services are absent and surface is not recorded).
+    evidence_columns: []
+    limitations: ["Cannot show whether the last stretch is paved."]
+  road_access.minimum_all_weather_access_expectation:
+    status: NOT_SUPPORTED
+    reason: BASELINE_DRIVE_TIME is free-flow; no rainy-season, flooding or surface information exists to prove all-weather access.
+    evidence_columns: []
+    limitations: ["M2A cannot verify all-weather access."]
+  road_access.route_redundancy_importance:
+    status: NOT_SUPPORTED
+    reason: No alternative-route or network-redundancy metric was computed.
+    evidence_columns: []
+    limitations: ["Would need a routing analysis (second independent route)."]
+  utilities.electricity:
+    status: NOT_SUPPORTED
+    reason: PEA Power Map has no verified machine-readable source; every cell is NOT_ASSESSED and parcel verification is always required.
+    evidence_columns: [electricity_service_potential, electricity_parcel_verification_required]
+    limitations: ["Planning information from PEA would never guarantee service."]
+  utilities.water:
+    status: NOT_SUPPORTED
+    reason: No PWA service-area polygons are published; every cell is NON_PWA_OR_UNKNOWN_SERVICE, which is not 'no water'.
+    evidence_columns: [water_service_context, water_service_verification_required]
+    limitations: ["Outside PWA is not absence of water; field verification is required."]
+  utilities.telecom:
+    status: NOT_SUPPORTED
+    reason: Telecom is DEFERRED; NBTC publishes aggregates, not spatial coverage.
+    evidence_columns: [telecom_evidence, telecom_resolution]
+    limitations: ["Province-level shares are not grid coverage."]
+  urban_access.preferred_drive_time_to_town_services:
+    status: NOT_SUPPORTED
+    reason: No town-services facility layer or definition of 'town services' exists in M2A.
+    evidence_columns: []
+    limitations: ["Needs a definition and a facility source."]
+  urban_access.absolute_max_drive_time_to_major_city_services:
+    status: NOT_SUPPORTED
+    reason: No major-city service reference points were defined or routed.
+    evidence_columns: []
+    limitations: ["University and hospital times are not a general city-services proxy."]
+  urban_access.airport_importance:
+    status: NOT_SUPPORTED
+    reason: No airport layer or routing to airports exists.
+    evidence_columns: []
+    limitations: []
+  urban_access.shopping_daily_services_importance:
+    status: NOT_SUPPORTED
+    reason: No retail or daily-services layer exists.
+    evidence_columns: []
+    limitations: []
+  livability.preferred_population_density:
+    status: NOT_SUPPORTED
+    reason: No population-density grid has been acquired.
+    evidence_columns: []
+    limitations: []
+  livability.avoid_dense_urban_core:
+    status: NOT_SUPPORTED
+    reason: No urban-core or built-up delineation has been acquired.
+    evidence_columns: []
+    limitations: []
+  livability.tolerate_tourism_activity:
+    status: NOT_SUPPORTED
+    reason: No tourism-activity evidence has been acquired.
+    evidence_columns: []
+    limitations: []
+  livability.tolerate_nightlife:
+    status: NOT_SUPPORTED
+    reason: No nightlife-venue evidence has been acquired.
+    evidence_columns: []
+    limitations: []
+  livability.industrial_nuisance_tolerance:
+    status: NOT_SUPPORTED
+    reason: Nuisance sources (industry, mining, farms) have not been acquired.
+    evidence_columns: []
+    limitations: []
+  livability.agricultural_surroundings_preference:
+    status: NOT_SUPPORTED
+    reason: No land-use / agricultural-surroundings layer has been acquired.
+    evidence_columns: []
+    limitations: []
+  land.budget_thb:
+    status: NOT_SUPPORTED
+    reason: No land-price evidence has been acquired.
+    evidence_columns: []
+    limitations: []
+  land.preferred_area_rai:
+    status: NOT_SUPPORTED
+    reason: Area-level (500 m cell) evidence cannot evaluate parcel size; parcels are out of scope until later.
+    evidence_columns: []
+    limitations: []
+  land.minimum_area_rai:
+    status: NOT_SUPPORTED
+    reason: Parcel size is a parcel-level attribute.
+    evidence_columns: []
+    limitations: []
+  land.maximum_area_rai:
+    status: NOT_SUPPORTED
+    reason: Parcel size is a parcel-level attribute.
+    evidence_columns: []
+    limitations: []
+  land.terrain_tolerance:
+    status: PARTIALLY_SUPPORTED
+    reason: Regional slope statistics from a 30 m DSM exist (M1B), but they are a terrain proxy, not parcel slope.
+    evidence_columns: []
+    limitations: ["Hazard-integration artifacts (outputs/m1b, outputs/m1e) hold slope and landslide context; they are not joined here and never act as a score."]
+  land.willingness_to_improve_drainage:
+    status: PARTIALLY_SUPPORTED
+    reason: M1E records flood and landslide verification actions per cell; no engineering feasibility or cost evidence exists.
+    evidence_columns: []
+    limitations: ["Hazard actions stay independent and are never offset by family access."]
+  land.willingness_to_build_retaining_structures:
+    status: PARTIALLY_SUPPORTED
+    reason: M1E records landslide/terrain verification context; no geotechnical or cost evidence exists.
+    evidence_columns: []
+    limitations: ["Parcel site investigation is always required."]
+
+# Questions that are not (yet) user requirements but must not be silently assumed answered.
+capability_only:
+  school_quality:
+    status: NOT_SUPPORTED
+    reason: Presence is not quality; no quality, capacity or enrolment-based measure is used, and school-quality fields are forbidden.
+    evidence_columns: []
+    limitations: ["Needs a trusted quality source and an owner decision."]
+  emergency_trauma_icu_capability:
+    status: NOT_SUPPORTED
+    reason: No accessible source states emergency, trauma, ICU or specialist capability; facility type is not capability. Future facility-verification question.
+    evidence_columns: []
+    limitations: []
+  facility_freshness:
+    status: PARTIALLY_SUPPORTED
+    reason: Education register is stale (2021 / 2020) and health records are mostly 2023-dated; freshness is recorded but a current register is outstanding.
+    evidence_columns: [education_primary_source_vintage, healthcare_primary_source_vintage, facility_data_freshness]
+    limitations: ["MOE CKAN register temporarily unreachable."]
+
+# Education source options (backlog stays OPEN in parallel; sources are NOT combined in M2B.0).
+education_source_options:
+  combine_in_m2b0: false
+  options:
+    - {id: moe-ckan-per-school-resource, state: TEMPORARILY_UNREACHABLE, role_if_acquired: PRIMARY, note: "catalog.moe.go.th dataset_04_25660427; manual import path ready"}
+    - {id: dopa-2021, state: ACQUIRED, role: HISTORICAL_FALLBACK, note: "current layer vintage 2021 (stale)"}
+    - {id: obec-2563, state: ACQUIRED, role: AUTHORITATIVE_CLASSIFICATION_VALIDATION, note: "class ranges for OBEC schools (2020)"}
+    - {id: dla-school-list-2569, state: CANDIDATE_NOT_ACQUIRED, role_if_acquired: PRIMARY_FOR_LOCAL_AUTHORITY_SCHOOLS, note: "local-government school list; not verified in M2B.0"}
+    - {id: opec-private-school-current, state: CANDIDATE_NOT_ACQUIRED, role_if_acquired: PRIMARY_FOR_PRIVATE_SCHOOLS, note: "private-school evidence; not verified in M2B.0"}
+    - {id: vocational-current, state: CANDIDATE_NOT_ACQUIRED, role_if_acquired: PRIMARY_FOR_VOCATIONAL, note: "current vocational institution data; not verified in M2B.0"}
+    - {id: moe-data-virtualization-report, state: VERIFIED_NOT_EXTRACTABLE, role: CURRENT_PRESENCE_EVIDENCE, note: "Power BI report; no export; no coordinates"}
+    - {id: osm-validation, state: ACQUIRED, role: EXTERNAL_CROSS_CHECK, note: "crowd-sourced; never authoritative"}
+  future_work: A federated current register may be built from several of these, with each source's role, vintage and conflicts kept explicit.
