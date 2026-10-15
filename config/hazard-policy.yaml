@@ -64,6 +64,8 @@ prohibited_evidence_columns:
   - waterway_stream_length_m
   - legacy_flood_2005_2016_area_fraction
   - legacy_flood_2005_2016_years_ge3_area_fraction
+  - lowland_stratum        # M1C.3: slope strata are reporting-only, never a hazard input
+  - slope_stratum
 prohibited_source_prefixes: ["review:", "experimental:", "policy:"]
 
 unresolved:

@@ -1,0 +1,98 @@
+# Flood evidence fusion (M1C.3) - source-aware annual ledger + candidate flood ladders.
+#
+# STATUS: PROVISIONAL. No candidate is selected (default_candidate must stay null).
+# The ledger is a raw OBSERVATIONAL record, not a homogeneous 19-year statistical
+# series: 2005-2010 comes from the legacy GISTDA product only, 2011-2016 from both,
+# 2017-2023 from the current GISTDA product only, and neither product documents its
+# methodology (docs/research/flood-product-documentation.md). Counts of observed
+# years are NOT probabilities or return periods.
+#
+# Rules are positive-only: a rule can raise concern, never lower it, and the absence
+# of a polygon in any product is never evidence that flooding did not occur.
+# Thresholds follow evidence semantics (years x share of the cell); they were not
+# chosen to reproduce earlier affected-area percentages.
+schema_version: 1
+fusion_id: gistda-flood-fusion
+fusion_version: 0.1.0
+status: PROVISIONAL
+default_candidate: null
+
+# A cell-year counts as "observed" when >= this share of the (in-AOI) cell was mapped
+# flooded by at least one available product (union of the two products in 2011-2016).
+presence_min_fraction: 0.01
+# years_since_most_recent_observation is measured from the end of the newest record.
+reference_year: 2023
+
+sources:
+  legacy:
+    source_id: flood-gistda-repeated-2005-2016
+    years: [2005, 2016]
+    role: LEGACY_COMPARISON_PRODUCT
+  current:
+    source_id: flood-gistda-history
+    years: [2011, 2023]
+    role: PRIMARY_CURRENT_PRODUCT
+
+# Temporal bands (exposed, never converted into decay weights without policy review).
+eras:
+  OLDER: [2005, 2010]    # legacy product only
+  MID: [2011, 2016]      # both products
+  RECENT: [2017, 2023]   # current product only
+
+# Slope strata for REPORTING ONLY (DSM slope p90, degrees). Never an input to hazard
+# state and never a suitability criterion.
+stratification:
+  purpose: reporting_only_not_suitability
+  slope_p90_bands_deg: [5, 15]   # LOW_SLOPE_LE_5 | GENTLE_5_15 | STEEP_GT_15
+
+candidates:
+  FLOOD_CURRENT_PRIMARY:
+    description: >-
+      Current product primary. Legacy-only observations (2005-2010, or 2011-2016 where
+      only the legacy product maps flooding) create verification flags; they do not
+      create strong concern on their own.
+    extends: null
+    rules:
+      - {id: FLOOD_CURRENT_PRODUCT_RECURRENT_SUBSTANTIAL, level: STRONG, metric: current_fraction, years: [2011, 2023], min_years: 3, min_fraction: 0.10}
+      - {id: FLOOD_CURRENT_PRODUCT_OBSERVED, level: VERIFY, metric: current_fraction, years: [2011, 2023], min_years: 1, min_fraction: 0.05}
+      - {id: FLOOD_LEGACY_ONLY_OBSERVATION, level: VERIFY, metric: legacy_exclusive_fraction, years: [2005, 2016], min_years: 1, min_fraction: 0.10}
+      - {id: FLOOD_PRODUCT_DISAGREEMENT_2011_2016, level: VERIFY, metric: mismatch_fraction, years: [2011, 2016], min_years: 1, min_fraction: 0.10}
+      - {id: FLOOD_HISTORICAL_OBSERVATION, level: HISTORICAL, metric: observed_fraction, years: [2005, 2023], min_years: 1, min_fraction: 0.01}
+  FLOOD_ANY_SOURCE:
+    description: >-
+      Any well-supported observation from either product can raise concern; recent
+      recurrence (2017-2023) and two-product consensus recurrence (2011-2016)
+      escalate to strong concern; overlap disagreement triggers verification.
+    extends: FLOOD_CURRENT_PRIMARY
+    rules:
+      - {id: FLOOD_RECENT_RECURRENCE_2017_2023, level: STRONG, metric: observed_fraction, years: [2017, 2023], min_years: 2, min_fraction: 0.10}
+      - {id: FLOOD_CONSENSUS_RECURRENCE_2011_2016, level: STRONG, metric: intersection_fraction, years: [2011, 2016], min_years: 2, min_fraction: 0.10}
+      - {id: FLOOD_OBSERVED_2011_2023, level: VERIFY, metric: observed_fraction, years: [2011, 2023], min_years: 1, min_fraction: 0.05}
+      - {id: FLOOD_OLDER_SUBSTANTIAL_2005_2010, level: VERIFY, metric: observed_fraction, years: [2005, 2010], min_years: 1, min_fraction: 0.10}
+      - {id: FLOOD_PRODUCT_DISAGREEMENT_2011_2016, level: VERIFY, metric: mismatch_fraction, years: [2011, 2016], min_years: 1, min_fraction: 0.05}
+  FLOOD_UNION_CONSERVATIVE:
+    description: >-
+      Spatial union of positive evidence from both products drives search screening.
+      Repeated or substantial flooding in the raw observation ledger escalates to
+      strong concern; legacy evidence can strongly influence regional search effort
+      but never means parcel rejection.
+    extends: FLOOD_ANY_SOURCE
+    rules:
+      - {id: FLOOD_UNION_REPEAT_OBSERVATIONS, level: STRONG, metric: observed_fraction, years: [2005, 2023], min_years: 2, min_fraction: 0.10}
+      - {id: FLOOD_UNION_SUBSTANTIAL_SINGLE_YEAR, level: STRONG, metric: observed_fraction, years: [2005, 2023], min_years: 1, min_fraction: 0.50}
+      - {id: FLOOD_UNION_OBSERVED, level: VERIFY, metric: observed_fraction, years: [2005, 2023], min_years: 1, min_fraction: 0.05}
+      - {id: FLOOD_PRODUCT_DISAGREEMENT_2011_2016, level: VERIFY, metric: mismatch_fraction, years: [2011, 2016], min_years: 1, min_fraction: 0.01}
+
+reason_codes:
+  FLOOD_CURRENT_PRODUCT_RECURRENT_SUBSTANTIAL: "Current GISTDA product maps >= 10% of the cell flooded in >= 3 of the years 2011-2023"
+  FLOOD_CURRENT_PRODUCT_OBSERVED: "Current GISTDA product maps >= 5% of the cell flooded in at least one year 2011-2023"
+  FLOOD_LEGACY_ONLY_OBSERVATION: "Only the legacy GISTDA product maps >= 10% of the cell flooded in a year (2005-2010, or 2011-2016 where the current product disagrees)"
+  FLOOD_PRODUCT_DISAGREEMENT_2011_2016: "The two GISTDA products disagree about flooding in this cell in a year they both cover (2011-2016)"
+  FLOOD_HISTORICAL_OBSERVATION: "Some observed flooding (>= 1% of the cell) in at least one year 2005-2023"
+  FLOOD_RECENT_RECURRENCE_2017_2023: "Observed flooding (>= 10% of the cell) in >= 2 years of 2017-2023"
+  FLOOD_CONSENSUS_RECURRENCE_2011_2016: "Both products agree on >= 10% of the cell flooded in >= 2 years of 2011-2016"
+  FLOOD_OBSERVED_2011_2023: "Observed flooding (>= 5% of the cell) in at least one year 2011-2023"
+  FLOOD_OLDER_SUBSTANTIAL_2005_2010: "Legacy product maps >= 10% of the cell flooded in at least one year 2005-2010"
+  FLOOD_UNION_REPEAT_OBSERVATIONS: "Observed flooding (>= 10% of the cell) in >= 2 years of the 2005-2023 raw observation ledger (a count of mapped years, not a probability)"
+  FLOOD_UNION_SUBSTANTIAL_SINGLE_YEAR: "Observed flooding covers >= 50% of the cell in at least one year 2005-2023"
+  FLOOD_UNION_OBSERVED: "Observed flooding (>= 5% of the cell) in at least one year 2005-2023"

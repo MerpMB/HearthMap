@@ -25,3 +25,23 @@ gates:
     reviewer_role: null
     result: null
     reviewed_material: M1C policy review maps (outputs/m1c-review/), not confirmed reviewed
+  m1c1_human_visual_signoff:
+    # No review of outputs/m1c1-review has been reported; not inferred.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1C.1 flood refresh review maps (outputs/m1c1-review/), not confirmed reviewed
+  m1c2_human_visual_signoff:
+    # No review of outputs/m1c2-review has been reported; not inferred.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1C.2 flood reconciliation review maps (outputs/m1c2-review/), not confirmed reviewed
+  m1c3_human_visual_signoff:
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1C.3 flood fusion review maps (outputs/m1c3-review/), not yet reviewed

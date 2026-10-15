@@ -45,6 +45,7 @@ context can never change an outcome. It never touches ``eligible``.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 from pathlib import Path
 from typing import Literal
@@ -284,16 +285,42 @@ def _codes_append(codes: list[list[str]], mask: np.ndarray, code: str) -> None:
         codes[i].append(code)
 
 
+@dataclass(frozen=True)
+class FloodOverride:
+    """A fused flood ladder (M1C.3) that replaces the profile's own flood rule.
+
+    ``level`` uses :class:`Level` (NONE / VERIFY / STRONG; flood fusion never
+    deprioritises on its own). The override is positive-only evidence: it can only be
+    produced from observed flooding and is never read as reassurance.
+    """
+
+    policy_id: str
+    level: np.ndarray
+    hazard_codes: list[list[str]]
+    info_codes: list[list[str]]
+    state: np.ndarray
+
+
 def apply_policy(
-    evidence: pd.DataFrame, cfg: HazardPolicyConfig, profile_name: str
+    evidence: pd.DataFrame,
+    cfg: HazardPolicyConfig,
+    profile_name: str,
+    flood_override: FloodOverride | None = None,
 ) -> pd.DataFrame:
-    """Evaluate one profile. Returns policy columns indexed like ``evidence``."""
+    """Evaluate one profile. Returns policy columns indexed like ``evidence``.
+
+    With ``flood_override`` the flood level/codes come from a flood-fusion candidate;
+    landslide, terrain, completeness and multi-hazard logic are unchanged.
+    """
     missing = [c for c in POLICY_INPUTS if c not in evidence.columns]
     if missing:
         raise KeyError(f"missing policy input columns: {missing}")
     if profile_name not in cfg.profiles:
         raise KeyError(f"unknown profile {profile_name}")
-    check_flood_evidence(evidence, cfg)
+    if flood_override is None:
+        check_flood_evidence(evidence, cfg)
+    elif len(flood_override.level) != len(evidence):
+        raise ValueError("flood override length does not match the evidence")
     p = cfg.profiles[profile_name]
     u = cfg.unresolved
     d = evidence.loc[:, list(POLICY_INPUTS)].astype(float)  # context columns are never read
@@ -304,23 +331,29 @@ def apply_policy(
     info_codes: list[list[str]] = [[] for _ in range(n)]
 
     # ---- flood
-    fr = d[f"flood_years_ge{p.flood.min_years_flooded}_area_fraction"].fillna(0).to_numpy()
-    fa = d["flood_area_fraction"].fillna(0).to_numpy()
-    fd = d["flood_distance_m"].to_numpy()
-    flood = np.full(n, Level.NONE, dtype=int)
-    m_dep = fr >= p.flood.deprioritize_min_fraction
-    m_str = ~m_dep & (fr >= p.flood.strong_min_fraction)
-    m_ver = (
-        (flood == Level.NONE)
-        & ~m_dep
-        & ~m_str
-        & ((fa >= p.flood.verify_min_fraction) | (fd <= p.flood.verify_distance_m))
-    )
-    flood[m_dep], flood[m_str], flood[m_ver] = Level.DEPRIORITIZE, Level.STRONG, Level.VERIFY
-    _codes_append(hazard_codes, m_dep, "RECURRENT_FLOOD_SUBSTANTIAL_COVERAGE")
-    _codes_append(hazard_codes, m_str, "STRONG_RECURRENT_FLOOD_EVIDENCE")
-    _codes_append(hazard_codes, m_ver, "OBSERVED_FLOOD_EVIDENCE")
-    _codes_append(info_codes, flood == Level.NONE, "NO_OBSERVED_FLOOD_IN_RECORD")
+    if flood_override is not None:
+        flood = np.asarray(flood_override.level, dtype=int).copy()
+        for i in range(n):
+            hazard_codes[i].extend(flood_override.hazard_codes[i])
+            info_codes[i].extend(flood_override.info_codes[i])
+    else:
+        fr = d[f"flood_years_ge{p.flood.min_years_flooded}_area_fraction"].fillna(0).to_numpy()
+        fa = d["flood_area_fraction"].fillna(0).to_numpy()
+        fd = d["flood_distance_m"].to_numpy()
+        flood = np.full(n, Level.NONE, dtype=int)
+        m_dep = fr >= p.flood.deprioritize_min_fraction
+        m_str = ~m_dep & (fr >= p.flood.strong_min_fraction)
+        m_ver = (
+            (flood == Level.NONE)
+            & ~m_dep
+            & ~m_str
+            & ((fa >= p.flood.verify_min_fraction) | (fd <= p.flood.verify_distance_m))
+        )
+        flood[m_dep], flood[m_str], flood[m_ver] = Level.DEPRIORITIZE, Level.STRONG, Level.VERIFY
+        _codes_append(hazard_codes, m_dep, "RECURRENT_FLOOD_SUBSTANTIAL_COVERAGE")
+        _codes_append(hazard_codes, m_str, "STRONG_RECURRENT_FLOOD_EVIDENCE")
+        _codes_append(hazard_codes, m_ver, "OBSERVED_FLOOD_EVIDENCE")
+        _codes_append(info_codes, flood == Level.NONE, "NO_OBSERVED_FLOOD_IN_RECORD")
 
     # ---- landslide
     c3 = d["landslide_class3_fraction"].fillna(0).to_numpy()
@@ -441,6 +474,9 @@ def apply_policy(
         for a, b in zip(ls_unres, ter_unres, strict=True)
     ]
     out["informational_codes"] = ["|".join(c) for c in info_codes]
+    out["flood_policy_id"] = (
+        flood_override.policy_id if flood_override is not None else "PROFILE_OWN_FLOOD_RULE"
+    )
     out["policy_profile"] = profile_name
     out["policy_version"] = cfg.policy_version
     out["policy_status"] = cfg.status
