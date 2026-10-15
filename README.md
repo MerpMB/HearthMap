@@ -14,6 +14,13 @@ priority over visually impressive output.
 
 ## Status
 
+**M1D — Seismic and active-fault evidence.** Fault context, DMR probabilistic PGA hazard
+zones (10% in 50 years, shown as MMI), historical seismicity and an explicit
+"ground response not assessed" limitation, as experimental **regional** screening. The
+selected provisional defaults (BALANCED + FLOOD_ANY_SOURCE) are recorded and are not
+production truth. Parcel/site seismic assessment is **not** supported. See
+[m1d-seismic-evidence-report.md](docs/research/m1d-seismic-evidence-report.md).
+
 **M1C.3 — Flood evidence fusion.** A source-aware 2005–2023 observation ledger
 (a raw observational record, not a homogeneous series), a positive-only flood
 ladder with three candidate policies, and the flood-policy × hydrogeomorphic-

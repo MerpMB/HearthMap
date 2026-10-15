@@ -127,6 +127,24 @@ delete them here.
 43. Should legacy-only older evidence (2005-2010) ever count toward recurrence
     strength, or stay verification-only as in FLOOD_CURRENT_PRIMARY?
 
+## Raised by M1D (2026-10-16) — seismic evidence
+
+44. Which DMR catalogue record governs the EQ_ZONE / active-fault licence: the current
+    data.dmr.go.th record (CC Attributions, no condition) or the older data.go.th records
+    that carry a no-commercial/not-a-legal-reference text? Ask DMR (via the DMR
+    catalogue contact) and have the stale records corrected.
+45. Ask DMR for the EQ_ZONE method: PGA-to-MMI class boundaries, source model, site/Vs30
+    assumptions, map scale and data year. Until then the strong state only reads off the
+    zone-VII footprint (53.7% of the AOI).
+46. Is a majority rule (class VII >= 50% of the cell) the right provisional trigger for
+    strong seismic screening concern? Sensitivity over 10-75% changes the AOI by < 1%, so
+    the open question is the semantic one, not the cut-off.
+47. What site-level evidence can be obtained for shortlisted areas (geology/sediment
+    thickness, Vs30, liquefaction susceptibility, building code zone) before any parcel
+    decision?
+48. TMD has no bulk instrumental catalogue or API. Request a structured catalogue for
+    northern Thailand?
+
 ## Process
 
 21. Who validates outputs in QGIS, and against which known places?

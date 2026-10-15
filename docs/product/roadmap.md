@@ -64,6 +64,15 @@ act on different land (lowlands vs steep land). No candidate or profile is
 selected. See [m1c3-flood-fusion-report.md](../research/m1c3-flood-fusion-report.md)
 and [flood-fusion-policy.md](flood-fusion-policy.md).
 
+## M1D — Seismic and active-fault evidence (done, provisional, regional screening)
+
+DMR active-fault context, DMR probabilistic PGA hazard zones (10% in 50 years, shown as
+MMI), DMR/TMD/USGS historical seismicity (separate), explicit ground-response limitation,
+and an experimental regional screening state. Records the selected provisional defaults
+BALANCED + FLOOD_ANY_SOURCE (not production truth). Regional screening is supported;
+parcel/site seismic assessment is not. See
+[m1d-seismic-evidence-report.md](../research/m1d-seismic-evidence-report.md).
+
 ## M1 — Regional hazard + infrastructure scan
 
 - Acquire and register: admin boundaries, DEM, flood history/hazard, landslide
