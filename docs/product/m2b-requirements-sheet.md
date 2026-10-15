@@ -67,3 +67,11 @@ score exists until these answers do.
 | F2 | Should the 211 OBEC-only schools (2020, no counterpart in the 2021 register) be included in school accessibility? (sensitivity in `obec-only-union-sensitivity.csv`) | UNANSWERED |
 | F3 | Is a government-only hospital list (no private hospitals, hospital level unassessed) acceptable, or is MoPH HCODE data a prerequisite? | UNANSWERED |
 | F4 | How should "derived" education levels (about half the schools, all non-school institutions) be treated in thresholds? | UNANSWERED |
+
+## G. Updated by M2A.2 (still unfilled)
+
+| # | Question | Answer |
+|---|---|---|
+| G1 | The healthcare layer is now the public MoPH point layer (2026 edit, 2023-dated records, government facilities only). Is that adequate for B1-B2, or is an HCODE export required first? | UNANSWERED |
+| G2 | "Higher-level hospital" currently means the source type *regional hospital* (2 hospitals). Should large general hospitals (S level) or university hospitals count? | UNANSWERED |
+| G3 | Education still rests on 2021/2020 sources until the MOE register is imported (`data/manual/moe-register-current/`). Proceed to M2B calibration with stale education data, or wait for the register (E1)? | UNANSWERED |
