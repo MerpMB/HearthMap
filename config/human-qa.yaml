@@ -1,0 +1,66 @@
+# HearthMap human visual QA gates - the single record of who reviewed what.
+#
+# Only what the reviewer actually reported is recorded here; no detailed
+# observations are invented. Gate values in config/hazard.yaml and
+# config/hazard-policy.yaml must match this file (tested).
+schema_version: 1
+gates:
+  m1a1_human_visual_signoff:
+    status: PASSED
+    review_date: "2026-10-15"
+    reviewer_role: project user
+    result: no blocking visual anomalies observed
+    reviewed_material: M1A.1 spatial QA review maps (outputs/m1a1-review/)
+  m1b_human_visual_signoff:
+    status: PASSED
+    review_date: "2026-10-15"
+    reviewer_role: project user
+    result: no blocking visual anomalies observed
+    reviewed_material: M1B hazard evidence review maps (outputs/m1b-review/)
+  m1c_human_visual_signoff:
+    # The confirmation covered the requested M1A.1/M1B visual QA; it did not
+    # clearly include the M1C policy review pack, so M1C is not assumed passed.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1C policy review maps (outputs/m1c-review/), not confirmed reviewed
+  m1c1_human_visual_signoff:
+    # No review of outputs/m1c1-review has been reported; not inferred.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1C.1 flood refresh review maps (outputs/m1c1-review/), not confirmed reviewed
+  m1c2_human_visual_signoff:
+    # No review of outputs/m1c2-review has been reported; not inferred.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1C.2 flood reconciliation review maps (outputs/m1c2-review/), not confirmed reviewed
+  m1c3_human_visual_signoff:
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1C.3 flood fusion review maps (outputs/m1c3-review/), not yet reviewed
+  m1d_human_visual_signoff:
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1D seismic evidence review maps (outputs/m1d-review/), not yet reviewed
+  m1e_human_visual_signoff:
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M1E natural hazard integration review maps (outputs/m1e-review/), not yet reviewed
+  m2a_human_visual_signoff:
+    # M2A family and infrastructure evidence is a separate future gate; nothing reviewed, nothing inferred.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M2A family and infrastructure review maps (outputs/m2a-review/), not yet reviewed

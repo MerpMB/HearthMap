@@ -1,0 +1,10 @@
+# Authoritative healthcare level reference list (regional / tertiary / general / community).
+# DELIBERATELY EMPTY in M2A: no machine-readable, verified source of hospital service level was found
+# (data.go.th mirrors only count facilities; MOPH hospital-level registers were not reachable/verified).
+# To enable `higher_level_hospital` accessibility, supply entries below WITH their source, e.g.:
+#   - facility_official_id: "0000000000000"
+#     level: REGIONAL_OR_TERTIARY_HOSPITAL
+#     source: "<URL or document>"
+#     source_date: "YYYY-MM-DD"
+# Names alone are never promoted to a level.
+reference_list: []

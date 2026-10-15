@@ -1,0 +1,1615 @@
+# HearthMap data-source registry (machine-readable).
+#
+# Validated by `hearthmap check-registry` (hearthmap.provenance.registry).
+# Human guide: data-source-registry.md
+#
+# M1A state (2026-10-15): entries marked VERIFIED were inspected at the source
+# (metadata read AND data downloaded/opened, or for blocked sources the access
+# path itself checked). A working URL alone is never verification. Everything
+# else remains CANDIDATE or NEEDS_RESEARCH and must not be cited as fact.
+#
+# verification_status: VERIFIED | CANDIDATE | NEEDS_RESEARCH
+# role: PRIMARY | SECONDARY | VALIDATION_ONLY
+# metadata_verified / data_verified: catalogue/access checked vs data itself opened
+# acquisition_status: NOT_STARTED | ACQUIRED | DEFERRED | BLOCKED_CREDENTIAL_REQUIRED | BLOCKED_SIZE_GUARD
+# permitted_uses: REGIONAL_SCREENING | POTENTIAL_HARD_EXCLUSION | LEGAL_WARNING_ONLY |
+#                 PARCEL_LEGAL_VERIFICATION | VALIDATION_REFERENCE
+# priority: must_have | useful | later
+# processing_status: NOT_ACQUIRED | ACQUIRED | PROCESSING | PROCESSED | REJECTED
+# confidence: HIGH | MEDIUM | LOW | UNKNOWN  (quality of the dataset itself)
+
+schema_version: 1
+sources:
+- id: boundaries-ocha-cod-ab
+  name: Thailand administrative boundaries (COD-AB), province/district/sub-district
+  category: boundaries
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  - VALIDATION_REFERENCE
+  publisher: 'OCHA Field Information Services (FIS) / HDX; source: Royal Thai Survey Department (acquired
+    by ICRC, configured by ITOS); contributed by OCHA ROAP'
+  dataset_title: Thailand - Subnational Administrative Boundaries (COD-AB) dataset version 01
+  landing_page: https://data.humdata.org/dataset/cod-ab-tha
+  data_endpoint: https://data.humdata.org/dataset/d24bdc45-eb4c-4e3d-8b16-44db02667c27/resource/ccbf3740-0638-48ea-b612-cdb61ef5462c/download/tha_admin_boundaries.gdb.zip
+  access_method: Anonymous HTTPS download (302 redirect to a signed S3 URL)
+  access_restrictions: None observed
+  format: Esri File Geodatabase in ZIP (174,679,979 bytes); layers tha_admin0..3, adminlines, adminpoints
+  source_crs: EPSG:4326
+  coverage: 'Thailand: 77 provinces, 928 districts, 7,425 sub-districts'
+  spatial_resolution: Vector; mapping scale not published
+  temporal_coverage: Boundaries created 2022-01-01; valid_on 2022-01-22; reviewed 2025-10-30
+  last_update: Resources modified 2026-01-26; package metadata modified 2026-08-14
+  last_verified: '2026-10-15'
+  verification_evidence: HDX CKAN package_show inspected; geodatabase downloaded (sha256 09e62345...6e0d8)
+    and opened with GDAL; AOI codes TH50/TH56/TH57 and district counts 25/18/9 confirmed; topology and
+    reference comparisons in docs/research/m1a-validation-report.md
+  redirects_or_changes: Download URL redirects to signed S3. File names changed since 2022 (THA_AdminBoundaries_candidate.gdb.zip
+    / tha_adm_rtsd_itos_20210121_SHP.zip -> tha_admin_boundaries.*); GeoJSON (437 MB) and SHP (377 MB)
+    variants also offered.
+  license_or_usage_notes: CC BY-IGO per HDX package (license_id cc-by-igo). Some third-party mirrors (Open
+    Development Mekong) describe use as 'humanitarian use only' - discrepancy recorded; HDX licence taken
+    as authoritative for this version.
+  expected_update_frequency: Yearly (HDX data_update_frequency 365)
+  confidence: MEDIUM
+  known_limitations:
+  - Administrative, not cadastral/legal parcel boundaries.
+  - Mapping scale and positional accuracy not published.
+  - 'Compared with GISTDA 1:50k: median boundary offset ~31-37 m, but p95 1.1 km and max 4.9 km in Chiang
+    Mai.'
+  - 'HDX caveat: one Thai district name (Pom Prap Sattru Phai) incorrect in ADM2_TH.'
+  analytical_suitability: AOI definition and grid generation; not legal boundary evidence.
+  local_raw_path: data/raw/boundaries-ocha-cod-ab/2026-01-26/
+  processing_status: PROCESSED
+  notes: 'Chosen PRIMARY: documented lineage from a Thai government mapping agency (RTSD), explicit open
+    licence, full admin hierarchy with stable P-codes.'
+- id: boundaries-gistda-50k
+  name: GISTDA province and district boundaries 1:50,000 (L05_AdminBoundary)
+  category: boundaries
+  priority: useful
+  verification_status: VERIFIED
+  role: SECONDARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: Geo-Informatics and Space Technology Development Agency (GISTDA)
+  dataset_title: L05_Province_GISTDA_50k (ขอบเขตจังหวัด), L05_Amphoe_GISTDA_50k (ขอบเขตอำเภอ)
+  landing_page: https://gistdaportal.gistda.or.th/data/rest/services/L05_AdminBoundary
+  data_endpoint: https://gistdaportal.gistda.or.th/data/rest/services/L05_AdminBoundary/L05_Province_GISTDA_50k/MapServer/0/query
+    (and L05_Amphoe_GISTDA_50k)
+  access_method: Public ArcGIS REST query (no key); server-side filter PV_CODE in (50,56,57); no pagination
+    support, AOI subset fits one response
+  access_restrictions: None observed
+  format: ArcGIS REST JSON (Esri JSON)
+  source_crs: EPSG:3857 (as served; wkid 102100)
+  coverage: 'Thailand: 77 provinces, 928 districts'
+  spatial_resolution: 1:50,000 (from layer name)
+  temporal_coverage: Unknown (MOD_DATE null; no date in service metadata)
+  last_update: Unknown
+  last_verified: '2026-10-15'
+  verification_evidence: Service and layer JSON inspected (fields PV_CODE/PV_TN/PV_EN, counts 77/928);
+    AOI subset downloaded; district counts 25/18/9 and codes 50/56/57 match COD-AB.
+  license_or_usage_notes: Not stated on the service; copyright GISTDA. Validation use only; do not redistribute.
+  expected_update_frequency: Unknown
+  confidence: LOW
+  known_limitations:
+  - No vintage date; licence not stated.
+  - 'M1A.1: 76 material zones vs COD-AB (216 km2), mostly on Chiang Mai''s borders with Mae Hong Son,
+    Tak and Myanmar; see docs/research/m1a1-spatial-qa-report.md.'
+  analytical_suitability: Independent cross-check of COD-AB (Thai government agency).
+  local_raw_path: data/raw/boundaries-gistda-50k/service-2026-10-15/
+  processing_status: PROCESSED
+- id: boundaries-geoboundaries
+  name: geoBoundaries Thailand (ADM1-ADM3)
+  category: boundaries
+  priority: useful
+  verification_status: VERIFIED
+  role: VALIDATION_ONLY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: 'William & Mary geoLab (geoBoundaries); ADM1 source: OpenStreetMap (Wambacher)'
+  dataset_title: geoBoundaries gbOpen THA ADM1 (THA-ADM1-36821470)
+  landing_page: https://www.geoboundaries.org/
+  data_endpoint: https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/THA/ADM1/geoBoundaries-THA-ADM1.geojson
+  access_method: geoBoundaries API (api/current/gbOpen/THA/ADM1/) -> GitHub LFS download
+  access_restrictions: None
+  format: GeoJSON (4,032,763 bytes)
+  source_crs: EPSG:4326
+  coverage: Thailand ADM1 (77 units)
+  spatial_resolution: Vector (OSM-derived)
+  temporal_coverage: boundaryYearRepresented 2017
+  last_update: sourceDataUpdateDate 2023-01-19; buildDate 2023-12-12
+  last_verified: '2026-10-15'
+  verification_evidence: API metadata inspected and saved; file downloaded and compared.
+  redirects_or_changes: GitHub raw URL redirects to media.githubusercontent.com (LFS).
+  license_or_usage_notes: ODbL 1.0 (OpenStreetMap-derived).
+  expected_update_frequency: Irregular
+  confidence: LOW
+  known_limitations:
+  - THA ADM2 in geoBoundaries is derived from the same RTSD/OCHA data, so only ADM1 is independent of
+    the primary.
+  - 'Large divergence from COD-AB: symmetric difference 4.3-12.0% of province area; boundary offset p95
+    3.5-12.6 km (2017 OSM boundaries).'
+  - 'M1A.1: material disagreement with COD-AB on 172 zones (3,491 km2); along the western Chiang Mai border
+    its line agrees with neither COD-AB nor GISTDA. Too divergent to drive boundary-caution flags on its
+    own.'
+  analytical_suitability: Validation only; not suitable as AOI geometry.
+  local_raw_path: data/raw/boundaries-geoboundaries/THA-ADM1-36821470/
+  processing_status: PROCESSED
+  notes: Cross-check source for province outlines.
+- id: boundaries-thai-official
+  name: Official Thai administrative boundaries (DOPA / RTSD / other agency)
+  category: boundaries
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: null
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: Thailand
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations: []
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: '2026-10-15: no downloadable DOPA boundary dataset found via gdcc.data.go.th search; a DOPA/DOPA_Basemap
+    MapServer exists on gistdaportal.gistda.or.th but was not evaluated. COD-AB is RTSD-derived and serves
+    as PRIMARY meanwhile.'
+- id: dem-copernicus-glo30
+  name: Copernicus DEM GLO-30
+  category: elevation
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: ESA / Copernicus programme (TanDEM-X data, DLR & Airbus); AWS copy managed by Sinergise
+  dataset_title: Copernicus DEM GLO-30 Public (Digital Surface Model)
+  landing_page: https://registry.opendata.aws/copernicus-dem/
+  data_endpoint: https://copernicus-dem-30m.s3.amazonaws.com/<tile>/<tile>.tif
+  access_method: Anonymous HTTPS GET from the AWS Open Data bucket (verified, no account). Copernicus
+    Data Space Ecosystem access requires registration.
+  access_restrictions: None for the AWS copy; some countries' GLO-30 tiles withheld (not Thailand)
+  format: Cloud-optimised GeoTIFF, Float32, 1x1 degree tiles (~45 MB each)
+  source_crs: EPSG:4326 (WGS84-G1150) + EGM2008 heights (EPSG:3855)
+  coverage: Global (AOI fully covered by 9 tiles, 0 nodata pixels inside AOI)
+  spatial_resolution: 1 arc-second (~30 m)
+  temporal_coverage: TanDEM-X acquisitions 2011-2015
+  last_update: AWS objects dated 2022-05-09 (2021 release); CDSE lists releases to 2024_1 with changes
+    for other regions only
+  last_verified: '2026-10-15'
+  verification_evidence: AWS registry YAML and Copernicus Data Space collection page read; anonymous HEAD/GET
+    of 16 candidate tiles; 9 AOI tiles downloaded, opened with rasterio, AOI stats computed (min 205.2
+    m, max 2,579.7 m, nodata 0).
+  redirects_or_changes: OpenTopography moved to the ESA-hosted 2023_1 version in 2024; not used here.
+  license_or_usage_notes: 'Copernicus DEM licence: GLO-30 Public free for the general public; attribution
+    notice required when distributing.'
+  expected_update_frequency: Static (occasional releases)
+  confidence: MEDIUM
+  known_limitations:
+  - Digital SURFACE model - includes tree canopy and buildings; inflates heights in forest and biases
+    slope.
+  - Stated absolute vertical accuracy < 4 m (90% LE) is a global figure; worse expected in steep forested
+    terrain.
+  analytical_suitability: Regional terrain preview; not yet fit for a slope hard constraint (ADR-0008).
+  local_raw_path: data/raw/dem-copernicus-glo30/aws-2021-release/
+  processing_status: PROCESSED
+  notes: Reproject to EPSG:32647 before deriving slope.
+- id: dem-fabdem
+  name: FABDEM (Forest And Buildings removed Copernicus DEM)
+  category: elevation
+  priority: useful
+  verification_status: CANDIDATE
+  role: VALIDATION_ONLY
+  acquisition_status: DEFERRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: University of Bristol
+  dataset_title: FABDEM V1-2 (Forest And Buildings removed Copernicus DEM)
+  landing_page: https://data.bris.ac.uk/data/dataset/s5hqmjcdj8yo2ibzi9b4ew3sn
+  access_method: Download
+  format: GeoTIFF tiles
+  coverage: Global
+  spatial_resolution: ~30 m
+  temporal_coverage: Derived from Copernicus DEM
+  last_verified: '2026-10-15'
+  license_or_usage_notes: CC BY-NC-SA 4.0 per the data.bris record (read 2026-10-15); commercial use requires
+    Fathom. Share-alike and non-commercial terms would constrain derived outputs.
+  expected_update_frequency: Static
+  confidence: UNKNOWN
+  known_limitations:
+  - Machine-learning correction; errors in dense forest remain.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: 'Evaluated, deferred (ADR-0008): kept as a cross-validation candidate only; must not become a
+    dependency. Vertical datum assumed inherited from Copernicus (EGM2008) - not independently verified.
+    Data not downloaded.'
+- id: flood-gistda-history
+  name: GISTDA flood recurrence 2011-2023 via API Gateway (ข้อมูลพื้นที่น้ำท่วมซ้ำซาก)
+  category: flood
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: PRIMARY_HISTORICAL_FLOOD_EVIDENCE
+  intended_role: PRIMARY_HISTORICAL_FLOOD_EVIDENCE
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: GISTDA
+  dataset_title: ข้อมูลพื้นที่น้ำท่วมซ้ำซาก (disasters-01), "flood recurrence in the 13-year cycle (2011-2023)"
+  landing_page: https://opendata.gistda.or.th/dataset/disasters-01
+  data_endpoint: https://api-gateway.gistda.or.th/api/2.0/resources/gi-service/v1.1/disasters/flood-recurrence
+    (query parameter `area` = GeoJSON polygon, or lat/lon; `api_key` required)
+  access_method: 'authenticated GISTDA API; credential_source: environment (.env.local, Git-ignored). 124
+    lon/lat tiles of 0.2 deg covering the three provinces; recorded URLs sanitised (api_key=REDACTED)'
+  access_restrictions: Personal/project API key (GISTDA API Gateway). The key is never recorded in
+    manifests, provenance, reports or Git.
+  format: JSON (list of features with subdistrict/district/province names, `total`, `detail[]` per year,
+    `area`, `geom` GeoJSON); 381 MB raw for the AOI tiles
+  source_crs: Served as GeoJSON lon/lat (EPSG:4326). API `area` equals the polygon area in UTM 47N to
+    1e-12 (ratio median 1.0), suggesting a UTM-based production CRS
+  coverage: Thailand (national); all 124 AOI tiles answered (41 with no flood polygons)
+  spatial_resolution: 20 m (publisher metadata)
+  temporal_coverage: 2011-2023 (13 years; every feature carries exactly the 13 yearly values)
+  last_update: Catalogue metadata modified 2026-09-04; publisher update frequency "Yearly"
+  last_verified: '2026-10-15'
+  verification_evidence: 'Data opened and validated (M1C.1): 167,804 polygons (163,162 intersecting the AOI);
+    0 null/empty/invalid, 0 duplicates, pairwise overlap 1e-6 m2 total (areas additive); yearly freq values
+    only 0/1 and total = sum of yearly freq for every feature (total = years flooded, 1-7 in AOI);
+    feature-cap check: two densest tiles re-requested as quadrants returned identical flooded area per
+    class (ratio 1.000). See outputs/m1c1/flood-2011-2023-qa.json.'
+  license_or_usage_notes: Open Data Common (catalogue). Attribution GISTDA.
+  expected_update_frequency: Yearly (publisher)
+  confidence: MEDIUM
+  known_limitations:
+  - Satellite observation misses short-lived flash floods and cloud-covered peaks.
+  - Absence of observed flooding is NOT evidence of no flood risk.
+  - Publisher description says "frequency of floods in 10-year period" while the record has 13 yearly
+    values; detailed methodology (sensors, thresholds, compositing) is not published.
+  - Ends 2023 (2024-2026 not covered); not current/event flooding.
+  - Polygons are split by sub-district and by the query tile (attributes identical across splits).
+  analytical_suitability: Primary historical observed-flood evidence for regional screening (years flooded
+    of 13); not a hard exclusion on its own.
+  local_raw_path: data/raw/flood-gistda-history/api-2026-10-15/
+  processing_status: PROCESSED
+  notes: Acquired in M1C.1 with a legitimate project key. Supersedes the 2005-2016 layer as PRIMARY; the
+    2005-2016 layer is kept as HISTORICAL_CORROBORATION (context only). M1C.2 role label PRIMARY_CURRENT_PRODUCT
+    (not "correct"); 2011-2013 geometry identical to the legacy product in the AOI, 2014 mostly and 2016 entirely
+    absent relative to it (docs/research/m1c2-flood-reconciliation-report.md).
+- id: flood-gistda-repeated-2005-2016
+  name: GISTDA repeated flooding areas 2005-2016 (1:50k), observed
+  category: flood
+  priority: must_have
+  verification_status: VERIFIED
+  role: SECONDARY
+  evidence_role: HISTORICAL_CORROBORATION
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: GISTDA
+  dataset_title: พื้นที่น้ำท่วมซ้ำซาก ปี 2005 - 2016 (FL_RepeatedFlooding_GISTDA_50k_Y2005_Y2016)
+  landing_page: https://gistdaportal.gistda.or.th/data/rest/services/FL_Flood
+  data_endpoint: https://gistdaportal.gistda.or.th/data/rest/services/FL_Flood/FL_RepeatedFlooding_GISTDA_50k_Y2005_Y2016/FeatureServer/0/query
+  access_method: Public ArcGIS REST FeatureServer (no key); paged (1,000/page) with where pv_code in ('50','56','57');
+    215 pages
+  access_restrictions: None observed (service advertises editing capabilities; read only here)
+  format: ArcGIS REST JSON; 214,350 polygons in AOI (469 MB of pages)
+  source_crs: Served EPSG:3857; stored EPSG:4326 (sourceSpatialReference); field names suggest an earlier
+    UTM version - original datum not documented
+  coverage: Thailand (3.63M polygons nationally)
+  spatial_resolution: 1:50,000 (layer name)
+  temporal_coverage: 2005-2016 (yearly flags year2005..year2016; flood_freq = years flooded)
+  last_update: Unknown
+  last_verified: '2026-10-15'
+  verification_evidence: Service/layer JSON inspected; AOI count 214,350 = received; flood_freq distribution
+    checked; normalised and overlaid (validation report).
+  license_or_usage_notes: Not stated on the service; copyright GISTDA. Internal analysis only, no redistribution.
+  expected_update_frequency: None (historical product)
+  confidence: MEDIUM
+  known_limitations:
+  - HISTORICAL OBSERVED flooding (satellite), not modelled hazard, not current events.
+  - Misses flash floods and cloud-covered peaks; absence of a polygon is not absence of risk.
+  - Ends 2016.
+  analytical_suitability: Regional screening; candidate input for a future flood constraint, not a hard
+    exclusion on its own.
+  local_raw_path: data/raw/flood-gistda-repeated-2005-2016/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: 'M1C.1: reclassified from PRIMARY/TEMPORARY_HISTORICAL_EVIDENCE to SECONDARY/HISTORICAL_CORROBORATION
+    (legacy historical evidence). Kept, not deleted: per-cell legacy_flood_2005_2016_* context columns; never
+    read by interpretation or policy. Primary flood evidence is now flood-gistda-history (2011-2023). M1C.2
+    role label LEGACY_COMPARISON_PRODUCT (not "wrong"): maps 2014/2016 AOI flooding absent from the current product.'
+- id: flood-gistda-event
+  name: GISTDA current/event flood extents (1/3/7/30-day) and STAC catalogs
+  category: flood
+  priority: later
+  verification_status: CANDIDATE
+  role: null
+  metadata_verified: true
+  acquisition_status: BLOCKED_CREDENTIAL_REQUIRED
+  permitted_uses: []
+  publisher: GISTDA
+  landing_page: https://opendata.gistda.or.th/dataset/flood-disaster-data
+  access_method: API Gateway (API key/token required), WMS/WMTS/TMS
+  access_restrictions: Personal API key required
+  last_verified: '2026-10-15'
+  license_or_usage_notes: Licence not specified in catalogue
+  confidence: UNKNOWN
+  processing_status: NOT_ACQUIRED
+  notes: CURRENT/EVENT flooding - kept separate from historical observed recurrence. Not needed for M1A.
+- id: flood-jrc-global-surface-water
+  name: JRC Global Surface Water (water occurrence/recurrence)
+  category: flood
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  permitted_uses: []
+  publisher: European Commission Joint Research Centre
+  landing_page: https://global-surface-water.appspot.com/
+  access_method: Download / Google Earth Engine
+  format: GeoTIFF
+  coverage: Global
+  spatial_resolution: ~30 m
+  temporal_coverage: From 1984 (end year to confirm)
+  last_verified: null
+  license_or_usage_notes: To confirm
+  expected_update_frequency: Irregular
+  confidence: UNKNOWN
+  known_limitations:
+  - Landsat-based; misses brief floods and floods under cloud.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Proxy for permanent/seasonal water and frequently inundated land.
+- id: flood-modelled-hazard
+  name: Modelled river/flash flood hazard maps (national or global)
+  category: flood
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: null
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations: []
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Investigate Thai agency products (e.g. DDPM, RID, DWR) and global models (JRC river flood hazard).
+    Global models are usually too coarse for small northern valleys.
+- id: landslide-susceptibility-dmr
+  name: DMR landslide susceptibility (areas with potential for landslide occurrence)
+  category: landslide
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: SUSCEPTIBILITY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division
+  dataset_title: พื้นที่มีโอกาสเกิดแผ่นดินถล่ม / LANDSLIDE_SUSCEPTIBILITY (05010103)
+  landing_page: https://data.dmr.go.th/dataset/landslide_susceptibility
+  data_endpoint: https://data.dmr.go.th/dataset/29b3d834-43bb-4187-9118-8eb0bf8ee4d5/resource/b2605199-dbe1-465f-a8c2-24a091651af6/download/shp_05010103-.rar
+  access_method: Anonymous HTTPS (descriptive User-Agent; portal intermittently returns 502/504). Same
+    53,199 features also in a CSV export and an ArcGIS MapServer (gisportal.dmr.go.th/.../HAZARD/LANDSLIDE_SUSCEPTIBILITY).
+  access_restrictions: None stated
+  format: RAR (Thai folder name) containing ESRI Shapefile, UTF-8, 53,199 polygons
+  source_crs: EPSG:32647
+  coverage: 'Partial national coverage, 248,018 km2. AOI coverage of province area: Chiang Mai 93.1%,
+    Chiang Rai 77.6%, Phayao 76.2%.'
+  spatial_resolution: '~1 km lattice: 1 km2 cells, some merged into larger same-class polygons (up to
+    7,130 km2); lattice offset from the HearthMap grid (x mod 1000 = 143.6 m, y mod 1000 = 115 m)'
+  temporal_coverage: Not stated; SHP resource 2021-06-21
+  last_update: CSV export 2026-06-23 (identical rows/classes to SHP); metadata 2026-08-10; stated update
+    cycle 5 years
+  last_verified: '2026-10-15'
+  verification_evidence: CKAN package_show + data dictionary (.docx) read; SHP extracted and opened; field/class
+    values and CSV cross-checked (53,199 rows, identical gridcodes); ArcGIS service count 53,199; AOI
+    coverage measured.
+  license_or_usage_notes: Creative Commons Attributions (catalogue)
+  expected_update_frequency: Every 5 years (catalogue)
+  confidence: MEDIUM
+  known_limitations:
+  - 'Classes: gridcode 1 Very Low, 2 Low, 3 Medium, 4 High, 5 Very High (data dictionary LUT_SUSCEPT_LEVEL
+    + per-class Desc_T/Desc_E). Methodology is NOT published with the dataset; the catalogue cites DMR
+    community-level landslide surveys as data source.'
+  - '~1 km resolution: coarser than the 500 m analysis grid.'
+  - 'Partial coverage: unmapped land is NOT ASSESSED, never ''Very Low''.'
+  - 1,196 polygons (national) had ring self-intersections; repaired with make_valid (audited).
+  analytical_suitability: Regional susceptibility evidence; not yet permitted for hard exclusion (M1A.1
+    human sign-off pending; policy review needed).
+  local_raw_path: data/raw/landslide-susceptibility-dmr/2026-08-10/
+  processing_status: PROCESSED
+  notes: Supersedes M0 placeholder 'landslide-dmr-susceptibility'.
+- id: landslide-inventory-dmr
+  name: DMR landslide inventory (mapped landslide scars) 1989-2019
+  category: landslide
+  priority: useful
+  verification_status: VERIFIED
+  role: SECONDARY
+  evidence_role: HISTORICAL_EVENT_LOCATIONS
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division
+  dataset_title: ร่องรอยแผ่นดินถล่ม / LANDSLIDE_INVENTORY_MAP (05010102)
+  landing_page: https://data.dmr.go.th/dataset/landslide_inventory_map
+  data_endpoint: https://data.dmr.go.th/dataset/258c96e9-67cc-4605-8def-9e5cb4e23da3/resource/8558dd02-1554-4422-8c32-b743e116b244/download/shp_05010102-.rar
+  access_method: Anonymous HTTPS (portal intermittently 504; resumable acquisition)
+  access_restrictions: None; more detail on request from the Environmental Geology Division
+  format: RAR containing ESRI Shapefile (points), 56,177 features; CSV export
+  source_crs: EPSG:32647
+  coverage: 'National; AOI points: Chiang Mai 4,240, Chiang Rai 1,796, Phayao 46'
+  spatial_resolution: Points interpreted from aerial photographs
+  temporal_coverage: 1989-2019 (catalogue); YEAR_DATA field empty in the data
+  last_update: CSV 2026-06-23; metadata 2026-06-23
+  last_verified: '2026-10-15'
+  verification_evidence: CKAN metadata + data dictionary read; SHP extracted and opened.
+  license_or_usage_notes: Creative Commons Attributions (catalogue)
+  expected_update_frequency: Every 5 years (catalogue)
+  confidence: LOW
+  known_limitations:
+  - 'Very uneven coverage between provinces (Phayao 46 points): absence is not stability.'
+  - No event dates in the data; duplicate coordinates occur.
+  - Historical event locations - a different concept from susceptibility; kept separate.
+  analytical_suitability: Supporting historical evidence (CAUTION level), not exclusion.
+  local_raw_path: data/raw/landslide-inventory-dmr/2026-06-23/
+  processing_status: PROCESSED
+- id: debris-flow-flash-flood-dmr
+  name: DMR modelled areas affected by landslide debris flow / flash flood
+  category: landslide
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  evidence_role: MODELLED_IMPACT_AREA
+  metadata_verified: true
+  data_verified: false
+  acquisition_status: DEFERRED
+  permitted_uses: []
+  publisher: Department of Mineral Resources (DMR)
+  landing_page: https://data.dmr.go.th/dataset/debris_flood
+  format: File geodatabase zip (226 MB, 2024-01-23); ArcGIS MapServer HAZARD/DEBRIS_FLOOD
+  last_verified: '2026-10-15'
+  license_or_usage_notes: Creative Commons Attributions (catalogue)
+  confidence: UNKNOWN
+  processing_status: NOT_ACQUIRED
+  notes: 'Modelled impact areas (a third concept: neither susceptibility nor events). Deferred from M1B;
+    near the size guard - prefer an AOI subset via the MapServer.'
+- id: seismic-active-faults-dmr
+  name: DMR active fault groups of Thailand (fault traces)
+  category: seismic
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: ACTIVE_FAULT_TRACES
+  intended_role: FAULT_CONTEXT_FOR_REGIONAL_SEISMIC_SCREENING
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division
+  dataset_title: กลุ่มรอยเลื่อนมีพลัง (zone-acttivefault); ArcGIS service THA_DMR_ZONE_ACTIVEFAULT_WMS (identical attribute tables republished as ZONE_ACTIVEFAULT, ZONE_ACTIVEFAULT_WMS_GSi and a Thai-named service)
+  landing_page: https://data.dmr.go.th/ (catalogue record zone-acttivefault); https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD
+  data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/THA_DMR_ZONE_ACTIVEFAULT_WMS/MapServer/0
+  access_method: Public ArcGIS REST MapServer (query supported, no key); 640 polylines in 2 pages
+  format: Polyline features (626 LineString, 14 MultiLineString), 640 traces in 17 fault groups
+  source_crs: EPSG:32647 (service spatial reference; attribute LENGTH_KM equals geometry length)
+  coverage: Thailand; groups in or near the AOI include Mae Chan, Mae Lao, Mae Ing, Mae Tha, Phayao, Wiang Haeng, Mae Hong Son, Thoen, Pua, Moei
+  spatial_resolution: Map scale not documented
+  temporal_coverage: DMR active-fault map (2012 vintage per DMR 2023 material); catalogue record created 2023-06-19
+  last_update: Catalogue record modified 2026-08-13 (data.dmr.go.th)
+  last_verified: '2026-10-16'
+  verification_evidence: 'Catalogue record and ArcGIS layer inspected; all 640 features downloaded and checked
+    (CRS EPSG:32647, 0 invalid or duplicate geometries, 0 empty, attribute length = geometry length, 3 service
+    aliases have identical attribute tables). Attribute completeness is poor: DIP populated for 47 of 640, SLIP_P_EV
+    56, F_EVENT 62, DISPLACE 236; TRENCHSITE/TRENCHLAT/TRENCHLONG/DATE/V_DISPLACE/REFERENCE are empty. The DMR
+    "tambon within 20 km" listing (1,329 points) lies entirely within 20 km of these traces.'
+  license_or_usage_notes: 'Catalogue (data.dmr.go.th and the current data.go.th record gdpublish-zone-acttivefault):
+    Creative Commons Attributions, accessible_condition "none". See dataset_licence / legal_use_disclaimer for
+    the older data.go.th record that carries a restriction.'
+  dataset_licence: Creative Commons Attributions (official DMR catalogue data.dmr.go.th, and data.go.th record gdpublish-zone-acttivefault modified 2026-09-25)
+  service_terms: None stated on the ArcGIS service (copyrightText and description empty)
+  legal_use_disclaimer: 'Older data.go.th record "activefault" (created 2020-07-14, modified 2023-04-19) states
+    accessible_condition: not usable as legal reference, no commercial use, DMR not liable. The current official
+    DMR record and the newer data.go.th records state none. Not adopted as a licence term; used conservatively
+    (no legal reference use, regional screening only).'
+  licence_discrepancy: 'Restriction text exists only on the superseded data.go.th record (2020 vintage) and its
+    mirrors; authoritative current catalogue says Creative Commons Attributions / no access condition.'
+  methodology: 'Publisher: compiled from satellite-image interpretation, geology, geomorphology, earthquake-event
+    data and other relevant sources, with field checking, fault dating and corrections (data_source field).
+    Details unpublished; the field data dictionary could not be downloaded (HTTP 502).'
+  expected_update_frequency: Not stated
+  confidence: MEDIUM
+  known_limitations:
+  - Fault traces are mapped context only; distance to a trace is NOT a shaking or risk measure and no fault distance score exists.
+  - Many source-native attributes are empty or zero placeholders (DIP "0" for 593 of 640); MCE units/scale are undocumented.
+  - Unmapped, buried or newly recognised faults are not represented; absence of a trace is not evidence of no fault.
+  analytical_suitability: Fault context for regional seismic screening (REQUIRES_SEISMIC_VERIFICATION at most when used alone).
+  local_raw_path: data/raw/seismic-active-faults-dmr/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D. Supersedes the placeholder 'seismic-active-faults'.
+- id: seismic-intensity-zones-dmr
+  name: DMR earthquake disaster areas (EQ_ZONE) - probabilistic PGA hazard shown as MMI zones
+  category: seismic
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: PROBABILISTIC_EARTHQUAKE_HAZARD_ZONES
+  intended_role: EARTHQUAKE_HAZARD_CONTEXT_FOR_REGIONAL_SEISMIC_SCREENING
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division (maintainer)
+  dataset_title: พื้นที่พิบัติภัยแผ่นดินไหว (eq_zone), ArcGIS service HAZARD/EQ_ZONE
+  landing_page: https://data.dmr.go.th/ (catalogue record eq_zone)
+  data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/EQ_ZONE/MapServer/0
+  access_method: Public ArcGIS REST MapServer (query supported, no key); 427 polygons in 18 pages
+  format: Polygons (315 Polygon, 112 MultiPolygon); fields EQ_ZONE_ID, INTENSITY (MMI code), INTEN_T (Thai description)
+  source_crs: EPSG:32647 (service); 1 self-intersecting ring repaired (area change 1e-13 km2)
+  coverage: Thailand; covers 99.97% of the three-province AOI (39,919 of 39,930 km2); no overlapping polygons
+  spatial_resolution: Map scale NOT documented in the catalogue or data dictionary
+  temporal_coverage: Hazard level fixed at 10% probability of exceedance in 50 years; data year not stated
+  last_update: 'Catalogue record created 2023-06-19, modified 2026-08-13; earlier data.go.th record created
+    2020-07-18 (shapefile eq_zone_20200718), modified 2021-10-31'
+  last_verified: '2026-10-16'
+  verification_evidence: 'Official DMR catalogue record eq_zone read directly (data.dmr.go.th package_search API).
+    Publisher data_source, verbatim: "การวิเคราะห์ความน่าจะเป็นของค่าความเร่งพื้นดินสูงสุดของแผ่นดินไหวที่มีโอกาสเพียง
+    10% ที่มีค่าสูงกว่าค่าที่วิเคราะห์ได้ในคาบเวลา 50 ปี ตามสมการของ Sadigh and others (1997) ในโครงการการประเมินภัยพิบัติแผ่นดินไหว"
+    = probabilistic analysis of peak ground acceleration with a 10% probability of exceedance in 50 years, per Sadigh
+    et al. (1997), in the earthquake-hazard assessment project. Notes: "boundaries of areas that may be affected by
+    earthquakes in Thailand using a model program and probabilistic analysis". Data dictionary 05030103 describes
+    INTENSITY as the Modified Mercalli intensity zone code. All 427 features downloaded and validated; AOI class
+    areas: IV 39 km2, V 8,729, VI 9,721, VII 21,430, I-III 0.'
+  license_or_usage_notes: 'Official DMR catalogue: Creative Commons Attributions, accessible_condition "none".
+    See dataset_licence / service_terms / legal_use_disclaimer.'
+  dataset_licence: Creative Commons Attributions (official DMR catalogue data.dmr.go.th record eq_zone, accessible_condition "none")
+  service_terms: None stated on the ArcGIS service (copyrightText and description empty)
+  legal_use_disclaimer: 'The older national-portal record data.go.th/dataset/eqzone (created 2020-07-18, modified
+    2021-10-31, mirrored by OD Mekong) lists the same licence but an accessible_condition: data not usable as legal
+    reference, no commercial use, DMR not liable for damages. The current official DMR record states none. That
+    earlier M1D finding came from the superseded data.go.th/OD Mekong record, not from the DMR catalogue or the
+    service. Not recorded as an authoritative non-commercial restriction; legal-reference use is avoided anyway.'
+  licence_discrepancy: 'Two catalogues disagree: data.dmr.go.th (2023-06-19 / 2026-08-13) = CC Attributions, no
+    condition; data.go.th eqzone (2020 / 2021) = CC Attributions + restrictive access text. Resolution pending
+    DMR confirmation; project use (non-commercial regional screening, attribution given) satisfies both.'
+  methodology: 'Probabilistic seismic hazard: PGA with 10% probability of exceedance in 50 years (about a
+    475-year return level), Sadigh et al. (1997) ground-motion relation, earthquake-hazard assessment project.
+    The published GIS layer displays the result as MMI zones (I-III, IV, V, VI, VII). NOT documented: the PGA-to-MMI
+    transformation and class boundaries, source model (which faults/seismicity), site/Vs30 assumptions, map scale,
+    data year. None of these is inferred.'
+  expected_update_frequency: Catalogue other / unspecified
+  confidence: MEDIUM
+  known_limitations:
+  - The layer is a regional hazard display, not a site-response model (no local geology, sediment, amplification or liquefaction).
+  - PGA is the stated analysis variable but only MMI classes are published; do not read MMI as measured intensity.
+  - Hazard zones, fault traces and event catalogues are not statistically independent evidence.
+  analytical_suitability: Regional modelled-hazard context; a dominant top class (VII) may support STRONG_SEISMIC_SCREENING_CONCERN in provisional regional screening, never a parcel/site conclusion.
+  local_raw_path: data/raw/seismic-intensity-zones-dmr/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D. Corrects the earlier description ("model program, no scenario or return period").
+- id: seismic-tambon-near-faults-dmr
+  name: DMR tambon within about 20 km of active faults (listing)
+  category: seismic
+  priority: useful
+  verification_status: VERIFIED
+  role: VALIDATION_ONLY
+  evidence_role: FAULT_PROXIMITY_LISTING
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: Department of Mineral Resources (DMR)
+  dataset_title: ตำบลที่อยู่ใกล้รอยเลื่อนมีพลังในรัศมี 20 กิโลเมตร (t-activefault)
+  landing_page: https://data.dmr.go.th/ (catalogue record t-activefault)
+  data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/T_ACTIVEFAULT/MapServer/0
+  access_method: Public ArcGIS REST MapServer (no key)
+  format: Points, 1,329 sub-district records (TB_CODE, TAMBON, DISTRICT, PROVINCE, fault group, coordinates)
+  source_crs: EPSG:32647 (service); lat/lon WGS 84 attributes
+  coverage: Thailand (sub-districts near active faults)
+  last_update: Catalogue record created 2023-06-22, modified 2026-08-13
+  last_verified: '2026-10-16'
+  verification_evidence: All 1,329 points downloaded; every point is within 19.95 km of the nearest DMR fault trace (median 7.07 km), consistent with the stated 20 km listing rule.
+  license_or_usage_notes: Catalogue Creative Commons Attributions, accessible_condition none
+  dataset_licence: Creative Commons Attributions (data.dmr.go.th and data.go.th gdpublish-t-activefault)
+  service_terms: None stated on the ArcGIS service
+  methodology: 'Publisher: field survey data and GIS calculation to find villages/sub-districts within about 20 km of active faults.'
+  confidence: MEDIUM
+  known_limitations:
+  - A proximity listing, not a hazard surface; used only to validate fault-trace geometry.
+  local_raw_path: data/raw/seismic-tambon-near-faults-dmr/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D validation reference.
+- id: geohazard-events-dmr
+  name: DMR geohazard events inventory (earthquake subset used)
+  category: seismic
+  priority: useful
+  verification_status: VERIFIED
+  role: SECONDARY
+  evidence_role: HISTORICAL_SEISMICITY_DMR_INVENTORY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Mineral Resources (DMR), Environmental Geology Division
+  dataset_title: เหตุการณ์ธรณีพิบัติภัย (GEOHAZARD_EVENTS)
+  landing_page: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/GEOHAZARD_EVENTS/MapServer
+  data_endpoint: https://gisportal.dmr.go.th/arcgis/rest/services/HAZARD/GEOHAZARD_EVENTS/MapServer/0
+  access_method: Public ArcGIS REST MapServer (no key)
+  format: Points, 1,015 events (773 landslide, 124 sinkhole, 118 earthquake); fields incl. DATE, MAGNITUDE, DEPTH_KM, LATITUDE, LONGITUDE
+  source_crs: EPSG:32647 (service); lat/lon WGS 84 attributes used
+  coverage: Thailand
+  temporal_coverage: Earthquake records 1994-2025 (37 in 2025, a post-2025 Myanmar-sequence burst)
+  last_verified: '2026-10-16'
+  verification_evidence: All 1,015 events downloaded; 118 earthquakes with magnitude 3.0-6.3 (depth for 77); 84 within the AOI bounding region plus margin; Reference field attributes all events to the DMR environmental-geology division.
+  license_or_usage_notes: Not stated on the service; DMR catalogue licence for hazard datasets is Creative Commons Attributions - confirm for this layer.
+  service_terms: None stated on the ArcGIS service
+  methodology: Curated inventory of felt/damaging or notable events; selection criteria not documented. Not a complete instrumental catalogue.
+  confidence: LOW
+  known_limitations:
+  - Incomplete and uneven in time; magnitude scale not stated; kept separate from TMD and USGS and never merged.
+  - Landslide and sinkhole events in the same layer are not used for seismic evidence.
+  local_raw_path: data/raw/geohazard-events-dmr/service-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D historical seismicity (Thai authority, corroborating context only).
+- id: seismic-felt-events-tmd
+  name: TMD statistics of earthquakes affecting Thailand (felt events)
+  category: seismic
+  priority: useful
+  verification_status: VERIFIED
+  role: PRIMARY
+  evidence_role: HISTORICAL_SEISMICITY_TMD_FELT_EVENTS
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Thai Meteorological Department (TMD), Earthquake Observation Division
+  dataset_title: สถิติข้อมูลแผ่นดินไหวที่มีผลกระทบต่อประเทศไทย (thailand_earthquake_stat.xls)
+  landing_page: https://earthquake.tmd.go.th/earthquakestat.html
+  data_endpoint: https://earthquake.tmd.go.th/eqstat_2excel.php
+  access_method: Public export link (SpreadsheetML), no key; recent events also via RSS (earthquake.tmd.go.th/feed)
+  format: SpreadsheetML (552 rows; DATE in Thai text, TIME, LOCAT., LAT.-LONG., M/I, DETAIL)
+  source_crs: WGS 84 lat/lon text (EPSG:4326)
+  coverage: Thailand and neighbouring events felt in Thailand
+  temporal_coverage: 552 records from 624 BC chronicles to 2026; 477 with usable coordinates (1930-2026)
+  last_verified: '2026-10-16'
+  verification_evidence: 'Export downloaded and parsed: dates in mixed full/abbreviated Thai months and 2- or 4-digit Buddhist-era years; M/I mixes magnitudes (some with type, e.g. "5.3 Mb") and MM intensities; 75 records without coordinates are excluded from spatial metrics. TMD offers no bulk instrumental catalogue or API (RSS of recent events only).'
+  license_or_usage_notes: Not stated by TMD on the statistics page.
+  service_terms: None stated
+  methodology: Felt/effects statistics compiled by TMD (instrumental and reported events); selection criteria not documented.
+  confidence: LOW
+  known_limitations:
+  - A felt-effects list, not a complete catalogue; includes distant events felt in Thailand.
+  - Preferred Thai operational/historical context where usable, but not deduplicated against DMR or USGS and never merged.
+  local_raw_path: data/raw/seismic-felt-events-tmd/download-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D historical seismicity.
+- id: seismicity-usgs-comcat
+  name: USGS ComCat earthquake catalogue (6x6 degree box, M>=3)
+  category: seismic
+  priority: useful
+  verification_status: VERIFIED
+  role: SECONDARY
+  evidence_role: HISTORICAL_SEISMICITY_INTERNATIONAL_CORROBORATION
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  - VALIDATION_REFERENCE
+  publisher: U.S. Geological Survey (composite of contributing seismic networks)
+  dataset_title: USGS ComCat FDSN event service
+  landing_page: https://earthquake.usgs.gov/fdsnws/event/1/
+  data_endpoint: https://earthquake.usgs.gov/fdsnws/event/1/query (16-22N, 96-102E, 1900-2026, M>=3)
+  access_method: Public FDSN API (GeoJSON), no key
+  format: GeoJSON, 384 events (mb 310, mw/mww/mwc/mwr/mwb ~62, ml 8, ms 4)
+  source_crs: EPSG:4326
+  coverage: Global composite; request box around the AOI
+  temporal_coverage: 1912-2026 (instrumental completeness for northern Thailand roughly M4.5 from the 1970s)
+  last_verified: '2026-10-16'
+  verification_evidence: Query counted (384 events M>=3, 364 M>=4) then downloaded; magnitude types and statuses recorded per event.
+  license_or_usage_notes: U.S. Government work (public domain); attribution requested.
+  service_terms: USGS data use policy
+  methodology: Catalogue of earthquake parameters contributed by seismic networks; magnitudes of mixed types.
+  confidence: MEDIUM
+  known_limitations:
+  - An international composite catalogue, not the Thai national record; used as corroborating context beside TMD and DMR.
+  - Not deduplicated against Thai sources; never merged.
+  local_raw_path: data/raw/seismicity-usgs-comcat/download-2026-10-15/
+  processing_status: PROCESSED
+  notes: M1D historical seismicity (instrumental reference).
+- id: rivers-osm
+  name: OpenStreetMap waterways
+  category: hydrology
+  priority: must_have
+  verification_status: CANDIDATE
+  role: null
+  acquisition_status: BLOCKED_SIZE_GUARD
+  permitted_uses: []
+  publisher: OpenStreetMap contributors (extracts e.g. via Geofabrik)
+  landing_page: https://download.geofabrik.de/asia/thailand.html
+  access_method: Download (PBF / Shapefile extract)
+  format: OSM PBF
+  coverage: Thailand
+  spatial_resolution: Variable (vector)
+  temporal_coverage: Continuously updated
+  last_verified: null
+  license_or_usage_notes: ODbL (attribution + share-alike on derived databases) - confirm obligations
+  expected_update_frequency: Daily
+  confidence: UNKNOWN
+  known_limitations:
+  - Completeness varies; small streams and drainage channels often missing.
+  - Classification (river vs stream vs canal) inconsistent.
+  local_raw_path: null
+  processing_status: REJECTED
+  notes: National Geofabrik extract verified at 693 MB (2026-10-15) - above the acquisition guard; superseded
+    for M1A by osm-overpass-aoi.
+- id: rivers-hydrosheds
+  name: HydroRIVERS / HydroSHEDS
+  category: hydrology
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  permitted_uses: []
+  publisher: WWF / HydroSHEDS
+  landing_page: null
+  access_method: Download
+  format: Shapefile / GeoDatabase
+  coverage: Global
+  spatial_resolution: Derived from ~90 m / 15 arc-second DEM (to confirm)
+  temporal_coverage: Static
+  last_verified: null
+  license_or_usage_notes: To confirm
+  expected_update_frequency: Static
+  confidence: UNKNOWN
+  known_limitations:
+  - DEM-derived network; positional error of tens to hundreds of metres in flat valleys.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Consistent stream order for "major river" proximity.
+- id: protected-wdpa
+  name: World Database on Protected Areas (WDPA)
+  category: protected_land
+  priority: must_have
+  verification_status: CANDIDATE
+  role: null
+  acquisition_status: DEFERRED
+  permitted_uses: []
+  publisher: UNEP-WCMC / IUCN (Protected Planet)
+  landing_page: https://www.protectedplanet.net/
+  access_method: Download
+  format: Shapefile / GeoDatabase
+  coverage: Global
+  spatial_resolution: Vector, variable
+  temporal_coverage: Monthly releases
+  last_verified: null
+  license_or_usage_notes: Restrictive terms (non-commercial; no redistribution) - must confirm
+  expected_update_frequency: Monthly
+  confidence: UNKNOWN
+  known_limitations:
+  - May omit national forest reserves and other Thai legal categories.
+  - Boundaries may be generalised or point-only for some sites.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: 'Deferred: licence restrictive (non-commercial, no redistribution - to confirm) and Thai agency
+    layers were found.'
+- id: protected-dnp-boundaries
+  name: National parks, wildlife sanctuaries and other DNP-managed areas
+  category: protected_land
+  priority: must_have
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: Department of National Parks, Wildlife and Plant Conservation (DNP) - to confirm
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations: []
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Current official DNP boundaries still not located (2026-10-15). Interim screening via protected-gistda-mnre
+    (2014).
+- id: protected-gistda-mnre
+  name: National parks (2014, 1:50k) and wildlife sanctuaries served by GISTDA (MNRE)
+  category: protected_land
+  priority: must_have
+  verification_status: VERIFIED
+  role: SECONDARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  - LEGAL_WARNING_ONLY
+  publisher: Ministry of Natural Resources and Environment (copyright), served by GISTDA
+  dataset_title: L10_NPRK_MNRE_50k (อุทยานแห่งชาติ ปี พ.ศ.2557), L10_WLDS_MNRE_xxk (เขตรักษาพันธุ์สัตว์ป่า)
+  landing_page: https://gistdaportal.gistda.or.th/data/rest/services/L10_Forest
+  data_endpoint: https://gistdaportal.gistda.or.th/data/rest/services/L10_Forest/<layer>/MapServer/0/query
+  access_method: Public ArcGIS REST query filtered by AOI envelope
+  access_restrictions: None observed
+  format: ArcGIS REST JSON
+  source_crs: EPSG:3857 (served)
+  coverage: Thailand
+  spatial_resolution: National parks 1:50,000; sanctuaries scale not stated ('xxk')
+  temporal_coverage: National parks BE 2557 (2014); sanctuaries undated
+  last_update: Unknown
+  last_verified: '2026-10-15'
+  verification_evidence: Service descriptions/copyright/fields inspected; AOI subsets downloaded.
+  license_or_usage_notes: Not stated; MNRE copyright. Screening only, no redistribution.
+  confidence: LOW
+  known_limitations:
+  - Old (2014) and secondary-hosted; current DNP boundaries may differ.
+  - Not legal boundary evidence.
+  analytical_suitability: Regional screening / legal warning only.
+  local_raw_path: data/raw/protected-gistda-mnre/service-2026-10-15/
+  processing_status: PROCESSED
+- id: forest-reserve-rfd
+  name: National reserved forest boundaries (RFD)
+  category: protected_land
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  - LEGAL_WARNING_ONLY
+  publisher: Royal Forest Department (กรมป่าไม้), Forest Land Management Office
+  dataset_title: ป่าสงวนแห่งชาติ - แนวเขตป่าสงวนแห่งชาติ (final_NRF_all_1221_620108)
+  landing_page: https://data.forest.go.th/dataset/reserve_forest
+  data_endpoint: https://data.forest.go.th/dataset/0927753e-c752-463d-8117-679d1b3476cc/resource/971b289e-dd9f-4539-8305-c9b5099994b4/download/_final_nrf_all_1221_620108.rar
+  access_method: Anonymous HTTPS (site returns 403 to the default Python user agent; a descriptive User-Agent
+    works)
+  access_restrictions: None ('ไม่มีการจำกัดการเข้าถึงข้อมูล')
+  format: RAR (RAR5, Thai folder names) containing an ESRI Shapefile, UTF-8, 1,221 polygons
+  source_crs: EPSG:32647 (WGS_1984_UTM_Zone_47N .prj)
+  coverage: Thailand, 1,221 national reserved forests
+  spatial_resolution: Vector; mapping scale not published
+  temporal_coverage: Edition 2019-01-08 (BE 2562; filename 620108); boundaries reviewed under RFD orders
+    308/2558 and 390/2558
+  last_update: SHP resource uploaded 2022-11-02; dataset metadata modified 2026-07-13
+  last_verified: '2026-10-15'
+  verification_evidence: RFD CKAN package_show read (incl. legal disclaimer); RAR downloaded and extracted
+    with 7-Zip into data/interim; .prj, fields, counts inspected.
+  redirects_or_changes: Also offered as WMS/WFS at gis.forest.go.th (labelled approximate, not legally
+    citable).
+  license_or_usage_notes: Open Data Common (catalogue).
+  expected_update_frequency: Per committee meetings and announcements
+  confidence: LOW
+  known_limitations:
+  - 'Publisher: cannot be used to certify forest boundaries; only forest officials can certify.'
+  - Declared legal area (AREA_RAI) and GIS area (rai_GIS) differ materially for many reserves.
+  - Later revocations/additions after the 2019 edition are not reflected.
+  analytical_suitability: Regional screening and legal WARNING only (REQUIRES_LEGAL_VERIFICATION); never
+    a definitive exclusion; unsuitable for parcel-level legal verification.
+  local_raw_path: data/raw/forest-reserve-rfd/2022-11-02/
+  processing_status: PROCESSED
+  notes: Very large share of northern land may be forest reserve; this layer will remove a lot of area.
+- id: forest-cover-rfd-2562
+  name: RFD forest cover (สภาพพื้นที่ป่าไม้) 2019 shapefile
+  category: land_use
+  priority: later
+  verification_status: CANDIDATE
+  role: null
+  acquisition_status: DEFERRED
+  permitted_uses: []
+  publisher: Royal Forest Department
+  landing_page: https://gdcc.data.go.th/dataset/forestarea_2562_wgs84
+  format: Shapefile parts (.shp 244.9 MB)
+  source_crs: WGS84 (per description; not inspected)
+  last_verified: '2026-10-15'
+  license_or_usage_notes: Creative Commons Attributions (catalogue)
+  confidence: UNKNOWN
+  processing_status: NOT_ACQUIRED
+  notes: 'Deferred: forest COVER (land cover), not legal reserve status; .shp near the size guard and
+    national-only. Possible later livability/land-use layer.'
+- id: watershed-classification
+  name: Watershed classification (classes 1A-5)
+  category: protected_land
+  priority: must_have
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: null
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations: []
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Upper watershed classes carry land-use restrictions; confirm publisher, scale and legal effect.
+- id: land-reform-alro
+  name: Agricultural land reform (ALRO) areas
+  category: land_rights
+  priority: must_have
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: Agricultural Land Reform Office (ALRO) - to confirm
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations: []
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Land under reform rights generally cannot be freely bought for residential use; ultimately verified
+    per parcel via title (M5).
+- id: planning-comprehensive-plans
+  name: Comprehensive town/city plans (land-use zoning)
+  category: planning
+  priority: must_have
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: Department of Public Works and Town & Country Planning (DPT) and local authorities - to confirm
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: Plan revisions every several years (to confirm)
+  confidence: UNKNOWN
+  known_limitations:
+  - Plans likely cover municipal/peri-urban areas only; most rural land may have no plan.
+  - Plans expire and are revised; vintage and legal status must be tracked.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: '"No plan" must be represented as unknown/unplanned, not as compatible.'
+- id: landuse-ldd
+  name: Land-use / land-cover maps
+  category: land_use
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: Land Development Department (LDD) - to confirm
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations: []
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Global alternatives (e.g. ESA WorldCover) may substitute if access is difficult.
+- id: roads-osm
+  name: OpenStreetMap road network
+  category: roads
+  priority: must_have
+  verification_status: CANDIDATE
+  role: null
+  acquisition_status: BLOCKED_SIZE_GUARD
+  permitted_uses: []
+  publisher: OpenStreetMap contributors
+  landing_page: https://download.geofabrik.de/asia/thailand.html
+  access_method: Download (same extract as rivers-osm)
+  format: OSM PBF
+  coverage: Thailand
+  spatial_resolution: Vector, variable
+  temporal_coverage: Continuously updated
+  last_verified: null
+  license_or_usage_notes: ODbL - confirm obligations
+  expected_update_frequency: Daily
+  confidence: UNKNOWN
+  known_limitations:
+  - Surface type, width and rainy-season passability mostly missing.
+  - Road presence does not prove legal public access to adjacent land.
+  local_raw_path: null
+  processing_status: REJECTED
+  notes: National Geofabrik extract verified at 693 MB (2026-10-15) - above the acquisition guard; superseded
+    for M1A by osm-overpass-aoi.
+- id: osm-overpass-aoi
+  name: OpenStreetMap roads and waterways for the AOI provinces (Overpass subset)
+  category: roads
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: OpenStreetMap contributors
+  dataset_title: 'OSM ways: highway motorway..secondary(+links); tertiary/unclassified/residential; waterway
+    river/stream/canal'
+  landing_page: https://www.openstreetmap.org/copyright
+  data_endpoint: https://maps.mail.ru/osm/tools/overpass/api/interpreter (area ISO3166-2 TH-50/TH-56/TH-57,
+    admin_level 4)
+  access_method: Overpass API POST, one query per province and category (9 queries)
+  access_restrictions: Public instance usage policy; overpass-api.de returned 406/502/timeouts on 2026-10-15,
+    two other mirrors returned HTTP 500
+  format: Overpass JSON with way geometry (108 MB total)
+  source_crs: EPSG:4326
+  coverage: Chiang Mai, Chiang Rai, Phayao
+  spatial_resolution: Vector, variable
+  temporal_coverage: OSM state 2026-10-15T07:15Z-07:35Z (osm3s timestamp_osm_base per file)
+  last_update: Continuous
+  last_verified: '2026-10-15'
+  verification_evidence: Responses inspected (no remarks), element counts per file recorded, normalised
+    and lengths computed.
+  redirects_or_changes: Geofabrik national extract (693 MB) exceeds the 250 MB guard - AOI subset used
+    instead.
+  license_or_usage_notes: 'ODbL 1.0: attribution ''(c) OpenStreetMap contributors''; publicly distributed
+    derived databases must be offered under ODbL; kept separate from government layers.'
+  expected_update_frequency: Continuous
+  confidence: MEDIUM
+  known_limitations:
+  - 'Completeness varies (waterway ways: 3,560 Chiang Mai vs 979 Chiang Rai vs 309 Phayao).'
+  - No legal-access, surface or rainy-season information.
+  - Ways crossing province borders are kept whole.
+  analytical_suitability: Bootstrap roads/waterways for screening; no routing yet.
+  local_raw_path: data/raw/osm-overpass-aoi/2026-10-15/
+  processing_status: PROCESSED
+- id: roads-official-doh-drr
+  name: Official rural road centrelines (DRR) and national highway context
+  category: roads
+  priority: useful
+  verification_status: VERIFIED
+  role: VALIDATION_ONLY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: Department of Rural Roads (DRR); Department of Highways (DOH) not reached
+  dataset_title: ทางหลวงชนบท (DRR_Feature FeatureServer layer 2) / data.go.th record dataset_41_011
+  landing_page: https://gis.drr.go.th/arcgis/rest/services/DRR_Feature/FeatureServer/2
+  data_endpoint: https://gis.drr.go.th/arcgis/rest/services/DRR_Feature/FeatureServer/2 (https; plain http refused)
+  access_method: Public ArcGIS REST FeatureServer (query supported, no key); AOI envelope query
+  format: Polyline features (390 LineString in the AOI envelope)
+  source_crs: EPSG:4326 service, requested outSR 32647
+  coverage: Thailand layer; 390 features intersect the three-province envelope (route-level links, not a complete road network)
+  spatial_resolution: 'Service description: 1:4000 in 110 cities, 1:20000 elsewhere'
+  temporal_coverage: Features carry survey_date / updated_date (updated 2025-01-22 on the sampled links)
+  last_update: Catalogue record modified 2026-01-25
+  last_verified: '2026-10-16'
+  verification_evidence: Service directory, layer metadata and all 390 envelope features inspected; geometry types, CRS and attributes (road_code, lane_count, lane_width, survey_date) checked.
+  license_or_usage_notes: data.go.th record licence Open Data Common; access condition none. Service itself states no terms.
+  dataset_licence: Open Data Common (data.go.th record dataset_41_011)
+  service_terms: None stated on the ArcGIS service
+  expected_update_frequency: Not stated
+  confidence: LOW
+  known_limitations:
+  - Only 390 links in the AOI envelope; it is NOT a connected, routable network and is not merged with OSM.
+  - DOH national-highway layers were not located as a machine-readable service in this milestone.
+  - Used as an independent corroboration of OSM road presence only; provenance is kept separate.
+  analytical_suitability: Context that an official rural highway exists within 1 km of a cell. Not used for routing.
+  local_raw_path: data/raw/roads-drr-gis/download-2026-10-16/
+  processing_status: PROCESSED
+- id: schools-official
+  name: Ministry of Education institution register (ข้อมูลโรงเรียนในประเทศไทย / ฐานทะเบียนสถานศึกษา)
+  category: education
+  priority: must_have
+  verification_status: NEEDS_RESEARCH
+  role: null
+  acquisition_status: NOT_STARTED
+  permitted_uses: []
+  publisher: Ministry of Education (MOE) data catalogue
+  landing_page: https://catalog.moe.go.th/
+  access_method: Not reached (retried 2026-10-16 in M2A.1)
+  last_verified: '2026-10-16'
+  verification_evidence: 'Retried in M2A.1: https://catalog.moe.go.th and data.moe.go.th refused or failed to resolve (Python, curl, fetch tool and the in-app browser); plain http on catalog.moe.go.th answers but lists zero datasets (a different, empty CKAN instance; package_show returns nothing); the MOE file server 203.159.172.49 timed out. A web-search index shows the live catalogue lists a 2568 institution statistics dataset (counts by level/affiliation/province, XLSX) and states the data-exchange API requires an inter-agency MOU. None of the live resources could be opened here, so NOTHING is verified. No authentication or access restriction was bypassed.'
+  confidence: UNKNOWN
+  known_limitations:
+  - The current register is the intended PRIMARY education source; until it is acquired the primary layer is the stale DOPA 2021 fallback.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Obtain the register from another network or request it from the MOE Education Data Center; a loader is still needed; source roles, reconcile and compose_primary are in place.
+- id: education-obec-school-list
+  name: OBEC school list with class range, MOE code and coordinates (OBEC_SCHOOL_007)
+  category: education
+  priority: must_have
+  verification_status: VERIFIED
+  role: SECONDARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Office of the Basic Education Commission (OBEC), Education Data Center
+  dataset_title: รายชื่อ ร.ร. สังกัด สพฐ. ปี 2563 (OBEC_SCHOOL_007); data.go.th record obec-school-007
+  landing_page: https://opendata.edudev.in.th/
+  data_endpoint: https://opendata.edudev.in.th/v1/OBEC_SCHOOL_007
+  access_method: Public JSON API (no key, no authentication)
+  format: JSON array, 29,642 schools nationally (1,537 in the three provinces)
+  source_crs: EPSG:4326 (latitude/longitude with 4 decimals)
+  coverage: OBEC-affiliated schools nationwide (not private, local-authority, vocational or university institutions)
+  spatial_resolution: Point
+  temporal_coverage: Academic year 2563 (2020)
+  last_update: Catalogue record modified 2024-04-12; API footer v1.0.0 2021-06-25
+  last_verified: '2026-10-16'
+  verification_evidence: Full list downloaded; fields inspected (moeCode, schoolName, schoolType, province/district/subdistrict, classMinLevel/classMaxLevel, students, coordinates). 5 of 1,537 regional records fail coordinate QA, 8 are flagged. Class range 0-0 on 14 records is treated as UNKNOWN.
+  license_or_usage_notes: Open Data Common (data.go.th record obec-school-007)
+  dataset_licence: Open Data Common
+  expected_update_frequency: Annual (the API still serves 2563)
+  confidence: MEDIUM
+  known_limitations:
+  - 'STALE (2020): an AUTHORITATIVE CLASSIFICATION source for matched schools, not a current register.'
+  - Only OBEC schools; 211 OBEC schools have no DOPA counterpart (kept as a separate layer, not unioned).
+  analytical_suitability: Authoritative levels (class range) and MOE code for schools matched to the primary layer. Enrolment fields are not used and are not quality.
+  local_raw_path: data/raw/education-obec-school-list/api-2026-10-16/
+  processing_status: PROCESSED
+- id: osm-facilities-aoi
+  name: OpenStreetMap schools, colleges, hospitals and clinics for the AOI (Overpass)
+  category: education
+  priority: useful
+  verification_status: VERIFIED
+  role: VALIDATION_ONLY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - VALIDATION_REFERENCE
+  publisher: OpenStreetMap contributors
+  dataset_title: 'OSM nwr amenity=school|kindergarten|college|university|hospital|clinic|doctors|childcare, healthcare=hospital|clinic|centre'
+  landing_page: https://www.openstreetmap.org/copyright
+  data_endpoint: https://maps.mail.ru/osm/tools/overpass/api/interpreter (area ISO3166-2 TH-50/56/57)
+  access_method: Overpass API POST, one query per province
+  format: Overpass JSON (out tags center)
+  source_crs: EPSG:4326
+  coverage: Chiang Mai, Chiang Rai, Phayao
+  spatial_resolution: Point (way/relation centres)
+  temporal_coverage: Snapshot 2026-10-16
+  last_update: Continuous
+  last_verified: '2026-10-16'
+  verification_evidence: Responses inspected; element counts and names tallied (1,034 education objects of which 225 unnamed; 251 hospital-type objects of which 37 unnamed).
+  license_or_usage_notes: 'ODbL 1.0; kept separate from government layers; never merged into primary layers.'
+  dataset_licence: ODbL 1.0
+  expected_update_frequency: Continuous
+  confidence: LOW
+  known_limitations:
+  - Crowd-sourced and incomplete; presence in OSM is not an official register entry and absence is not closure.
+  - Used only to detect current-only / possible-match records against the stale registers.
+  analytical_suitability: Current-validation of register staleness. Never authoritative for classification or capability.
+  local_raw_path: data/raw/osm-facilities-aoi/api-2026-10-16/
+  processing_status: PROCESSED
+- id: places-dopa-gis02
+  name: DOPA government places and important places (gis-02), education subset
+  category: education
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Provincial Administration (DOPA)
+  dataset_title: ข้อมูลสถานที่ราชการและสถานที่สำคัญใน 76 จังหวัด (gis-02)
+  landing_page: https://catalog.dopa.go.th/dataset/gis-02
+  data_endpoint: https://catalog.dopa.go.th/dataset/c0cddb04-4b6e-40bc-afb9-ea72d28324bb (per-province JSON resources)
+  access_method: Direct JSON download (no key)
+  format: JSON arrays, one per province (Chiang Mai 16,729; Chiang Rai 14,364; Phayao records)
+  source_crs: EPSG:4326 (oct_side01_lat/lon)
+  coverage: Chiang Mai, Chiang Rai, Phayao (all places; gov_office_id 2 = education)
+  spatial_resolution: Point
+  temporal_coverage: Budget year 2564 (BE) = 2021 on every sampled record
+  last_update: Catalogue metadata modified 2025-10-24; data vintage 2021
+  last_verified: '2026-10-16'
+  verification_evidence: All three provincial files downloaded and profiled. 5,450 records have gov_office_id 2. The published data dictionary (data_dictionary.json) lists field names only; sub-code meanings are NOT documented, so institution types are derived from names observed under each code. Exact duplicate rows exist and were merged deterministically.
+  license_or_usage_notes: Open Data Common; accessible_condition none
+  dataset_licence: Open Data Common
+  service_terms: null
+  expected_update_frequency: Annual (not met - data is 2021)
+  confidence: LOW
+  known_limitations:
+  - STALE (2021). Closures, new institutions and relocations since then are not reflected.
+  - No authoritative level/affiliation/status/id fields; levels derived from names and sub-codes (confidence-qualified).
+  - Coordinates are of the place point, not necessarily the school gate; some are outside the stated province (flagged, not corrected).
+  analytical_suitability: Presence and approximate position of education institutions for accessibility evidence. Not quality, capacity or enrolment.
+  local_raw_path: data/raw/places-dopa-gis02/download-2026-10-16/
+  processing_status: PROCESSED
+- id: universities
+  name: Universities and higher-education campuses
+  category: education
+  priority: useful
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: DOPA gis-02 (see places-dopa-gis02)
+  dataset_title: Universities and colleges subset of DOPA gis-02
+  data_endpoint: https://catalog.dopa.go.th/dataset/c0cddb04-4b6e-40bc-afb9-ea72d28324bb
+  format: JSON subset
+  source_crs: EPSG:4326
+  landing_page: https://catalog.dopa.go.th/dataset/gis-02
+  access_method: Subset of places-dopa-gis02 (university keywords or sub-code 2010)
+  coverage: Three provinces
+  last_verified: '2026-10-16'
+  verification_evidence: Derived from the same verified files; counts reported in outputs/m2a-review.
+  license_or_usage_notes: Open Data Common
+  expected_update_frequency: Annual (not met)
+  confidence: LOW
+  known_limitations:
+  - Same 2021 vintage and name-derived typing as places-dopa-gis02.
+  local_raw_path: data/raw/places-dopa-gis02/download-2026-10-16/
+  processing_status: PROCESSED
+- id: health-facilities-moph
+  name: MoPH HCODE / hospital service levels (authoritative)
+  category: health
+  priority: must_have
+  verification_status: NEEDS_RESEARCH
+  role: null
+  acquisition_status: NOT_STARTED
+  permitted_uses: []
+  publisher: Ministry of Public Health (MOPH)
+  landing_page: https://hcode.moph.go.th/
+  access_method: Not accessible (retried 2026-10-16 in M2A.1)
+  last_verified: '2026-10-16'
+  verification_evidence: 'hcode.moph.go.th returns HTTP 403 and, with a browser User-Agent, a Cloudflare "Just a moment" bot-challenge page; the challenge was NOT bypassed and no private API was reverse-engineered. opendata.moph.go.th (HDC) is a statistical-report service (its bundle points at https://opendata.moph.go.th/api and needs request headers), not a facility-coordinate register. Whether hospital_level is public or permission-gated could not be inspected. NOTHING is verified.'
+  confidence: UNKNOWN
+  known_limitations:
+  - 'Higher-level / regional hospital and emergency capability cannot be identified from lawful accessible data: hospital level stays PARTIALLY_ASSESSED.'
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Request an HCODE export (facility, organisation type, service level, hospital level, coordinates, active status) from MOPH, or supply an authoritative list in config/healthcare-reference-levels.yaml.
+- id: health-citizeninfo-dga
+  name: Government health-facility coordinates (CITIZENinfo)
+  category: health
+  priority: must_have
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Digital Government Development Agency (DGA), with MOPH, BMA, military and university hospitals
+  dataset_title: ข้อมูลพิกัดสถานพยาบาลของรัฐจากระบบ CITIZENinfo
+  landing_page: https://data.go.th/dataset/health-citizeninfo
+  data_endpoint: https://data.go.th/dataset/00170665-bda1-4f4a-ad7c-52dac7abc7a5/resource/2d45b0c6-75e9-4463-888d-ef364ad164fb/download/citizeninfo_health_20200314.csv
+  access_method: Direct CSV download (no key)
+  format: CSV, 10,714 rows (10,608 MOPH)
+  source_crs: EPSG:4326
+  coverage: Government facilities nationwide; 625 within the three provinces by stated province
+  spatial_resolution: Point
+  temporal_coverage: File dated 2020-03-14
+  last_update: Catalogue metadata modified 2021-10-31
+  last_verified: '2026-10-16'
+  verification_evidence: CSV downloaded and profiled (92 rows without coordinates nationally, a pin-ok flag, 13-digit unit codes whose family encodes hospital vs health-promoting hospital; 10 repeated codes nationally). Class is derived from name/ministry only.
+  license_or_usage_notes: CC BY 4.0
+  dataset_licence: Creative Commons Attribution 4.0
+  expected_update_frequency: Ad hoc (one-off programme)
+  confidence: LOW
+  known_limitations:
+  - STALE (2020). Private hospitals and clinics are absent (government only).
+  - No facility-level (regional/general/community), bed count, emergency or specialty capability fields.
+  analytical_suitability: Presence and position of government hospitals and primary health units for accessibility evidence only.
+  local_raw_path: data/raw/health-citizeninfo-dga/download-2026-10-16/
+  processing_status: PROCESSED
+- id: electricity-pea
+  name: PEA Power Map (service potential for preliminary planning)
+  category: electricity
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  acquisition_status: NOT_STARTED
+  permitted_uses: []
+  publisher: Provincial Electricity Authority (PEA)
+  landing_page: https://www.pea.co.th/
+  access_method: No public machine-readable endpoint verified; no scraping or API reverse-engineering attempted
+  last_verified: '2026-10-16'
+  verification_evidence: Web searches and the data.go.th catalogue returned no PEA grid-capacity or service-potential dataset; powermap.pea.co.th did not connect and www.pea.co.th/powermap returned 404. PEA describes the Power Map as preliminary-planning information that creates no obligation to serve.
+  confidence: UNKNOWN
+  known_limitations:
+  - Classified as REGIONAL_SERVICE_POTENTIAL, never PARCEL_ELECTRICITY_AVAILABLE.
+  - 'Recorded as review/context evidence: electricity_service_potential = NOT_ASSESSED with parcel verification required in every cell.'
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+- id: water-pwa-service
+  name: PWA service-area polygons
+  category: water
+  priority: must_have
+  verification_status: NEEDS_RESEARCH
+  role: null
+  acquisition_status: NOT_STARTED
+  permitted_uses: []
+  publisher: Provincial Waterworks Authority (PWA)
+  landing_page: https://www.pwa.co.th/province/report
+  access_method: None found
+  last_verified: '2026-10-16'
+  verification_evidence: PWA publishes province-level user/capacity tables (pwa.co.th/province/report, Chiang Mai 223,355 users / Chiang Rai 89,879 per the table) and no service-area polygons, shapefiles or services were found on pwa.co.th or data.go.th. NOT usable as spatial evidence.
+  confidence: UNKNOWN
+  known_limitations:
+  - Every cell is NON_PWA_OR_UNKNOWN_SERVICE with water_service_verification_required; this never means 'no water' (wells, municipal and village systems exist).
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+- id: telecom-nbtc-coverage
+  name: NBTC mobile coverage statistics
+  category: telecom
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  metadata_verified: true
+  data_verified: false
+  acquisition_status: DEFERRED
+  permitted_uses: []
+  publisher: Office of the NBTC
+  landing_page: https://datacatalog.nbtc.go.th/dataset/mobile-coverage
+  last_verified: '2026-10-16'
+  verification_evidence: Catalogue records (mobile-coverage, 3G/4G/5G dataset68_12_23/24/25) describe the share of population living in covered areas - an aggregate statistic, not spatial coverage. Rejected for grid use.
+  confidence: UNKNOWN
+  known_limitations:
+  - Province-level or national shares are not grid coverage; telecom is DEFERRED in M2A.
+  local_raw_path: null
+  processing_status: REJECTED
+- id: telecom-ookla-open-data
+  name: Ookla Open Data speed tiles (fixed and mobile)
+  category: telecom
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  acquisition_status: DEFERRED
+  permitted_uses: []
+  publisher: Ookla
+  access_method: Download (public cloud bucket; to confirm)
+  format: Parquet / Shapefile tiles
+  coverage: Global
+  spatial_resolution: ~600 m web-mercator tiles (to confirm)
+  temporal_coverage: Quarterly
+  last_verified: null
+  license_or_usage_notes: To confirm (believed CC BY-NC-SA)
+  expected_update_frequency: Quarterly
+  confidence: UNKNOWN
+  known_limitations:
+  - Crowd-sourced; only where tests were run, so absence of tiles is not absence of service; not authoritative.
+  - Global files exceed the 250 MB acquisition guard; deferred beyond M2A.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+- id: land-value-treasury-appraisal
+  name: Official assessed land values
+  category: land_value
+  priority: must_have
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: Treasury Department - to confirm
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: Multi-year appraisal cycles (to confirm)
+  confidence: UNKNOWN
+  known_limitations:
+  - Assessed values are for taxation/fees and can differ strongly from market prices.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Needed for M3. Determine whether bulk or only per-parcel lookup is available.
+- id: crime-police-statistics
+  name: Crime statistics
+  category: safety
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: Royal Thai Police - to confirm
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: Likely province or police-station area at best
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations:
+  - Reporting rates vary; recorded crime is not crime.
+  - Coarse resolution forbids village-level inference.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Use only at native resolution; see data-quality-framework ethics section.
+- id: infra-rail-north
+  name: Northern rail projects (e.g. Den Chai - Chiang Rai - Chiang Khong line)
+  category: infrastructure_projects
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: State Railway of Thailand (SRT) - to confirm
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations:
+  - Alignment, station locations and completion dates must be verified from current official sources;
+    project timelines slip.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Growth catalyst signal for M3; also a potential noise/severance nuisance near the alignment.
+- id: infra-road-projects
+  name: Planned or ongoing major road projects
+  category: infrastructure_projects
+  priority: later
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: null
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations: []
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: null
+- id: fire-hotspots-firms
+  name: NASA FIRMS active fire hotspots
+  category: environment
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  permitted_uses: []
+  publisher: NASA
+  landing_page: https://firms.modaps.eosdis.nasa.gov/
+  access_method: Download / API (free key may be required)
+  format: CSV / Shapefile points
+  coverage: Global
+  spatial_resolution: ~375 m (VIIRS) / ~1 km (MODIS)
+  temporal_coverage: Multi-year archive
+  last_verified: null
+  license_or_usage_notes: To confirm
+  expected_update_frequency: Near real-time
+  confidence: UNKNOWN
+  known_limitations:
+  - Detects burning, not smoke exposure; haze is regional and wind-driven.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Seasonal burning and haze are a major northern livability factor; local burning density is a
+    useful (partial) signal.
+- id: air-quality-pcd
+  name: Air-quality monitoring station data (PM2.5)
+  category: environment
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: Pollution Control Department (PCD) - to confirm
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: Station points (sparse)
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations:
+  - Sparse stations; interpolation between valleys is unreliable.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Likely regional context rather than a cell-level differentiator.
+- id: nuisance-sources
+  name: Quarries, mines, landfills, industrial estates, large livestock farms
+  category: environment
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: null
+  landing_page: null
+  access_method: null
+  format: null
+  coverage: null
+  spatial_resolution: null
+  temporal_coverage: null
+  last_verified: null
+  license_or_usage_notes: null
+  expected_update_frequency: null
+  confidence: UNKNOWN
+  known_limitations:
+  - OSM coverage of these features is likely partial.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Candidates - OSM landuse tags, mining concessions (DPIM - to confirm), industrial estate registries.
+- id: population-grids
+  name: Gridded population / built-up surface (e.g. GHSL, WorldPop)
+  category: population
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  permitted_uses: []
+  publisher: EC JRC (GHSL) / WorldPop - to confirm which
+  landing_page: null
+  access_method: Download
+  format: GeoTIFF
+  coverage: Global
+  spatial_resolution: ~100 m (to confirm per product)
+  temporal_coverage: Epoch-based estimates
+  last_verified: null
+  license_or_usage_notes: To confirm
+  expected_update_frequency: Multi-year
+  confidence: UNKNOWN
+  known_limitations:
+  - Modelled, not counted; dasymetric allocation errors in rural areas.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: Urban intensity / density for livability and access-to-services context.

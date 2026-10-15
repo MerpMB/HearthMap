@@ -1,0 +1,109 @@
+# ---------------------------------------------------------------------------
+# HearthMap .gitignore
+#
+# Rule of thumb: code, configuration and documentation are tracked; data and
+# generated artifacts are NOT. Real GIS datasets live under data/ and outputs/
+# and must never enter Git. Tiny, explicitly synthetic test fixtures are the
+# only geospatial files allowed (tests/fixtures/).
+# ---------------------------------------------------------------------------
+
+# --- Data directories: keep structure + READMEs, ignore contents ----------
+data/raw/*
+data/interim/*
+data/processed/*
+!data/*/.gitkeep
+!data/README.md
+outputs/*
+!outputs/.gitkeep
+!outputs/README.md
+
+# --- GIS / geospatial formats anywhere in the tree -------------------------
+*.gpkg
+*.gpkg-wal
+*.gpkg-shm
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.sbn
+*.sbx
+*.qix
+*.fgb
+*.parquet
+*.geoparquet
+*.tif
+*.tiff
+*.vrt
+*.nc
+*.hdf
+*.h5
+*.img
+*.asc
+*.dem
+*.kml
+*.kmz
+*.gml
+*.osm
+*.pbf
+*.mbtiles
+*.pmtiles
+*.duckdb
+*.duckdb.wal
+*.db
+*.sqlite
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.gz
+*.csv.gz
+*.aux.xml
+*.ovr
+
+# Large GeoJSON is ignored by default; allow only synthetic test fixtures.
+*.geojson
+*.json.gz
+!tests/fixtures/**/*.geojson
+
+# Provenance sidecars belong next to their (ignored) artifacts.
+*.provenance.json
+
+# --- QGIS -------------------------------------------------------------------
+# Project files (*.qgz) may be tracked deliberately later; QGIS backups never.
+*.qgs~
+*.qgz~
+*_attachments.zip
+.qgis*/
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.python-version
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# --- Editors / OS -------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Secrets ----------------------------------------------------------------
+# Local credentials (e.g. GISTDA_API_KEY in .env.local) never enter Git; only
+# the placeholder template .env.example is tracked.
+.env
+.env.*
+*.env.local
+!.env.example

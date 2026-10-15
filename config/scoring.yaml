@@ -1,0 +1,100 @@
+# HearthMap scoring model configuration.
+#
+# STATUS: PROVISIONAL. Weights and constraints are placeholders to be tuned once
+# family requirements are defined (docs/research/open-questions.md).
+# Semantics: docs/product/scoring-model-v0.1.md
+schema_version: 1
+model_id: hearthmap-suitability
+model_version: 0.1.0
+status: PROVISIONAL
+
+# Component scores are on 0..100 (100 = most suitable).
+# If weights_total is set, configured weights must sum to it (typo guard).
+# The engine always normalises weights to sum to 1.
+weights_total: 100
+
+dimensions:
+  - id: hazard_resilience
+    label: Natural hazard resilience
+    weight: 25
+  - id: family_services
+    label: Family / education / healthcare
+    weight: 20
+  - id: infrastructure
+    label: Infrastructure & utilities
+    weight: 15
+  - id: livability
+    label: Livability / peaceful environment
+    weight: 15
+  - id: value_potential
+    label: Long-term value potential
+    weight: 15
+    description: Probabilistic signal only - never a forecast.
+  - id: accessibility
+    label: Accessibility
+    weight: 10
+
+policies:
+  # What an UNKNOWN (unevaluated) hard constraint does:
+  #   unresolved -> status UNRESOLVED, score computed but flagged
+  #   exclude    -> status EXCLUDED (strict / conservative)
+  unknown_hard_constraint: unresolved
+  # What a missing component score does:
+  #   null_total  -> total is null (strict default)
+  #   renormalize -> weighted mean over available components, coverage reported
+  missing_component: null_total
+  # Only used with renormalize: minimum fraction of total weight that must be present.
+  min_component_coverage: 0.75
+  # Scores built from missing/renormalised dimensions, or for UNRESOLVED units,
+  # are excluded from cross-unit ranking unless this experimental switch is on.
+  allow_incomplete_ranking: false
+
+# Hard constraints are DESCRIPTIONS at M0/M1A. No thresholds exist yet
+# (rule_defined: false). Evaluation logic arrives with real layers in M1+.
+#
+# definitive_exclusion_allowed: may ANY evidence produce a FAIL (-> EXCLUDED)?
+# All false for now. Hazard constraints may become true once a hazard source is
+# verified as fit for exclusion. Legal/land-status constraints stay false:
+# GIS geometry can raise a FLAG (REQUIRES_LEGAL_VERIFICATION) but cannot
+# certify legal status - that needs title documents / officials (M5/M6).
+hard_constraints:
+  - id: flood_unacceptable
+    label: Unacceptable flood exposure
+    description: Inside a floodway or a zone of repeated deep inundation.
+    rule_defined: false
+    definitive_exclusion_allowed: false
+  - id: landslide_severe
+    label: Severe landslide exposure
+    description: High/very-high landslide susceptibility or a recorded event footprint.
+    rule_defined: false
+    definitive_exclusion_allowed: false
+  - id: slope_unsuitable
+    label: Unsuitable slope
+    description: Slope too steep for safe, affordable residential construction.
+    rule_defined: false
+    definitive_exclusion_allowed: false
+  - id: protected_or_state_land
+    label: Protected, forest or state land
+    description: National park, wildlife sanctuary, national forest reserve, restricted watershed class, other state land.
+    rule_defined: false
+    definitive_exclusion_allowed: false
+  - id: restricted_land_rights
+    label: Restricted land-rights category
+    description: Land that cannot carry secure private title for residential use (e.g. agricultural land reform areas).
+    rule_defined: false
+    definitive_exclusion_allowed: false
+  - id: incompatible_planning
+    label: Incompatible planning designation
+    description: Planning zone that prohibits residential building.
+    rule_defined: false
+    definitive_exclusion_allowed: false
+  - id: no_legal_access
+    label: No practical or legal access
+    description: No public road access, or access legally dubious.
+    rule_defined: false
+    definitive_exclusion_allowed: false
+  - id: severe_nuisance
+    label: Unacceptable environmental nuisance
+    description: Within a buffer of a severe nuisance source (quarry, landfill, heavy industry).
+    rule_defined: false
+    definitive_exclusion_allowed: false

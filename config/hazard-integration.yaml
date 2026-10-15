@@ -1,0 +1,159 @@
+# Natural Hazard integration v0.1 (M1E) - how hazard-family outcomes become land-search ACTIONS.
+#
+# STATUS: PROVISIONAL. No scalar hazard score exists or may be derived from this file. Hazards
+# differ in decision consequence, not only severity, so each family keeps its own severity,
+# confidence, recommended action and reason codes, and the integration layer never erases
+# them. "Higher hazard" is NOT "worse land" in one scale: avoidance, site verification and
+# engineering mitigation are separate decision axes.
+#
+# Inputs are the already selected PROVISIONAL regional-screening defaults (hydrogeomorphic
+# BALANCED + flood-fusion FLOOD_ANY_SOURCE; config/regional-screening-defaults.yaml,
+# production_truth false) and the experimental seismic evidence (config/seismic-evidence.yaml).
+# Neither is modified here. Parcel/site hazard assessment is NOT complete; ground response is
+# not assessed anywhere.
+schema_version: 1
+integration_id: natural-hazard-integration
+integration_version: 0.1.0
+status: PROVISIONAL
+default_integration_policy: null     # none selected automatically
+scoring_activated: false             # the future suitability contract is designed, not active
+
+# Action vocabulary (per hazard family and per cell).
+actions:
+  - NO_MAJOR_ACTION_TRIGGERED
+  - VERIFY_SITE
+  - ENGINEERING_MITIGATION_REQUIRED
+  - STRONG_AVOIDANCE_SIGNAL
+  - CONTEXT_ONLY
+  - UNRESOLVED
+
+# Dominant response taxonomy per rule (configurable). primary = what the rule mainly implies.
+response_classes: [AVOID, VERIFY, MITIGATE, CONTEXT]
+rule_responses:
+  flood_strong_recurrent:        {primary: AVOID,    secondary: VERIFY}
+  flood_observed:                {primary: VERIFY,   secondary: null}
+  landslide_strong_susceptibility: {primary: AVOID,  secondary: VERIFY}
+  landslide_verify:              {primary: VERIFY,   secondary: null}
+  terrain_steep_dsm_proxy:       {primary: VERIFY,   secondary: null}
+  seismic_regional_shaking_class_vii: {primary: MITIGATE, secondary: VERIFY}
+  active_fault_proximity:        {primary: VERIFY,   secondary: null}
+  historical_earthquake_record:  {primary: CONTEXT,  secondary: VERIFY}
+
+# Family severity (family-specific ordinal, NOT comparable across families) -> action.
+# Guards: terrain, fault and history can never produce an avoidance signal; no seismic family
+# produces avoidance in v0.1 (regional shaking alone does not deprioritize a region).
+family_actions:
+  flood:
+    NONE: NO_MAJOR_ACTION_TRIGGERED
+    VERIFY: VERIFY_SITE
+    STRONG: STRONG_AVOIDANCE_SIGNAL
+  landslide:
+    NONE: NO_MAJOR_ACTION_TRIGGERED
+    VERIFY: VERIFY_SITE
+    STRONG: STRONG_AVOIDANCE_SIGNAL
+    NOT_ASSESSED: UNRESOLVED
+  terrain:
+    NONE: NO_MAJOR_ACTION_TRIGGERED
+    VERIFY: VERIFY_SITE
+    UNRESOLVED: UNRESOLVED
+  seismic_shaking:
+    NONE: NO_MAJOR_ACTION_TRIGGERED
+    VERIFY: VERIFY_SITE
+    STRONG: ENGINEERING_MITIGATION_REQUIRED
+    UNRESOLVED: UNRESOLVED
+  fault_context:
+    NONE: NO_MAJOR_ACTION_TRIGGERED
+    VERIFY: VERIFY_SITE
+    STRONG: VERIFY_SITE             # very near a trace: still verification, never avoidance
+  historical_seismicity:
+    NONE: NO_MAJOR_ACTION_TRIGGERED
+    VERIFY: CONTEXT_ONLY
+    STRONG: CONTEXT_ONLY            # corroborating positive evidence only
+
+family_response_class:
+  flood: {VERIFY: VERIFY, STRONG: AVOID}
+  landslide: {VERIFY: VERIFY, STRONG: AVOID}
+  terrain: {VERIFY: VERIFY}
+  seismic_shaking: {VERIFY: VERIFY, STRONG: MITIGATE}
+  fault_context: {VERIFY: VERIFY, STRONG: VERIFY}
+  historical_seismicity: {VERIFY: CONTEXT, STRONG: CONTEXT}
+
+# Family confidence in the evidence (positive hits / absence). Absence is never reassurance, so
+# "NONE" carries LOW confidence; landslide outside DMR coverage is UNKNOWN.
+confidence:
+  flood: {positive: MEDIUM, absent: LOW}
+  landslide: {positive: LOW, absent: LOW, not_assessed: UNKNOWN}   # coarse DMR susceptibility, unpublished method
+  terrain: {positive: LOW, absent: LOW}                             # DSM proxy, not ground slope
+  seismic_shaking: {positive: MEDIUM, absent: LOW}                  # DMR probabilistic PGA zones shown as MMI
+  fault_context: {positive: LOW, absent: LOW}
+  historical_seismicity: {positive: LOW, absent: LOW}
+
+# Which hydrogeomorphic reason codes belong to which family (for per-family reason codes).
+hydro_code_families:
+  flood: [RECURRENT_FLOOD_SUBSTANTIAL_COVERAGE, STRONG_RECURRENT_FLOOD_EVIDENCE, OBSERVED_FLOOD_EVIDENCE]
+  flood_prefix: FLOOD_
+  landslide: [VERY_HIGH_LANDSLIDE_SUSCEPTIBILITY_DOMINANT, HIGH_VERY_HIGH_SUSCEPTIBILITY_DOMINANT, STRONG_LANDSLIDE_SUSCEPTIBILITY_EVIDENCE, LANDSLIDE_SUSCEPTIBILITY_BELOW_DEPRIORITIZATION, HISTORICAL_LANDSLIDE_SCAR_NEARBY, SCAR_CORROBORATES_LANDSLIDE_SUSCEPTIBILITY, LANDSLIDE_TERRAIN_CORROBORATED]
+  terrain: [TERRAIN_STEEPNESS_PROXY_HIGH]
+  multi: [MULTIPLE_STRONG_HAZARD_SIGNALS]
+
+# How hazard-family outcomes translate into REGIONAL SEARCH actions. They govern translation
+# only; they do not replace the hydrogeomorphic profile. Seismic results never enter.
+integration_policies:
+  BALANCED_ACTION:
+    description: >-
+      Deprioritize a region only where the selected hydrogeomorphic policy already does
+      (REGIONAL_DEPRIORITIZE); other avoidance signals continue the search with caution.
+    deprioritize_when: hydro_status_deprioritize
+  AVOIDANCE_FIRST:
+    description: >-
+      Any hydrogeomorphic avoidance signal (flood or landslide) deprioritizes the region.
+    deprioritize_when: any_hydro_avoidance_signal
+  VERIFICATION_FIRST:
+    description: >-
+      Avoidance signals become verification burden; deprioritize only where flood and
+      landslide both give avoidance signals.
+    deprioritize_when: multiple_hydro_avoidance_signals
+reference_policy_for_main_outputs: BALANCED_ACTION   # reference mapping, NOT a selection
+
+# Parcel-level handoff (contract only; none of these checks is performed in M1E).
+parcel_handoff:
+  flood_verify_or_strong:
+    - verify_historical_local_flooding
+    - obtain_local_flood_history
+    - check_road_and_drainage_elevation
+  landslide_verify_or_strong:
+    - inspect_slope_and_retaining_conditions
+    - review_local_landslide_susceptibility_and_scars
+  terrain_verify:
+    - inspect_slope_and_retaining_conditions
+  seismic_verify_or_strong:
+    - verify_fault_and_site_geology
+    - assess_soil_and_geotechnical_conditions
+  seismic_mitigation:
+    - evaluate_seismic_structural_requirements
+    - assess_liquefaction_and_site_amplification_where_relevant
+  always:
+    - parcel_specific_site_response_investigation
+
+# Future suitability contract: designed, NOT activated. Natural Hazard Resilience must enter
+# land suitability as separate dimensions with their action semantics, never as hazard_score.
+future_suitability_contract:
+  activated: false
+  dimensions:
+    hazard_search_eligibility: {values: [SEARCHABLE, SEARCHABLE_WITH_CAUTION, DEPRIORITIZED, UNRESOLVED], source: regional_search_action}
+    hazard_verification_burden: {values: [NONE, LOW, MODERATE, HIGH], source: count of families requiring site verification}
+    hazard_engineering_burden: {values: [NONE, SEISMIC_DESIGN_REQUIRED], source: engineering_mitigation_action}
+    hazard_uncertainty: {values: [REGIONAL_COMPLETE_SITE_RESPONSE_MISSING, PARTIAL_REGIONAL_EVIDENCE, CRITICAL_REGIONAL_GAP], source: data_completeness}
+  forbidden: [scalar_hazard_score_0_100, weighted_average_of_families, collapsing_actions_to_one_number]
+
+# Columns the integration may never read as hazard evidence.
+prohibited_evidence_columns:
+  - slope_stratum
+  - lowland_stratum
+  - slope_stratum_reporting_only
+  - majority_pcode
+  - province
+
+reason_codes:
+  SEISMIC_SHAKING_DOES_NOT_DEPRIORITIZE_REGION: "Regional shaking (DMR probabilistic PGA zones shown as MMI) calls for seismic design and site investigation; it does not remove land from the search"
+  GROUND_RESPONSE_NOT_ASSESSED: "Site effects (ground material, sediment, amplification, liquefaction) are not assessed; any parcel needs a site-specific investigation"

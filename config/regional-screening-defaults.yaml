@@ -1,0 +1,52 @@
+# Selected PROVISIONAL regional-screening defaults (recorded in M1D).
+#
+# Chosen by the project owner on 2026-10-15. They are current defaults for REGIONAL
+# screening only: not parcel-level truth, not a scientific optimum, and not final until the
+# policy visual QA below is PASSED. Thresholds of both selections are fingerprinted so any
+# change after this record is detectable (tests compare the fingerprint). Nothing is deleted:
+# the other profiles and flood candidates remain as sensitivity references.
+schema_version: 1
+status: PROVISIONAL
+decision_date: "2026-10-15"
+decided_by: project owner
+hydrogeomorphic_profile: BALANCED
+flood_fusion_policy: FLOOD_ANY_SOURCE
+selected_for_provisional_screening: true
+production_truth: false
+
+provisional_until_visual_qa_passed:
+  - m1c_human_visual_signoff
+  - m1c1_human_visual_signoff
+  - m1c2_human_visual_signoff
+  - m1c3_human_visual_signoff
+
+threshold_fingerprint:
+  hydrogeomorphic_profile_sha256: 7520e7dbd8f6eb15f289308545315455138065f964d1f4c772965743b327bac1
+  flood_fusion_rules_sha256: 098dc818b33ed73e7ce98b95038b683c40c9b8bf6fb6439386c983a33b8efcc5
+  presence_min_fraction: "0.01"
+
+rationale:
+  hydrogeomorphic_BALANCED:
+    - CONSERVATIVE would be too aggressive given coarse landslide susceptibility and DSM-derived terrain proxies.
+    - PERMISSIVE is less appropriate for long-term family-home screening, where false-negative hazard decisions are costly.
+    - BALANCED gives a reasonable regional search filter while retaining verification states.
+    - It is a project risk-tolerance decision, not a scientific optimum.
+  flood_FLOOD_ANY_SOURCE:
+    - Positive evidence from either verified GISTDA product matters.
+    - Legacy evidence can raise concern but never lower it.
+    - Source disagreements remain explicit.
+    - It avoids the excessive lowland sensitivity of FLOOD_UNION_CONSERVATIVE.
+    - It does not discard valid historical observations merely because a newer product omitted them.
+
+not_claimed:
+  - scientifically optimal
+  - parcel-level truth
+  - complete natural-hazard assessment
+  - a final seismic or Natural Hazard policy
+
+retained_sensitivity_references:
+  - CONSERVATIVE
+  - PERMISSIVE
+  - FLOOD_CURRENT_PRIMARY
+  - FLOOD_UNION_CONSERVATIVE
+  - V021_CURRENT_ONLY_REFERENCE
