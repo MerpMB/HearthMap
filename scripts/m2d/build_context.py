@@ -37,7 +37,7 @@ from hearthmap.context.semantics import (  # noqa: E402
 from hearthmap.context.settlement import (  # noqa: E402
     CELL_KM2,
     GridIndex,
-    aggregate_to_grid,
+    aggregate_to_grid_aoi,
     area_fraction,
     assign_max_overlap,
 )
@@ -118,7 +118,7 @@ def main() -> int:
         }
     )
     lonlat = gpd.GeoSeries(cen_geo, crs=CANONICAL).to_crs(4326).total_bounds
-    aoi_ll = (
+    window_ll = (
         float(lonlat[0]) - 0.02,
         float(lonlat[1]) - 0.02,
         float(lonlat[2]) + 0.02,
@@ -126,10 +126,24 @@ def main() -> int:
     )
 
     # ---------------------------------------------------------------- settlement
+    # GRID_FOOTPRINT vs AOI_ANALYTICAL_FOOTPRINT: edge cells extend outside the AOI. Analytical evidence is clipped to the AOI
+    # (the same AOI polygon M1A/M1B use: the union of the three province boundaries); full-cell sums are kept as CONTEXT ONLY.
+    prov_gdf = gpd.read_file(PROCESSED / "boundaries.gpkg", layer="province_boundaries")
+    aoi_poly = shapely.union_all(prov_gdf.geometry.to_numpy())
+    aoi_ll_poly = gpd.GeoSeries([aoi_poly], crs=prov_gdf.crs).to_crs(4326).iloc[0]
     wp = next(one_version("population-worldpop-r2025a").glob("*.tif"))
-    pop, used = aggregate_to_grid([str(wp)], gi, aoi_ll, n_cells, nodata=-99999)
-    print(f"population: {used:,} pixels, sum {pop.sum():,.0f} ({time.time() - t0:.0f}s)")
+    pop_full, pop, used, pop_dropped = aggregate_to_grid_aoi(
+        [str(wp)], gi, window_ll, n_cells, aoi_ll_poly, nodata=-99999
+    )
+    interior_cells = (
+        grid["coverage_fraction"].to_numpy() >= 1 - 1e-9
+    )  # fully inside the AOI: the correction touches EDGE cells only
+    pop = np.where(interior_cells, pop_full, pop)
+    print(
+        f"population: {used:,} pixels, full-cell sum {pop_full.sum():,.0f}, AOI-clipped {pop.sum():,.0f} ({time.time() - t0:.0f}s)"
+    )
     out["population_worldpop2025_count_500m"] = pop.round(2)
+    out["population_worldpop2025_count_500m_full_cell_context"] = pop_full.round(2)
     out["population_worldpop2025_density_per_km2"] = (pop / CELL_KM2).round(1)
     for r, tag in ((1, "1p5km"), (2, "2p5km")):
         out[f"population_worldpop2025_density_per_km2_mean_{tag}"] = (
@@ -142,13 +156,43 @@ def main() -> int:
     )
     ghsl_zips = sorted(one_version("builtup-ghsl-r2023a").glob("*.zip"))
     srcs = [f"/vsizip/{z.as_posix()}/{z.stem}.tif" for z in ghsl_zips]
-    built, used = aggregate_to_grid(srcs, gi, aoi_ll, n_cells, nodata=None)
-    print(f"built-up: {used:,} pixels, sum {built.sum() / 1e6:,.1f} km2 ({time.time() - t0:.0f}s)")
+    built_full, built, used, built_dropped = aggregate_to_grid_aoi(
+        srcs, gi, window_ll, n_cells, aoi_ll_poly, nodata=None
+    )
+    built = np.where(interior_cells, built_full, built)
+    print(
+        f"built-up: {used:,} pixels, full-cell {built_full.sum() / 1e6:,.1f} km2, AOI-clipped {built.sum() / 1e6:,.1f} km2 ({time.time() - t0:.0f}s)"
+    )
     out["built_ghsl2020_surface_m2_500m"] = built.round(0)
-    frac = np.clip(built / (CELL_KM2 * 1e6), 0, 1)
+    out["built_ghsl2020_surface_m2_500m_full_cell_context"] = built_full.round(0)
+    frac = np.clip(
+        built / (CELL_KM2 * 1e6), 0, 1
+    )  # share of the NOMINAL 0.25 km2 cell; the AOI-clipped numerator, so edge cells read lower
     out["built_ghsl2020_fraction_500m"] = frac.round(4)
     for r, tag in ((1, "1p5km"), (2, "2p5km")):
         out[f"built_ghsl2020_fraction_mean_{tag}"] = gi.smooth_mean(frac, r).round(4)
+    out["evidence_settlement_footprint"] = (
+        "AOI_ANALYTICAL_FOOTPRINT: population and built-up are clipped to grid cell INTERSECT AOI; *_full_cell_context columns are CONTEXT_ONLY"
+    )
+    # AOI totals: explicit definition and old-vs-corrected comparison
+    totals = []
+    for label, full, clip_, dropped, unit in (
+        ("WorldPop modelled population (people)", pop_full, pop, pop_dropped, 1.0),
+        ("GHSL built-up surface (km2)", built_full, built, built_dropped, 1e6),
+    ):
+        fv, cv = float(full.sum()) / unit, float(clip_.sum()) / unit
+        totals.append(
+            {
+                "quantity": label,
+                "old_full_cell_grid_total_context_only": round(fv, 3),
+                "new_aoi_clipped_total": round(cv, 3),
+                "absolute_difference": round(fv - cv, 3),
+                "percentage_difference_of_old": round(100 * (fv - cv) / fv, 4),
+                "closure_check_value_of_clipped_pixels_in_no_grid_cell": round(dropped / unit, 4),
+                "definition": "AOI total = sum over pixels of value x share of the pixel footprint inside the AOI (union of the three provinces); a sum of full grid cells is NOT an AOI total; cells fully inside the AOI keep their full-cell value by rule, so the correction touches edge cells only",
+            }
+        )
+    pd.DataFrame(totals).to_csv(TABLES / "aoi-evidence-totals-old-vs-clipped.csv", index=False)
 
     net = load_network()
     rev = reverse(net)
@@ -717,7 +761,7 @@ def main() -> int:
     comp = pd.crosstab(out["majority_pcode"], out["settlement_signal_agreement_class"])
     comp.to_csv(TABLES / "settlement-signal-agreement.csv")
     summary = {
-        "cells": n_cells, "population_total_in_grid": round(float(pop.sum())), "built_up_km2_in_grid": round(float(built.sum() / 1e6), 1),
+        "cells": n_cells, "population_total_aoi_clipped": round(float(pop.sum())), "population_total_full_cell_grid_context": round(float(pop_full.sum())), "built_up_km2_aoi_clipped": round(float(built.sum() / 1e6), 1), "built_up_km2_full_cell_grid_context": round(float(built_full.sum() / 1e6), 1), "edge_cells_with_less_than_full_aoi_coverage": int((grid["coverage_fraction"] < 1 - 1e-9).sum()),
         "service_pois_raw": n_raw, "service_pois_after_dedup": len(sv), "nightlife_candidates": len(nl),
         "service_pois_by_component": sv["component"].value_counts().to_dict(),
         "service_cluster_poi_members": {k: int((sv[f"cluster_{k.lower()}"] >= 0).sum()) for k in svc.CLUSTER_DEFINITIONS},

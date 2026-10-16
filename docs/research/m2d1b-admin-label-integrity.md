@@ -1,5 +1,7 @@
 # M2D.1b - administrative label integrity
 
+> **Figures superseded by M2D.1c** ([m2d1c-edge-cell-aoi-accounting.md](m2d1c-edge-cell-aoi-accounting.md)): WorldPop and GHSL are now clipped to the AOI. AOI modelled population is 3,341,405 (was 3,356,000 as a sum of full grid cells) and built-up 330.4 km2 (was 333.3 km2); unresolved shares are 1.61% of modelled population and 0.57% of built-up (were 1.63% and 0.59%). Cell and area shares are unchanged.
+
 Date: 2026-10-16. Branch: `claude/m2d1b-admin-label-integrity`. No routing policy or evidence semantics changed (routing fingerprint `5c35e98882c3ac62`, 1 km snap, population, built-up and
 every travel time are byte-identical); no scoring; Wave 2 not started; `M2D_HUMAN_VISUAL_SIGNOFF` stays PENDING.
 
@@ -38,8 +40,6 @@ the centroid can sit in a neighbouring province: the two labels came from differ
   A nearest or nationwide place is never put in a district field.
 - Invariant tests (`tests/test_m2d1b.py`): every reported district/province pair is a valid COD pair; every district pcode starts with the province pcode; the context fields are separate and explicitly named; tambon context is always a tambon of the cell's own province.
 
-## Side finding to keep in mind for review
+## Side finding (resolved in M2D.1c)
 
-Population and built-up are summed over the **whole** 500 m cell, including any part outside the AOI. The 4,636 edge cells hold about 39,900 modelled people, of which at most about 16,000 (0.48% of the AOI total, an upper bound from `1 - coverage_fraction`) lie outside the AOI.
-This is a property of the grid design (coverage is recorded in `coverage_fraction`) and was not changed. For the cell above, 82% of its area is in Nan, so its 295 modelled people and 29,205 m2 built-up are mostly outside the AOI and its status as the "highest-impact" unresolved cell is overstated; it is the largest *listed* cell, not evidence of a Phayao routing gap.
-The review table now carries `aoi_coverage_fraction_of_cell` so each row can be read with that in mind. The M2D.1a headline shares (1.63% population, 0.59% built-up unresolved) are unaffected to within this bound.
+Population and built-up had been summed over the whole 500 m cell, including parts outside the AOI. M2D.1c clipped them to the AOI: the AOI total fell from 3,356,000 to 3,341,405 modelled people (0.43%) and from 333.3 to 330.4 km2 built-up (0.87%), and the cell above went from 294.9 to 27.5 modelled people. See [m2d1c-edge-cell-aoi-accounting.md](m2d1c-edge-cell-aoi-accounting.md).

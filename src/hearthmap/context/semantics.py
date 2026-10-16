@@ -84,11 +84,23 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         },
     ),
     (
+        r"^(population|built)_.*_full_cell_context$",
+        {
+            "family": "SETTLEMENT",
+            "sources": "population-worldpop-r2025a; builtup-ghsl-r2023a",
+            "evidence_type": "FULL_CELL_CONTEXT_ONLY",
+            "evidence_footprint": "GRID_FOOTPRINT",
+            "spatial_resolution": _RES["cell"],
+            "note": "summed over the whole 500 m cell including any part outside the AOI; never an AOI analytical value",
+        },
+    ),
+    (
         r"^population_",
         {
             "family": "SETTLEMENT",
             "sources": "population-worldpop-r2025a",
             "evidence_type": "POPULATION_INTENSITY_EVIDENCE",
+            "evidence_footprint": "AOI_ANALYTICAL_FOOTPRINT",
             "spatial_resolution": _RES["cell"],
             "product_class": "MODELLED_POPULATION_ESTIMATE",
             "worldpop_depends_partly_on_ghsl": "true",
@@ -100,6 +112,7 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
             "family": "SETTLEMENT",
             "sources": "builtup-ghsl-r2023a",
             "evidence_type": "BUILT_FORM_INTENSITY_EVIDENCE",
+            "evidence_footprint": "AOI_ANALYTICAL_FOOTPRINT",
             "spatial_resolution": _RES["cell"],
             "note": "GHSL is a covariate of the WorldPop model: not independent of population",
         },

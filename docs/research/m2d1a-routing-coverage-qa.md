@@ -1,5 +1,7 @@
 # M2D.1a - routing coverage QA
 
+> **Figures superseded by M2D.1c** ([m2d1c-edge-cell-aoi-accounting.md](m2d1c-edge-cell-aoi-accounting.md)): WorldPop and GHSL are now clipped to the AOI. AOI modelled population is 3,341,405 (was 3,356,000 as a sum of full grid cells) and built-up 330.4 km2 (was 333.3 km2); unresolved shares are 1.61% of modelled population and 0.57% of built-up (were 1.63% and 0.59%). Cell and area shares are unchanged.
+
 Date: 2026-10-16. Branch: `claude/m2d1a-routing-coverage-qa`. A narrow QA pass before human visual signoff.
 No evidence semantics changed, no source acquired, no routing recomputed, no routing parameter changed (the 1 km snap radius and the frozen
 BASELINE_DRIVE_TIME network and fingerprint `5c35e98882c3ac62` are untouched and tested), no scoring, Wave 2 not started.
@@ -15,10 +17,10 @@ Population is the WorldPop R2025A **MODELLED_POPULATION_ESTIMATE** (alpha), not 
 
 | Scope | Unresolved cells | Unresolved area | Unresolved modelled population | Unresolved built-up m2 |
 |---|---|---|---|---|
-| Chiang Mai | 46.3% | 46.0% | 1.53% (28,997 of 1.89 M) | 0.61% |
-| Chiang Rai | 34.2% | 34.0% | 1.82% (20,693 of 1.13 M) | 0.60% |
-| Phayao | 47.4% | 46.7% | 1.53% (5,034 of 0.33 M) | 0.47% |
-| **Whole AOI** | **43.0%** | **42.7%** | **1.63% (54,724 of 3,355,999)** | **0.59% (1.97 M of 333.3 M m2)** |
+| Chiang Mai | 46.3% | 46.0% | 1.52% (28,597 of 1.88 M) | 0.61% |
+| Chiang Rai | 34.2% | 34.0% | 1.82% (20,636 of 1.13 M) | 0.58% |
+| Phayao | 47.4% | 46.7% | 1.38% (4,535 of 0.33 M) | 0.37% |
+| **Whole AOI** | **43.0%** | **42.7%** | **1.61% (53,768 of 3,341,405, AOI-clipped)** | **0.57% (1.89 M of 330.4 M m2, AOI-clipped)** |
 
 Unresolved cells keep their population and built-up quantity; they are never counted as zero.
 

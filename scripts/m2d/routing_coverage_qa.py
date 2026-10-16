@@ -94,6 +94,31 @@ def main() -> int:
         )  # fmt: skip
     cov = pd.DataFrame(rows)
     cov.to_csv(OUT / "tables" / "routing-coverage-weighted.csv", index=False)
+    # old (full-cell context) vs corrected (AOI-clipped) shares: cell and area shares must not move
+    pop_ctx = df["population_worldpop2025_count_500m_full_cell_context"].to_numpy()
+    built_ctx = df["built_ghsl2020_surface_m2_500m_full_cell_context"].to_numpy()
+    cmp_rows = []
+    for scope, m in scopes.items():
+        po = weighted_coverage(np.where(m, pop_ctx, 0), routable)["unresolved_share"]
+        pn = weighted_coverage(np.where(m, pop, 0), routable)["unresolved_share"]
+        bo = weighted_coverage(np.where(m, built_ctx, 0), routable)["unresolved_share"]
+        bn = weighted_coverage(np.where(m, built, 0), routable)["unresolved_share"]
+        row = cov[cov["scope"] == scope].iloc[0]
+        cmp_rows.append(
+            {
+                "scope": scope,
+                "unresolved_cell_share": row["unresolved_cell_share"],
+                "unresolved_area_share": row["unresolved_area_share"],
+                "unresolved_population_share_old_full_cell_context": round(po, 4),
+                "unresolved_population_share_corrected_aoi_clipped": round(pn, 4),
+                "unresolved_built_up_share_old_full_cell_context": round(bo, 4),
+                "unresolved_built_up_share_corrected_aoi_clipped": round(bn, 4),
+                "note": "cell and area shares are unchanged by AOI clipping; the corrected population and built-up shares replace the old figures",
+            }
+        )
+    pd.DataFrame(cmp_rows).to_csv(
+        OUT / "tables" / "routing-coverage-old-vs-aoi-clipped.csv", index=False
+    )
 
     # reference for a DISPLAY class only: median of the routable cells' non-zero values (descriptive, not a policy threshold)
     ref_pop = float(np.median(pop[routable & (pop > 0)]))
@@ -237,7 +262,7 @@ def main() -> int:
             "unresolved_reason": df["service_convenience_store_unresolved_reason"].to_numpy()[sel],
             "in_top_population_list": [i in top_pop for i in sel],
             "in_top_built_up_list": [i in top_built for i in sel],
-            "evidence_note": "QA context: modelled population (alpha) and GHSL built-up are summed over the whole 500 m cell, including any part outside the AOI; unresolved is not routing failure and not a rejection",
+            "evidence_note": "QA context: modelled population (alpha) and GHSL built-up are AOI-CLIPPED (grid cell intersect AOI), so evidence outside the AOI is excluded; unresolved is not routing failure and not a rejection",
         }
     ).sort_values("modelled_population", ascending=False)
     review.to_csv(REVIEW / "routing-unresolved-settlement-overlap.csv", index=False)

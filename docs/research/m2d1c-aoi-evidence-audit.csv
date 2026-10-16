@@ -1,0 +1,16 @@
+field,milestone,class,basis,action
+population_worldpop2025_count_500m (and density and means),M2D,AOI_CLIPPED_ALREADY,pixel footprint share inside the AOI; interior cells unchanged (M2D.1c),corrected in M2D.1c
+built_ghsl2020_surface_m2_500m (and fraction and means),M2D,AOI_CLIPPED_ALREADY,pixel footprint share inside the AOI; interior cells unchanged (M2D.1c),corrected in M2D.1c
+population_worldpop2025_count_500m_full_cell_context,M2D,FULL_CELL_CONTEXT_ONLY,sum over the whole 500 m cell including outside the AOI,kept for debugging; never analytical
+built_ghsl2020_surface_m2_500m_full_cell_context,M2D,FULL_CELL_CONTEXT_ONLY,sum over the whole 500 m cell including outside the AOI,kept for debugging; never analytical
+terrain indicators (slope/elevation statistics),M1B,AOI_CLIPPED_ALREADY,pixels split across cells and edge cells clipped to their in-AOI part (scripts/m1b/terrain_cells.py),none
+flood metrics,M1B,AOI_CLIPPED_ALREADY,cell pieces intersected with the AOI and clipped area used (scripts/m1b/build_hazard.py),none
+landslide metrics,M1B,AOI_CLIPPED_ALREADY,coverage fraction and AOI passed to the overlay (code inspection only),none
+seismic zone overlays,M1D,AOI_CLIPPED_ALREADY,zone geometry intersected with the AOI and coverage used (code inspection only),none
+screening overlays (flood observed / forest / park area fractions),M1A,POTENTIALLY_AFFECTED,polygon_cell_metrics measures polygons against the full cell without an AOI clip,report for separate review; historical output not changed
+road_density_osm_drivable_km_per_km2 (and mean),M2D,POTENTIALLY_AFFECTED,road length of the whole cell divided by the nominal 0.25 km2,report for separate review
+osm_service_poi_count_500m / density,M2D,POTENTIALLY_AFFECTED,POIs counted over the whole cell (POIs fetched per province; low impact),report for separate review
+osm industrial / quarry polygon area fractions,M2D,POTENTIALLY_AFFECTED,fraction of the nominal cell without an AOI clip,report for separate review
+euclidean context counts and nearest distances,M2D,NOT_APPLICABLE,point-based from the cell centroid (can lie outside the AOI for edge cells),none
+routing travel times and snap distances,M2A/M2D,NOT_APPLICABLE,evaluated at the cell centre; not a footprint aggregation,none
+tambon / district context,M2D.1b,NOT_APPLICABLE,administrative label assignment (own-province hierarchy) not evidence aggregation,handled in M2D.1b

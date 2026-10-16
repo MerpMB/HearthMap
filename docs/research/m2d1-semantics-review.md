@@ -1,5 +1,7 @@
 # M2D.1 - evidence semantics and review corrections
 
+> **Figures superseded by M2D.1c** ([m2d1c-edge-cell-aoi-accounting.md](m2d1c-edge-cell-aoi-accounting.md)): WorldPop and GHSL are now clipped to the AOI. AOI modelled population is 3,341,405 (was 3,356,000 as a sum of full grid cells) and built-up 330.4 km2 (was 333.3 km2); unresolved shares are 1.61% of modelled population and 0.57% of built-up (were 1.63% and 0.59%). Cell and area shares are unchanged.
+
 Date: 2026-10-16. Branch: `claude/m2d1-evidence-semantics-review`. Corrects [M2D Wave 1](m2d-wave1-findings.md).
 Still evidence only: no scoring (`FAMILY_SCORING_ALLOWED` false), no user requirement changed, no M1E hazard action changed (the hazard and requirement
 configs are hash-pinned in `tests/test_m2d1.py`), Wave 2 not started. `M2D_HUMAN_VISUAL_SIGNOFF` stays **PENDING**; only the project user can pass it.

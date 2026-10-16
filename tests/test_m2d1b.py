@@ -91,9 +91,7 @@ def test_nearest_or_nationwide_place_labels_live_only_in_explicit_context_fields
     assert (edge["province"], edge["district"]) == ("Phayao", "Pong") and edge[
         "centroid_nationwide_adm1_context"
     ] == "Nan"
-    assert (
-        edge["aoi_coverage_fraction_of_cell"] < 0.2 and "whole 500 m cell" in edge["evidence_note"]
-    )
+    assert edge["aoi_coverage_fraction_of_cell"] < 0.2 and "AOI-CLIPPED" in edge["evidence_note"]
 
 
 @needs_outputs
@@ -108,10 +106,10 @@ def test_tambon_context_is_always_a_tambon_of_the_cells_own_province():
 
 
 @needs_outputs
-def test_correction_touched_only_tambon_context_columns_and_no_analytical_value():
+def test_totals_are_the_aoi_clipped_totals_after_m2d1c_and_routing_is_unchanged():
     df = pd.read_parquet(ART)
-    assert df["population_worldpop2025_count_500m"].sum() == pytest.approx(3355999.0, abs=5.0)
-    assert df["built_ghsl2020_surface_m2_500m"].sum() == pytest.approx(333292684, rel=0.001)
+    assert df["population_worldpop2025_count_500m"].sum() == pytest.approx(3341405.0, abs=5.0)
+    assert df["built_ghsl2020_surface_m2_500m"].sum() == pytest.approx(330408622, rel=0.001)
     assert df["routing_config_fingerprint"].eq("5c35e98882c3ac62").all()
 
 

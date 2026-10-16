@@ -97,6 +97,94 @@ def aggregate_to_grid(
     return sums, used
 
 
+def aoi_pixel_weights(
+    lon: np.ndarray,
+    lat: np.ndarray,
+    half_w: float,
+    half_h: float,
+    aoi_ll: shapely.Geometry,
+    sub: int = 8,
+) -> np.ndarray:
+    """Share (0..1) of each pixel FOOTPRINT that lies inside the AOI (lon/lat polygon).
+
+    Pixels whose centre and four corners agree are fully in (1) or fully out (0); mixed pixels are sampled on a ``sub`` x ``sub`` point lattice.
+    """
+    shapely.prepare(aoi_ll)
+    centre = shapely.contains_xy(aoi_ll, lon, lat)
+    corners = [
+        shapely.contains_xy(aoi_ll, lon + sx * half_w, lat + sy * half_h)
+        for sx in (-1, 1)
+        for sy in (-1, 1)
+    ]
+    all_in = centre & np.logical_and.reduce(corners)
+    all_out = ~centre & ~np.logical_or.reduce(corners)
+    w = all_in.astype(float)
+    mixed = ~(all_in | all_out)
+    if mixed.any():
+        offs = (np.arange(sub) + 0.5) / sub - 0.5
+        px = lon[mixed][:, None, None] + 2 * half_w * offs[None, :, None] + 0 * offs[None, None, :]
+        py = lat[mixed][:, None, None] + 2 * half_h * offs[None, None, :] + 0 * offs[None, :, None]
+        inside = shapely.contains_xy(aoi_ll, px.ravel(), py.ravel()).reshape(-1, sub * sub)
+        w[mixed] = inside.mean(axis=1)
+    return w
+
+
+def aggregate_to_grid_aoi(
+    sources: list[str],
+    gi: GridIndex,
+    bounds_lonlat: tuple[float, float, float, float],
+    n_cells: int,
+    aoi_ll: shapely.Geometry,
+    nodata: float | None = None,
+) -> tuple[np.ndarray, np.ndarray, int, float]:
+    """Sum raster values per grid cell twice: over the FULL cell (context only) and over the AOI-clipped footprint.
+
+    A pixel belongs to the cell that holds its centre (the rule used by ``aggregate_to_grid``); its AOI-clipped contribution is the pixel value
+    times the share of the pixel footprint inside the AOI. Pixel values are conserved totals (people, m2), so that share of the footprint is the
+    share of the value under a uniform-within-pixel assumption. Fully interior cells keep exactly their full-cell value.
+    Returns (full_cell_sums, aoi_clipped_sums, pixels_used, aoi_clipped_value_of_pixels_whose_centre_is_in_no_grid_cell).
+    The last number is a closure check: it should be about zero because the grid covers the AOI.
+    """
+    tr = Transformer.from_crs("EPSG:4326", "EPSG:32647", always_xy=True)
+    full = np.zeros(n_cells)
+    clipped = np.zeros(n_cells)
+    used = 0
+    dropped = 0.0
+    w, s, e, n = bounds_lonlat
+    for src in sources:
+        with rasterio.open(src) as ds:
+            bx0, by0, bx1, by1 = ds.bounds
+            x0, y0, x1, y1 = max(w, bx0), max(s, by0), min(e, bx1), min(n, by1)
+            if x0 >= x1 or y0 >= y1:
+                continue
+            win = from_bounds(x0, y0, x1, y1, ds.transform).round_offsets().round_lengths()
+            arr = ds.read(1, window=win).astype("float64")
+            t = ds.window_transform(win)
+            rows, cols = np.mgrid[0 : arr.shape[0], 0 : arr.shape[1]]
+            lon = t.c + (cols + 0.5) * t.a
+            lat = t.f + (rows + 0.5) * t.e
+            nd = nodata if nodata is not None else ds.nodata
+            keep = (
+                np.isfinite(arr)
+                & ((arr != nd) if nd is not None else True)
+                & (arr > 0)
+                & (lon >= w)
+                & (lon < e)
+                & (lat >= s)
+                & (lat < n)
+            )
+            lo, la, val = lon[keep], lat[keep], arr[keep]
+            x, y = tr.transform(lo, la)
+            idx = gi.locate(np.asarray(x), np.asarray(y))
+            wt = aoi_pixel_weights(lo, la, abs(t.a) / 2, abs(t.e) / 2, aoi_ll)
+            ok = idx >= 0
+            np.add.at(full, idx[ok], val[ok])
+            np.add.at(clipped, idx[ok], val[ok] * wt[ok])
+            dropped += float((val[~ok] * wt[~ok]).sum())
+            used += int(ok.sum())
+    return full, clipped, used, dropped
+
+
 def area_fraction(cells: np.ndarray, polys: np.ndarray, n_cells: int) -> np.ndarray:
     """Share of each 500 m cell covered by the given polygons (overlaps between polygons are merged first)."""
     out = np.zeros(n_cells)
