@@ -6,6 +6,8 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
+ORIGIN_SEMANTICS = "CANONICAL_AOI_ANALYSIS_POINT"
+
 # Any column whose name matches is a scoring/ranking/verdict column and is refused.
 _FORBIDDEN = re.compile(
     r"(^|_)(score|rank|ranking|penalty|pass_fail|verdict|suitability|livability|peacefulness)(_|$)"
@@ -73,12 +75,12 @@ CANDIDATE_DEFINITION = "CANDIDATE_DEFINITION"
 
 # Semantic classes of a field. A field says what it is: LOCAL evidence about the AOI, EXTERNAL access or influence context, or a mix that must be separated.
 LOCAL_AOI_EVIDENCE = "LOCAL_AOI_EVIDENCE"
-EXTERNAL_ACCESS_CONTEXT = "EXTERNAL_ACCESS_CONTEXT"
+ACCESSIBLE_EXTERNAL_CONTEXT = "ACCESSIBLE_EXTERNAL_CONTEXT"
 EXTERNAL_INFLUENCE_CONTEXT = "EXTERNAL_INFLUENCE_CONTEXT"
 MIXED_REQUIRES_SEPARATION = "MIXED_REQUIRES_SEPARATION"
 SEMANTIC_CLASSES = (
     LOCAL_AOI_EVIDENCE,
-    EXTERNAL_ACCESS_CONTEXT,
+    ACCESSIBLE_EXTERNAL_CONTEXT,
     EXTERNAL_INFLUENCE_CONTEXT,
     MIXED_REQUIRES_SEPARATION,
 )
@@ -114,7 +116,7 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         _RES["cell"],
     ),
     _r(
-        r"^(grid_centroid|analysis_point)_(lon|lat|method)$",
+        r"^((grid_centroid|analysis_point)_(lon|lat|method)|aoi_coverage_fraction_of_cell)$",
         "GRID",
         "analysis_grid_500m (M1A); AOI polygon (M1A boundaries)",
         "POINT_SEMANTICS",
@@ -136,7 +138,7 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         f"{_WP}; {_GH}",
         "AOI_CLIPPED_MASS",
         _RES["cell"],
-        semantic_class=LOCAL_AOI_EVIDENCE,
+        semantic_role=LOCAL_AOI_EVIDENCE,
         evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
         mass_class="POPULATION_MASS_AOI_CLIPPED (MODELLED_POPULATION_ESTIMATE) or BUILT_UP_M2_AOI_CLIPPED",
         worldpop_depends_partly_on_ghsl="true",
@@ -147,7 +149,7 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         f"{_WP}; {_GH}",
         "INTENSITY_PER_NOMINAL_GRID_CELL",
         _RES["cell"],
-        semantic_class=LOCAL_AOI_EVIDENCE,
+        semantic_role=LOCAL_AOI_EVIDENCE,
         evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
         denominator="nominal 0.25 km2 grid cell, NOT the AOI footprint",
         note="AOI-clipped numerator over the nominal cell area; an edge cell therefore reads lower than the local density of its AOI part, and this is not a density within the AOI footprint",
@@ -186,7 +188,7 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         "osm network (M2A cache)",
         "LOCAL_ROAD_CONTEXT",
         _RES["cell"],
-        semantic_class=LOCAL_AOI_EVIDENCE,
+        semantic_role=LOCAL_AOI_EVIDENCE,
         evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
         note="drivable-road length inside the AOI (edge midpoint rule); the routing network itself extends beyond the AOI (ROUTING_NETWORK_EXTENT)",
     ),
@@ -204,18 +206,40 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         "osm-service-pois-aoi",
         "LOCAL_SERVICE_PRESENCE",
         _RES["cell"],
-        semantic_class=LOCAL_AOI_EVIDENCE,
+        semantic_role=LOCAL_AOI_EVIDENCE,
         note="only POIs inside the AOI count; OSM completeness is spatially uneven; not peacefulness and not urban-core truth",
+    ),
+    _r(
+        r"^service_.*_destination_catalog_completeness$",
+        "TOWN_SERVICES",
+        "derived: drive times, network exit times",
+        "DESTINATION_CATALOG_COMPLETENESS",
+        _RES["cell"],
+        semantic_role=ACCESSIBLE_EXTERNAL_CONTEXT,
+        origin_semantics=ORIGIN_SEMANTICS,
+        note="COMPLETE_WITHIN_AVAILABLE_CATALOG means no outside destination can be nearer than the catalogued one; BOUNDARY_LIMITED means leaving the AOI is faster than reaching the catalogued destination (an outside destination could be nearer); SOURCE_COMPLETENESS_UNKNOWN means no route was evaluated; never an absolute OSM completeness claim",
+    ),
+    _r(
+        r"^(distance_to_aoi_boundary_m|drive_time_to_aoi_exit_|origin_semantics$|origin_extent$|network_extent$|service_destination_catalog_extent$|feature_context_extent$)",
+        "BOUNDARY_CONTEXT",
+        "AOI polygon (M1A); osm network (M2A cache); Thailand boundary (COD)",
+        "BOUNDARY_AND_EXTENT_CONTEXT",
+        _RES["cell"],
+        origin_semantics=ORIGIN_SEMANTICS,
+        note="descriptive; ORIGIN_EXTENT, NETWORK_EXTENT, DESTINATION_CATALOG_EXTENT and FEATURE_CONTEXT_EXTENT are different concepts; drive_time_to_aoi_exit_international is information only (international access is not ordinary accessibility)",
     ),
     _r(
         r"^(service_|drive_time_to_nearest_service_|network_distance_to_nearest_service_|nearest_service_|route_available_service_)",
         "TOWN_SERVICES",
         "osm-service-pois-aoi; osm network (M2A cache)",
-        "ACCESSIBLE_SERVICE_DESTINATION_BASELINE_DRIVE_TIME",
+        "ACCESSIBILITY_CONTEXT_WITH_AOI_LIMITED_DESTINATIONS",
         _RES["cell"],
-        semantic_class=EXTERNAL_ACCESS_CONTEXT,
-        origin="AOI_ANALYSIS_POINT",
-        note="destinations are all OSM POIs of the three provinces (including any outside the AOI polygon); destinations across the outer provincial borders are absent from the extract",
+        semantic_role=ACCESSIBLE_EXTERNAL_CONTEXT,
+        origin_semantics=ORIGIN_SEMANTICS,
+        catalog_extent="THREE_PROVINCE_OSM_EXTRACT",
+        completeness="BOUNDARY_LIMITED_WHERE_FLAGGED_BY_destination_catalog_completeness",
+        network_extent="OSM_DRIVABLE_NETWORK_EXTENDS_BEYOND_AOI",
+        note="routes may cross the AOI boundary but destinations outside the three provinces are absent from the extract: a valid route to a catalogued destination does not prove it is the true real-world nearest one; no destination was invented",
     ),
     _r(
         r"^nightlife_",
@@ -223,8 +247,11 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         "osm-service-pois-aoi",
         "OSM_TAG_CANDIDATE_CONTEXT",
         _RES["cell"],
-        semantic_class=EXTERNAL_INFLUENCE_CONTEXT,
-        origin="AOI_ANALYSIS_POINT",
+        semantic_role=EXTERNAL_INFLUENCE_CONTEXT,
+        origin_semantics=ORIGIN_SEMANTICS,
+        catalog_extent="THREE_PROVINCE_OSM_EXTRACT",
+        completeness="BOUNDARY_LIMITED",
+        note="AOI_FEATURE_PROXIMITY_CONTEXT: candidate tags only; venues outside the extract are not seen",
     ),
     _r(
         r"^diw_",
@@ -240,7 +267,7 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         "osm-industry-geom-aoi",
         "LOCAL_POLYGON_OCCUPANCY_AOI_CLIPPED",
         _RES["geom"],
-        semantic_class=LOCAL_AOI_EVIDENCE,
+        semantic_role=LOCAL_AOI_EVIDENCE,
         evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
         denominator="nominal 0.25 km2 grid cell",
         note="polygon intersect AOI intersect cell; a polygon wholly outside the AOI contributes nothing",
@@ -249,21 +276,25 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         r"^osm_(industrial|works)_",
         "INDUSTRY",
         "osm-industry-geom-aoi",
-        "EXTERNAL_INFLUENCE_CONTEXT",
+        "AOI_FEATURE_PROXIMITY_CONTEXT",
         _RES["geom"],
-        semantic_class=EXTERNAL_INFLUENCE_CONTEXT,
-        origin="AOI_ANALYSIS_POINT",
-        note="euclidean context from the AOI analysis point; features just outside the AOI may count; no nuisance distance or buffer is activated",
+        semantic_role=EXTERNAL_INFLUENCE_CONTEXT,
+        origin_semantics=ORIGIN_SEMANTICS,
+        catalog_extent="THREE_PROVINCE_OSM_EXTRACT",
+        completeness="BOUNDARY_LIMITED",
+        note="BOUNDARY_TRUNCATED_INFLUENCE_CONTEXT: euclidean context from the AOI analysis point; only features inside the three-province extract can be seen, so a factory or quarry just outside it has NOT been considered; no nuisance distance or buffer is activated",
     ),
     _r(
         r"^osm_quarry_",
         "MINING_QUARRY",
         "osm-industry-geom-aoi",
-        "EXTERNAL_INFLUENCE_CONTEXT",
+        "AOI_FEATURE_PROXIMITY_CONTEXT",
         _RES["geom"],
-        semantic_class=EXTERNAL_INFLUENCE_CONTEXT,
-        origin="AOI_ANALYSIS_POINT",
-        note="euclidean context from the AOI analysis point; features just outside the AOI may count; no nuisance distance or buffer is activated",
+        semantic_role=EXTERNAL_INFLUENCE_CONTEXT,
+        origin_semantics=ORIGIN_SEMANTICS,
+        catalog_extent="THREE_PROVINCE_OSM_EXTRACT",
+        completeness="BOUNDARY_LIMITED",
+        note="BOUNDARY_TRUNCATED_INFLUENCE_CONTEXT: euclidean context from the AOI analysis point; only features inside the three-province extract can be seen, so a factory or quarry just outside it has NOT been considered; no nuisance distance or buffer is activated",
     ),
     _r(
         r"^dpim_",
@@ -286,7 +317,7 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         "osm network (M2A cache); config/family-infrastructure.yaml",
         "ROUTING_BASIS",
         _RES["cell"],
-        origin="AOI_ANALYSIS_POINT",
+        origin_semantics=ORIGIN_SEMANTICS,
     ),
     _r(
         r"^(evidence_|scope_)",
@@ -296,3 +327,38 @@ COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
         _RES["none"],
     ),
 ]
+
+
+# The four extents are different concepts. Declared current truth per evidence family (verified by scripts/m2d/accessibility_extent_audit.py and tests).
+EVIDENCE_EXTENTS: dict[str, dict[str, str]] = {
+    "origin": {"ORIGIN_EXTENT": "AOI_ANALYSIS_POINTS (canonical contract shared by M2A and M2D)"},
+    "routing_network": {
+        "NETWORK_EXTENT": "OSM_DRIVABLE_NETWORK_EXTENDS_BEYOND_AOI (routes can cross provincial and international boundaries)"
+    },
+    "education": {
+        "DESTINATION_CATALOG_EXTENT": "THREE_PROVINCE_REGISTERS (DOPA gis-02 for TH50/56/57 plus OBEC classes); no neighbouring-province or international schools",
+        "completeness": "BOUNDARY_LIMITED",
+    },
+    "healthcare": {
+        "DESTINATION_CATALOG_EXTENT": "THREE_PROVINCE_MOPH_POINT_LAYERS (changwat filter at acquisition); no neighbouring-province hospitals",
+        "completeness": "BOUNDARY_LIMITED",
+    },
+    "town_services": {
+        "DESTINATION_CATALOG_EXTENT": "THREE_PROVINCE_OSM_EXTRACT",
+        "completeness": "BOUNDARY_LIMITED",
+    },
+    "industrial_quarry_nightlife_context": {
+        "FEATURE_CONTEXT_EXTENT": "THREE_PROVINCE_OSM_EXTRACT",
+        "completeness": "BOUNDARY_LIMITED",
+    },
+    "diw_dpim_registers": {
+        "FEATURE_CONTEXT_EXTENT": "TAMBON_REGISTERS_OF_THE_THREE_PROVINCES",
+        "completeness": "BOUNDARY_LIMITED",
+    },
+}
+
+ARCHITECTURE_RULE = (
+    "AOI defines what HearthMap is evaluating. AOI does NOT necessarily define all places or phenomena that can affect the evaluated location: "
+    "a market across a province border can be accessible, a hospital in the neighbouring province can be relevant, a quarry outside the AOI can create "
+    "nuisance inside it, and an external road can be part of a real route. Source/catalogue extent is therefore tracked separately from analytical AOI extent."
+)

@@ -34,3 +34,28 @@ A route origin outside the AOI must not represent the AOI sliver. The analysis p
 Evidence is classified as `LOCAL_AOI_EVIDENCE` (describes the AOI footprint: clipped), `EXTERNAL_ACCESS_CONTEXT` (real-world reach that may cross the AOI boundary: routes and destinations),
 `EXTERNAL_INFLUENCE_CONTEXT` (things just outside the AOI that may matter: nearby factories or quarries; no buffer or distance rule is activated) or `MIXED_REQUIRES_SEPARATION` (must be split before use). Local presence is not accessible destination, and local road context is not routing network extent.
 Nominal-grid intensity (mass divided by the nominal 0.25 km2 cell) is never described as density within the AOI footprint.
+
+## One canonical origin contract (M2D.1e)
+
+Every analytical accessibility or distance computation (M2A education and healthcare, M2D town services and context) takes its cell origin from ONE shared helper,
+`hearthmap.context.origin.canonical_origins` (`load_canonical_origins`), never from a raw centroid. The contract (`origin_semantics = CANONICAL_AOI_ANALYSIS_POINT`) emits
+`grid_centroid_lon/lat`, `analysis_point_lon/lat`, `analysis_point_method` (`GRID_CENTROID` or `AOI_REPRESENTATIVE_POINT`) and `aoi_coverage_fraction_of_cell`.
+A regression test fails if an accessibility script routes or snaps without that contract. The frozen M2A.2 output (nominal centroid) is not rewritten: the corrected values live in a separately versioned artifact (`outputs/m2a2-origin/`).
+
+## Four extents are four concepts (M2D.1e)
+
+| Extent | Meaning | Current truth |
+|---|---|---|
+| `ORIGIN_EXTENT` | where analytical origins are | AOI analysis points |
+| `NETWORK_EXTENT` | where the routing graph reaches | the AOI plus a thin margin (about 10,600 of 1.1 M nodes lie outside the AOI; about 900 outside Thailand), so routes can cross borders |
+| `DESTINATION_CATALOG_EXTENT` | where the facility/POI catalogue has records | the three AOI provinces: no neighbouring-province or international schools, hospitals or (but for one Lamphun POI) shops |
+| `FEATURE_CONTEXT_EXTENT` | where context features (factories, quarries, nightlife) were extracted | the three provinces (OSM extract) and tambon registers of the three provinces |
+
+They are not interchangeable. A destination-catalogue state is stored with every service and facility result (`COMPLETE_WITHIN_AVAILABLE_CATALOG`, `BOUNDARY_LIMITED`, `SOURCE_COMPLETENESS_UNKNOWN`); it is never an absolute OSM or register completeness claim.
+Cross-province movement inside Thailand is ordinary; movement into Myanmar or Laos is not, and no international-access model exists.
+
+## The AOI does not clip the world (M2D.1e)
+
+AOI defines what HearthMap is evaluating. AOI does NOT necessarily define all places or phenomena that can affect the evaluated location: a market across a province border can be accessible,
+a hospital in the neighbouring province can be relevant, a quarry outside the AOI can create nuisance inside it, and an external road can be part of a real route.
+The evidence model therefore tracks source/catalogue extent separately from analytical AOI extent, and keeps `LOCAL_AOI_EVIDENCE`, `ACCESSIBLE_EXTERNAL_CONTEXT` and `EXTERNAL_INFLUENCE_CONTEXT` apart, each with an explicit catalogue extent and completeness.

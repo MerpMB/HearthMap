@@ -19,7 +19,6 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import shapely
-from pyproj import Transformer
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "m1a"))
@@ -30,7 +29,12 @@ from common import CANONICAL, PROCESSED, source_ref  # noqa: E402
 from hearthmap.context import SCOPE_STATEMENTS, forbidden_columns  # noqa: E402
 from hearthmap.context import industry as ind  # noqa: E402
 from hearthmap.context import services as svc  # noqa: E402
-from hearthmap.context.origin import analysis_points  # noqa: E402
+from hearthmap.context.boundary import (  # noqa: E402
+    aoi_boundary_distance_m,
+    completeness_state,
+    exit_node_masks,
+)
+from hearthmap.context.origin import ORIGIN_COLUMNS, ORIGIN_SEMANTICS, load_canonical_origins  # noqa: E402
 from hearthmap.context.semantics import (  # noqa: E402
     CANDIDATE_DEFINITION,
     COLUMN_LINEAGE_RULES,
@@ -107,9 +111,6 @@ def main() -> int:
         .reset_index(drop=True)
     )
     n_cells = len(grid)
-    cen_geo = grid.geometry.centroid
-    cen = shapely.get_coordinates(cen_geo)
-    cen_pts = shapely.points(cen)
     cell_polys = grid.geometry.to_numpy()
     area_w = grid["coverage_fraction"].to_numpy() * CELL_KM2
     gi = GridIndex(grid["cell_id"].tolist())
@@ -120,7 +121,7 @@ def main() -> int:
             "coverage_fraction": grid["coverage_fraction"],
         }
     )
-    lonlat = gpd.GeoSeries(cen_geo, crs=CANONICAL).to_crs(4326).total_bounds
+    lonlat = gpd.GeoSeries(shapely.box(*grid.total_bounds), crs=CANONICAL).to_crs(4326).total_bounds
     window_ll = (
         float(lonlat[0]) - 0.02,
         float(lonlat[1]) - 0.02,
@@ -134,17 +135,20 @@ def main() -> int:
     prov_gdf = gpd.read_file(PROCESSED / "boundaries.gpkg", layer="province_boundaries")
     aoi_poly = shapely.union_all(prov_gdf.geometry.to_numpy())
     aoi_ll_poly = gpd.GeoSeries([aoi_poly], crs=prov_gdf.crs).to_crs(4326).iloc[0]
-    # POINT SEMANTICS: routing and distance origins are AOI_ANALYSIS_POINTs. An edge cell whose nominal GRID_CENTROID lies outside
-    # GRID_FOOTPRINT intersect AOI gets a deterministic point-on-surface of the clipped footprint; every other cell keeps its centroid.
-    grid_cen_xy = cen.copy()  # nominal GRID_CENTROID (context)
-    cen, ap_method, _ = analysis_points(cell_polys, grid["coverage_fraction"].to_numpy(), aoi_poly)
+    # CANONICAL ORIGIN CONTRACT (shared with M2A, hearthmap.context.origin): every routing and distance origin is the AOI_ANALYSIS_POINT.
+    # The nominal GRID_CENTROID is kept only as context and as the explicit historical comparison below.
+    origins, _, _ = load_canonical_origins(PROCESSED)
+    assert (origins["cell_id"].to_numpy() == grid["cell_id"].to_numpy()).all()
+    grid_cen_comparison_xy = origins[
+        ["grid_centroid_x", "grid_centroid_y"]
+    ].to_numpy()  # nominal GRID_CENTROID (comparison only)
+    cen = origins[["analysis_point_x", "analysis_point_y"]].to_numpy()
     cen_pts = shapely.points(cen)
-    to_ll = Transformer.from_crs(CANONICAL, "EPSG:4326", always_xy=True)
-    glon, glat = to_ll.transform(grid_cen_xy[:, 0], grid_cen_xy[:, 1])
-    alon, alat = to_ll.transform(cen[:, 0], cen[:, 1])
-    out["grid_centroid_lon"], out["grid_centroid_lat"] = np.round(glon, 6), np.round(glat, 6)
-    out["analysis_point_lon"], out["analysis_point_lat"] = np.round(alon, 6), np.round(alat, 6)
-    out["analysis_point_method"] = ap_method
+    for col in ORIGIN_COLUMNS:
+        out[col] = origins[col].to_numpy()
+    out["origin_semantics"] = ORIGIN_SEMANTICS
+    out["origin_extent"] = "AOI_ANALYSIS_POINTS"
+    ap_method = origins["analysis_point_method"].to_numpy()
     origin_changed = ap_method != "GRID_CENTROID"
     print(
         f"analysis origins replaced for {int(origin_changed.sum())} of {int((grid['coverage_fraction'] < 1 - 1e-9).sum())} partial cells"
@@ -268,12 +272,44 @@ def main() -> int:
         "NO_ROAD_WITHIN_SNAP_DISTANCE",
     )
     # comparison only (not part of the artifact): the same frozen routing from the nominal GRID_CENTROID
-    cell_node_nom, cell_snap_nom = snap(grid_cen_xy, net.xy, routable)
+    cell_node_nom, cell_snap_nom = snap(grid_cen_comparison_xy, net.xy, routable)
     cell_ok_nom = cell_snap_nom <= tt["max_snap_distance_m"]
     cmp_cols: dict[str, np.ndarray] = {"nominal_centroid_snap_distance_m": cell_snap_nom.round(1)}
     speeds = cfg.speeds
     et = rev.edge_time_s(speeds, 1.0)
     lg = ListGraph(rev, et)
+    # BOUNDARY CONTEXT (descriptive; no policy buffer): distance to the AOI boundary and drive time to leave the AOI through the real network.
+    th = gpd.read_file(
+        one_version("boundaries-ocha-cod-ab") / "tha_admin_boundaries.gdb.zip", layer="tha_admin0"
+    ).to_crs(CANONICAL)
+    dom_exit, intl_exit = exit_node_masks(
+        net.xy, aoi_poly, shapely.union_all(th.geometry.to_numpy())
+    )
+    big = net.component_size[net.component] >= 500
+
+    def exit_minutes(mask: np.ndarray) -> np.ndarray:
+        idx = np.flatnonzero(mask & big)
+        t_, _, _ = multi_source_dijkstra(
+            rev, et, idx, np.zeros(len(idx), dtype=np.int64), tt["max_search_min"] * 60.0
+        )
+        v = t_[cell_node] / 60.0
+        return np.where(np.isfinite(v) & cell_ok, v, np.nan)
+
+    t_exit_cell = exit_minutes(dom_exit)
+    out["distance_to_aoi_boundary_m"] = aoi_boundary_distance_m(cen, aoi_poly).round(0)
+    out["drive_time_to_aoi_exit_domestic_min"] = np.round(
+        t_exit_cell, 2
+    )  # leaving the AOI inside Thailand (ordinary cross-province movement)
+    out["drive_time_to_aoi_exit_international_min"] = np.round(
+        exit_minutes(intl_exit), 2
+    )  # reaching a network node outside Thailand: information only, not ordinary accessibility
+    out["network_extent"] = "OSM_DRIVABLE_NETWORK_EXTENDS_BEYOND_AOI_(ROUTES_CAN_CROSS_BOUNDARIES)"
+    out["service_destination_catalog_extent"] = (
+        "THREE_PROVINCE_OSM_EXTRACT_(NO_NEIGHBOURING_PROVINCE_OR_INTERNATIONAL_DESTINATIONS)"
+    )
+    out["feature_context_extent"] = (
+        "THREE_PROVINCE_OSM_EXTRACT_(FEATURES_OUTSIDE_THE_THREE_PROVINCES_ARE_NOT_IN_THE_SOURCE)"
+    )
 
     # ---------------------------------------------------------------- town services (OSM POIs, components kept separate)
     pois = pd.concat(
@@ -339,6 +375,9 @@ def main() -> int:
         cmp_cols.setdefault(f"nominal_centroid_time_{label}_min", np.full(n_cells, np.nan))
         out[f"drive_time_to_nearest_service_{label}_min"] = np.round(t_min, 2)
         out[f"route_available_service_{label}"] = np.isfinite(t_min)
+        out[f"service_{label}_destination_catalog_completeness"] = completeness_state(
+            t_min, t_exit_cell, cell_ok
+        )
         out[f"service_{label}_unresolved_reason"] = np.where(np.isfinite(t_min), "", reason)
         print(f"  {label}: facilities={len(nodes or {})} elapsed {time.time() - t0:.0f}s")
 
@@ -350,6 +389,8 @@ def main() -> int:
                 "net": Path("data/processed/m2a/network.npz").stat().st_size,
                 "clusters": svc.CLUSTER_DEFINITIONS,
                 "origins": hashlib.sha256(cen.tobytes()).hexdigest(),
+                "completeness": 1,
+                "exit": hashlib.sha256(np.nan_to_num(t_exit_cell, nan=-1).tobytes()).hexdigest(),
             },
             sort_keys=True,
             default=str,
@@ -411,7 +452,7 @@ def main() -> int:
         gi.smooth_mean(poi_n, 2) / CELL_KM2
     ).round(2)
     out["evidence_service_semantics"] = (
-        "LOCAL_SERVICE_PRESENCE (osm_service_poi_local_*: POIs inside the AOI only) is not ACCESSIBLE_SERVICE_DESTINATION (drive_time_to_nearest_service_*: all OSM POIs of the three provinces, including any outside the AOI polygon; destinations across the provinces' outer borders are absent from the extract)"
+        "LOCAL_SERVICE_PRESENCE (osm_service_poi_local_*: POIs inside the AOI only) is not ACCESSIBILITY_CONTEXT_WITH_AOI_LIMITED_DESTINATIONS (drive_time_to_nearest_service_*: routed on a network that extends beyond the AOI to the OSM POIs of the three provinces; destinations outside the three provinces are absent from the extract, so every result carries a destination_catalog_completeness state and a valid route does not prove the true real-world nearest destination)"
     )
     n_poi_outside_aoi = int((~sv_in_aoi).sum())
     sv.drop(columns=["node"], errors="ignore").to_csv(PROC / "service_pois.csv", index=False)

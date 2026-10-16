@@ -18,6 +18,7 @@ import shapely
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "m2a"))
 from build_accessibility import load_network, snap
 
+from hearthmap.context.origin import load_canonical_origins
 from hearthmap.family import load_config, multi_source_dijkstra
 from hearthmap.family.routing import reverse
 from hearthmap.family.taxonomy import levels_from_class_range
@@ -37,7 +38,13 @@ def main() -> int:
         .sort_values("cell_id")
         .reset_index(drop=True)
     )
-    cell_node, cell_snap = snap(shapely.get_coordinates(grid.geometry.centroid), net.xy, routable)
+    # M2D.1e: the origin comes from the canonical AOI-analysis-point contract shared with M2A and M2D (this historical sensitivity script
+    # was not re-run; its saved outputs were produced with the nominal centroid).
+    origins, _, _ = load_canonical_origins(Path("data/processed/m1a"))
+    assert (origins["cell_id"].to_numpy() == grid["cell_id"].to_numpy()).all()
+    cell_node, cell_snap = snap(
+        origins[["analysis_point_x", "analysis_point_y"]].to_numpy(), net.xy, routable
+    )
     ok = cell_snap <= tt["max_snap_distance_m"]
     edu = gpd.read_file("data/processed/m2a1/facilities.gpkg", layer="education_facilities")
     edu = edu[edu["coordinate_qa_status"] != "FAILED"]

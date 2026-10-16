@@ -34,7 +34,7 @@ entries:
     requirement_paths: [education.kindergarten]
     importance_path: education.kindergarten.importance
     evidence_families: [EF-01]
-    evidence: {exists: PARTIAL, resolution: "500 m cell, baseline drive time to facility points", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "register is DOPA 2021 + OBEC 2020 classes (about half of schools authoritative); the MOE current register is not accessible"}
+    evidence: {exists: PARTIAL, resolution: "500 m cell, baseline drive time to facility points", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "register is DOPA 2021 + OBEC 2020 classes (about half of schools authoritative); the MOE current register is not accessible Destination-boundary limit: the destination catalogue covers only the three AOI provinces (BOUNDARY_LIMITED), so edge-cell travel times may overstate access to neighbouring-province destinations; no destination was invented and no international destination is modelled."}
     stages:
       REGIONAL_SCREENING: [PARTIAL, "drive times exist but facility freshness and classification are partial"]
       CANDIDATE_ZONE_COMPARISON: [PARTIAL, "show nearest kindergartens with source vintage and classification basis"]
@@ -51,7 +51,7 @@ entries:
     requirement_paths: [education.primary]
     importance_path: education.primary.importance
     evidence_families: [EF-01]
-    evidence: {exists: PARTIAL, resolution: "500 m cell, baseline drive time to facility points", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "unstated school levels default to primary at LOW confidence; register stale"}
+    evidence: {exists: PARTIAL, resolution: "500 m cell, baseline drive time to facility points", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "unstated school levels default to primary at LOW confidence; register stale Destination-boundary limit: the destination catalogue covers only the three AOI provinces (BOUNDARY_LIMITED), so edge-cell travel times may overstate access to neighbouring-province destinations; no destination was invented and no international destination is modelled."}
     stages:
       REGIONAL_SCREENING: [PARTIAL, "usable for context only until a current register exists"]
       CANDIDATE_ZONE_COMPARISON: [PARTIAL, "compare with freshness and basis shown"]
@@ -68,7 +68,7 @@ entries:
     requirement_paths: [education.lower_secondary]
     importance_path: education.lower_secondary.importance
     evidence_families: [EF-01]
-    evidence: {exists: PARTIAL, resolution: "500 m cell; lower and upper secondary are pooled in the artifact", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "authoritative OBEC class ranges separate lower from upper secondary for about half of schools; the artifact does not yet"}
+    evidence: {exists: PARTIAL, resolution: "500 m cell; lower and upper secondary are pooled in the artifact", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "authoritative OBEC class ranges separate lower from upper secondary for about half of schools; the artifact does not yet Destination-boundary limit: the destination catalogue covers only the three AOI provinces (BOUNDARY_LIMITED), so edge-cell travel times may overstate access to neighbouring-province destinations; no destination was invented and no international destination is modelled."}
     stages:
       REGIONAL_SCREENING: [PARTIAL, "pooled secondary evidence only"]
       CANDIDATE_ZONE_COMPARISON: [PARTIAL, "separate lower secondary using authoritative class ranges where available"]
@@ -85,7 +85,7 @@ entries:
     requirement_paths: [education.upper_secondary]
     importance_path: education.upper_secondary.importance
     evidence_families: [EF-01]
-    evidence: {exists: PARTIAL, resolution: "500 m cell; pooled with lower secondary", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "same pooled, stale evidence as lower secondary"}
+    evidence: {exists: PARTIAL, resolution: "500 m cell; pooled with lower secondary", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "same pooled, stale evidence as lower secondary Destination-boundary limit: the destination catalogue covers only the three AOI provinces (BOUNDARY_LIMITED), so edge-cell travel times may overstate access to neighbouring-province destinations; no destination was invented and no international destination is modelled."}
     stages:
       REGIONAL_SCREENING: [PARTIAL, "pooled secondary evidence only"]
       CANDIDATE_ZONE_COMPARISON: [PARTIAL, "separate with authoritative class ranges where available"]
@@ -123,7 +123,7 @@ entries:
     requirement_paths: [healthcare.primary_healthcare]
     importance_path: healthcare.primary_healthcare.importance
     evidence_families: [EF-02]
-    evidence: {exists: YES, resolution: "500 m cell, baseline drive time to MoPH facility points", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "current MoPH layer (2026 edit, mostly 2023-dated records); government facilities only; a preference, not a gate"}
+    evidence: {exists: YES, resolution: "500 m cell, baseline drive time to MoPH facility points", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "current MoPH layer (2026 edit, mostly 2023-dated records); government facilities only; a preference, not a gate Destination-boundary limit: the destination catalogue covers only the three AOI provinces (BOUNDARY_LIMITED), so edge-cell travel times may overstate access to neighbouring-province destinations; no destination was invented and no international destination is modelled."}
     stages:
       REGIONAL_SCREENING: [READY_WITH_LIMITATIONS, "context with the government-only limitation shown"]
       CANDIDATE_ZONE_COMPARISON: [READY_WITH_LIMITATIONS, "nearest facilities with type and record date"]
@@ -140,7 +140,7 @@ entries:
     requirement_paths: [healthcare.hospital]
     importance_path: healthcare.hospital.importance
     evidence_families: [EF-02]
-    evidence: {exists: YES, resolution: "500 m cell, baseline drive time to MoPH hospital points", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "source-stated hospital types; government hospitals only; type is not capability"}
+    evidence: {exists: YES, resolution: "500 m cell, baseline drive time to MoPH hospital points", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "source-stated hospital types; government hospitals only; type is not capability Destination-boundary limit: the destination catalogue covers only the three AOI provinces (BOUNDARY_LIMITED), so edge-cell travel times may overstate access to neighbouring-province destinations; no destination was invented and no international destination is modelled."}
     stages:
       REGIONAL_SCREENING: [READY_WITH_LIMITATIONS, "usable for the MUST with the limitations shown; cells with no road access stay unresolved"]
       CANDIDATE_ZONE_COMPARISON: [READY_WITH_LIMITATIONS, "nearest hospitals with type and record date"]
@@ -157,7 +157,7 @@ entries:
     requirement_paths: [healthcare.regional_or_referral_hospital]
     importance_path: healthcare.regional_or_referral_hospital.importance
     evidence_families: [EF-02]
-    evidence: {exists: YES, resolution: "500 m cell, drive time to the two hospitals the source types as regional", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "source typecode only; large general and university hospitals are not promoted; no capability stated"}
+    evidence: {exists: YES, resolution: "500 m cell, drive time to the two hospitals the source types as regional", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "source typecode only; large general and university hospitals are not promoted; no capability stated Destination-boundary limit: the destination catalogue covers only the three AOI provinces (BOUNDARY_LIMITED), so edge-cell travel times may overstate access to neighbouring-province destinations; no destination was invented and no international destination is modelled."}
     stages:
       REGIONAL_SCREENING: [READY_WITH_LIMITATIONS, "two regional hospitals; cells beyond the 120 minute search limit stay unresolved"]
       CANDIDATE_ZONE_COMPARISON: [READY_WITH_LIMITATIONS, "show the regional hospital reached and its type"]
@@ -192,7 +192,7 @@ entries:
     requirement_paths: [urban_access.preferred_drive_time_to_town_services, urban_access.hard_limit_policy]
     importance_path: urban_access.preferred_drive_time_to_town_services_importance
     evidence_families: [EF-03]
-    evidence: {exists: "YES", resolution: "500 m cell, baseline drive time to OSM service POIs by component (M2D)", freshness: ACCEPTABLE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "component accessibility only: the town-services bundle is NOT YET DEFINED, CORE and BROADER clusters are candidate definitions, OSM completeness varies, and about 43% of cells have no road within 1 km (unresolved, not zero)"}
+    evidence: {exists: "YES", resolution: "500 m cell, baseline drive time to OSM service POIs by component (M2D)", freshness: ACCEPTABLE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "component accessibility only: the town-services bundle is NOT YET DEFINED, CORE and BROADER clusters are candidate definitions, OSM completeness varies, and about 43% of cells have no road within 1 km (unresolved, not zero) Destination-boundary limit: the destination catalogue covers only the three AOI provinces (BOUNDARY_LIMITED), so edge-cell travel times may overstate access to neighbouring-province destinations; no destination was invented and no international destination is modelled."}
     stages:
       REGIONAL_SCREENING: [READY_WITH_LIMITATIONS, "READY WITH LIMITATIONS FOR COMPONENT ACCESSIBILITY ONLY (per-component baseline drive time, routable cells only); the requirement-level town-services bundle is not yet defined"]
       CANDIDATE_ZONE_COMPARISON: [READY_WITH_LIMITATIONS, "component accessibility only, with unresolved cells shown; CORE and BROADER cluster definitions stay candidate definitions and neither is selected"]

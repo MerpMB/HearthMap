@@ -16,8 +16,8 @@ import yaml
 
 from hearthmap.context.origin import AOI_REPRESENTATIVE_POINT, GRID_CENTROID, analysis_points
 from hearthmap.context.semantics import (
+    ACCESSIBLE_EXTERNAL_CONTEXT,
     COLUMN_LINEAGE_RULES,
-    EXTERNAL_ACCESS_CONTEXT,
     EXTERNAL_INFLUENCE_CONTEXT,
     LOCAL_AOI_EVIDENCE,
     forbidden_columns,
@@ -85,12 +85,12 @@ def test_analysis_point_is_deterministic_and_geographically_neutral():
 
 def test_the_build_uses_the_analysis_point_as_the_only_routing_and_distance_origin():
     text = (ROOT / "scripts/m2d/build_context.py").read_text("utf-8")
-    assert "cen, ap_method, _ = analysis_points(" in text
+    assert "load_canonical_origins(PROCESSED)" in text
     assert "snap(cen, net.xy, routable)" in text and "euclid_counts(cen_pts" in text
     assert (
-        "snap(grid_cen_xy, net.xy, routable)" in text
+        "snap(grid_cen_comparison_xy, net.xy, routable)" in text
     )  # the nominal centroid appears ONLY as the saved comparison, never as the artifact origin
-    assert text.count("grid_cen_xy") <= 6
+    assert text.count("grid_cen_comparison_xy") <= 6
 
 
 # -- built artifact ------------------------------------------------------------------------------------------------
@@ -198,29 +198,32 @@ def test_the_checked_cell_no_longer_routes_from_nan():
 def test_semantic_classes_are_assigned_to_the_local_and_external_fields():
     assert (
         RULES[r"^osm_service_poi_"]["evidence_type"] == "LOCAL_SERVICE_PRESENCE"
-        and RULES[r"^osm_service_poi_"]["semantic_class"] == LOCAL_AOI_EVIDENCE
+        and RULES[r"^osm_service_poi_"]["semantic_role"] == LOCAL_AOI_EVIDENCE
     )
     svc = next(v for k, v in RULES.items() if k.startswith(r"^(service_|drive_time"))
     assert (
-        svc["evidence_type"].startswith("ACCESSIBLE_SERVICE_DESTINATION")
-        and svc["semantic_class"] == EXTERNAL_ACCESS_CONTEXT
+        svc["evidence_type"].startswith("ACCESSIBILITY_CONTEXT_WITH_AOI_LIMITED_DESTINATIONS")
+        and svc["semantic_role"] == ACCESSIBLE_EXTERNAL_CONTEXT
     )
-    assert "absent from the extract" in svc["note"] and svc["origin"] == "AOI_ANALYSIS_POINT"
+    assert (
+        "absent from the extract" in svc["note"]
+        and svc["origin_semantics"] == "CANONICAL_AOI_ANALYSIS_POINT"
+    )
     road = RULES[r"^road_(length|intensity)_"]
     assert (
         road["evidence_type"] == "LOCAL_ROAD_CONTEXT"
-        and road["semantic_class"] == LOCAL_AOI_EVIDENCE
+        and road["semantic_role"] == LOCAL_AOI_EVIDENCE
         and "ROUTING_NETWORK_EXTENT" in road["note"]
     )
     poly = RULES[r"^osm_(industrial|quarry)_.*polygon_fraction_of_nominal_grid_cell_aoi_clipped$"]
     assert (
-        poly["semantic_class"] == LOCAL_AOI_EVIDENCE
+        poly["semantic_role"] == LOCAL_AOI_EVIDENCE
         and poly["evidence_type"] == "LOCAL_POLYGON_OCCUPANCY_AOI_CLIPPED"
     )
     for pat in (r"^osm_(industrial|works)_", r"^osm_quarry_", r"^nightlife_"):
         assert (
-            RULES[pat]["semantic_class"] == EXTERNAL_INFLUENCE_CONTEXT
-            and RULES[pat]["origin"] == "AOI_ANALYSIS_POINT"
+            RULES[pat]["semantic_role"] == EXTERNAL_INFLUENCE_CONTEXT
+            and RULES[pat]["origin_semantics"] == "CANONICAL_AOI_ANALYSIS_POINT"
         )
     assert "no nuisance distance or buffer is activated" in RULES[r"^osm_quarry_"]["note"]
 
@@ -343,7 +346,8 @@ def test_local_poi_counts_exclude_outside_aoi_pois_while_routing_may_use_them():
         'if r["routed"]:' in text and "comp_nodes.setdefault" in text
     )  # routing destinations are NOT filtered by the AOI
     assert (
-        "ACCESSIBLE_SERVICE_DESTINATION" in df["evidence_service_semantics"].iloc[0]
+        "ACCESSIBILITY_CONTEXT_WITH_AOI_LIMITED_DESTINATIONS"
+        in df["evidence_service_semantics"].iloc[0]
         and "LOCAL_SERVICE_PRESENCE" in df["evidence_service_semantics"].iloc[0]
     )
     assert df["service_components_with_a_route"].max() == 8

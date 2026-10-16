@@ -23,6 +23,12 @@ import shapely
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "m1a"))
 from common import CANONICAL, PROCESSED, source_ref
 
+from hearthmap.context.boundary import (
+    aoi_boundary_distance_m,
+    completeness_state,
+    exit_node_masks,
+)
+from hearthmap.context.origin import ORIGIN_COLUMNS, ORIGIN_SEMANTICS, load_canonical_origins
 from hearthmap.enums import Confidence
 from hearthmap.family import (
     electricity_context,
@@ -44,6 +50,9 @@ M2A2 = "--m2a2" in sys.argv
 REFRESHED = (
     REFRESHED or M2A2
 )  # the m2a2 run also uses the M2A.1 education layer (OBEC classes) and its labels
+# M2D.1e: `--origin-corrected` routes from the canonical AOI analysis point (shared hearthmap.context.origin contract) and writes a NEW versioned
+# artifact under outputs/m2a2-origin/. Without it the frozen nominal-centroid output is reproduced unchanged (HISTORICAL_NOMINAL_CENTROID).
+ORIGIN_CORRECTED = "--origin-corrected" in sys.argv
 FAC = Path("data/processed/m2a2") if M2A2 else Path("data/processed/m2a1") if REFRESHED else DATA
 ART_DIR = Path("outputs/m2a2") if M2A2 else Path("outputs/m2a1") if REFRESHED else OUT
 SNAP_CSV = (
@@ -66,6 +75,11 @@ COUNT_60 = {
     "hospital",
     "higher_level_hospital",
 }
+
+
+if ORIGIN_CORRECTED:
+    ART_DIR = Path("outputs/m2a2-origin")
+    SNAP_CSV = Path("outputs/m2a2-origin-review")
 
 
 def load_network() -> Network:
@@ -103,7 +117,14 @@ def main() -> int:
         .sort_values("cell_id")
         .reset_index(drop=True)
     )
-    cen = shapely.get_coordinates(grid.geometry.centroid)
+    origins, _, aoi_poly = load_canonical_origins(PROCESSED)
+    assert (origins["cell_id"].to_numpy() == grid["cell_id"].to_numpy()).all()
+    # the ONLY place an origin is chosen: the canonical contract (shared with M2D); the nominal centroid is an explicit historical mode
+    cen = (
+        origins[["analysis_point_x", "analysis_point_y"]].to_numpy()
+        if ORIGIN_CORRECTED
+        else origins[["grid_centroid_x", "grid_centroid_y"]].to_numpy()
+    )
     cell_node, cell_snap = snap(cen, net.xy, routable)
     # nodes of ANY component, to tell 'no road' from 'road only in an isolated fragment'
     _, cell_any_snap = snap(cen, net.xy, np.arange(len(net.xy)))
@@ -129,6 +150,25 @@ def main() -> int:
     cats["higher_level_hospital"] = hl_ok[
         hl_ok["facility_class"].isin(higher)
     ]  # empty unless a source-stated level exists
+    if ORIGIN_CORRECTED:
+        th = gpd.read_file(
+            next(Path("data/raw/boundaries-ocha-cod-ab").glob("*/tha_admin_boundaries.gdb.zip")),
+            layer="tha_admin0",
+        ).to_crs(CANONICAL)
+        dom_exit, _ = exit_node_masks(net.xy, aoi_poly, shapely.union_all(th.geometry.to_numpy()))
+        dom_exit &= net.component_size[net.component] >= 500
+        t_exit_all, _, _ = multi_source_dijkstra(
+            rev,
+            rev.edge_time_s(cfg.speeds, 1.0),
+            np.flatnonzero(dom_exit),
+            np.zeros(int(dom_exit.sum()), dtype=np.int64),
+            tt["max_search_min"] * 60.0,
+        )
+        t_exit_cell = np.where(
+            np.isfinite(t_exit_all[cell_node]) & (cell_snap <= tt["max_snap_distance_m"]),
+            t_exit_all[cell_node] / 60.0,
+            np.nan,
+        )
     # snap facilities
     fac_rows, fac_node = [], {}
     for c, g in cats.items():
@@ -239,6 +279,10 @@ def main() -> int:
                     )  # -1 = unresolved (no road access)
                 print(f"{c}: {len(fids)} facilities counted in {time.time() - t1:.0f}s")
         out[f"drive_time_to_nearest_{c}_min"] = np.round(t_min, 2)
+        if ORIGIN_CORRECTED:
+            out[f"{c}_destination_catalog_completeness"] = completeness_state(
+                t_min, t_exit_cell, cell_ok
+            )
         out[f"network_distance_to_nearest_{c}_km"] = np.round(dist_km, 2)
         out[f"nearest_{c}_id"] = nearest
         out[f"route_available_{c}"] = np.isfinite(t_min)
@@ -280,6 +324,19 @@ def main() -> int:
     for k, v in {**el, **wt, **tc}.items():
         out[k] = v
     out["routing_basis"] = "BASELINE_DRIVE_TIME"
+    if ORIGIN_CORRECTED:
+        for col in ORIGIN_COLUMNS:
+            out[col] = origins[col].to_numpy()
+        out["origin_semantics"] = ORIGIN_SEMANTICS
+        out["distance_to_aoi_boundary_m"] = aoi_boundary_distance_m(cen, aoi_poly).round(0)
+        out["drive_time_to_aoi_exit_domestic_min"] = np.round(t_exit_cell, 2)
+        out["destination_catalog_extent"] = (
+            "AOI_PROVINCE_REGISTERS_ONLY (no neighbouring-province or international facilities)"
+        )
+        out["network_extent"] = "OSM_DRIVABLE_NETWORK_EXTENDS_BEYOND_AOI"
+        out["origin_extent"] = "AOI_ANALYSIS_POINTS"
+    else:
+        out["origin_semantics"] = "HISTORICAL_NOMINAL_CENTROID"
     out["routing_config_fingerprint"] = hashlib.sha256(
         json.dumps(cfg["travel_time"], sort_keys=True).encode()
     ).hexdigest()[:16]
@@ -308,7 +365,7 @@ def main() -> int:
     pq = ART_DIR / "family-infrastructure-evidence.parquet"
     out.to_parquet(pq, index=False)
     rec = ProvenanceRecord(
-        artifact_id="m2a2-family-infrastructure-evidence" if M2A2 else "m2a1-family-infrastructure-evidence" if REFRESHED else "m2a-family-infrastructure-evidence", artifact_path=pq.as_posix(), code_version=current_code_version(),
+        artifact_id=("m2a2-origin-corrected-family-infrastructure-evidence" if ORIGIN_CORRECTED else "m2a2-family-infrastructure-evidence") if M2A2 else "m2a1-family-infrastructure-evidence" if REFRESHED else "m2a-family-infrastructure-evidence", artifact_path=pq.as_posix(), code_version=current_code_version(),
         sources=[source_ref("places-dopa-gis02", original_crs="EPSG:4326"), source_ref("health-citizeninfo-dga", original_crs="EPSG:4326"), source_ref("osm-overpass-aoi", original_crs="EPSG:4326"), source_ref("roads-drr-gis", original_crs="EPSG:32647")] + ([source_ref("education-obec-school-list", original_crs="EPSG:4326"), source_ref("osm-facilities-aoi", original_crs="EPSG:4326")] if REFRESHED else []) + ([source_ref("facility-moph-hospital-update68", original_crs="EPSG:4326")] if M2A2 else []),
         normalized_crs=CANONICAL,
         method="config/family-infrastructure.yaml: BASELINE_DRIVE_TIME multi-source Dijkstra on a directed OSM network; facility classes derived only from source fields; PEA/PWA/NBTC contribute evidence STATES, not data.",
