@@ -96,3 +96,10 @@ gates:
         status: OPEN_NON_BLOCKING
         item: The historical M2A education-facility review map reports 4,413 plotted institutions while the visible category legend does not account for all plotted records. Investigate legend/category accounting if the M2A human-review artifact is regenerated.
     note: The M2A images reviewed with M2D are historical (pre M2A.2 origin correction) and must NOT be used to mark the current corrected M2A human gate as PASSED (m2a_human_visual_signoff stays PENDING).
+  hearthmap_briefing_v0_1_review:
+    # Presentation/synthesis review of docs/product/hearthmap-briefing-v0.1.md and outputs/briefing/ (labels, readability, map semantics, state accuracy). Not inferred; does not change any other gate or enable scoring.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: HearthMap Spatial Evidence Briefing v0.1 (docs/product/hearthmap-briefing-v0.1.md, outputs/briefing/), not yet reviewed
