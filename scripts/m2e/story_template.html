@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HearthMap — Evidence Story Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#0b0f14; --panel:rgba(14,20,28,.88); --line:rgba(255,255,255,.09); --txt:#e8eef5; --mut:#8a9bb0;
+  --accent:#5ff2c0; --warn:#ffb454; --bad:#ff5d73; --seis:#a78bfa; --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sans Thai',system-ui,sans-serif;overflow:hidden}
+#map{position:absolute;inset:0;background:#0b0f14}
+.leaflet-container{background:#0b0f14;font-family:inherit}
+.glass{background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 10px 40px rgba(0,0,0,.45)}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* header */
+#brand{position:absolute;z-index:900;left:16px;top:16px;padding:12px 16px;display:flex;align-items:center;gap:12px}
+#brand .logo{width:34px;height:34px;border-radius:10px;background:conic-gradient(from 210deg,#5ff2c0,#3fb6e8,#a78bfa,#5ff2c0);display:grid;place-items:center;color:#06210f;font-weight:800}
+#brand h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.2px}
+#brand small{color:var(--mut);font-size:11px;display:block}
+#modes{position:absolute;z-index:900;left:50%;top:16px;transform:translateX(-50%);padding:5px;display:flex;gap:4px}
+#modes button{background:none;border:0;color:var(--mut);padding:7px 16px;border-radius:10px;cursor:pointer;font:600 13px 'Noto Sans Thai';}
+#modes button.on{background:var(--accent);color:#04251a}
+
+/* KPI strip */
+#kpis{position:absolute;z-index:900;left:16px;top:84px;width:300px;padding:14px}
+#kpis .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi b{display:block;font-size:22px;font-weight:800;line-height:1.1}
+.kpi span{font-size:11px;color:var(--mut)}
+.kpi.a b{color:var(--accent)}.kpi.w b{color:var(--warn)}.kpi.s b{color:var(--seis)}.kpi.b b{color:#3fb6e8}
+
+/* explore panel */
+#panel{position:absolute;z-index:900;left:16px;top:84px;width:300px;max-height:calc(100% - 100px);overflow:auto;padding:14px;display:none}
+#panel h3{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:14px 0 8px}
+#panel h3:first-child{margin-top:0}
+.lyr{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:8px;font-size:13px}
+.lyr:hover{background:rgba(255,255,255,.04)}
+.lyr input[type=checkbox]{accent-color:var(--accent)}
+.lyr .sw{width:10px;height:10px;border-radius:3px}
+.lyr small{color:var(--mut);margin-left:auto;font-size:10px}
+select,input[type=range]{width:100%;accent-color:var(--accent)}
+select{background:#101822;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px}
+.frow{margin:8px 0;font-size:12px}
+.frow label{display:flex;justify-content:space-between;color:var(--mut)}
+.frow label b{color:var(--txt)}
+.note{font-size:11px;color:var(--mut);line-height:1.5}
+
+/* legend */
+#rcol{position:absolute;z-index:900;right:16px;top:84px;bottom:24px;width:420px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
+#rcol>*{pointer-events:auto;flex:none}
+#legend{padding:12px 14px;font-size:12px;margin-top:auto}
+#legend h4{margin:0 0 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+#legend .row{display:flex;align-items:center;gap:8px;margin:3px 0}
+#legend .sw{width:14px;height:10px;border-radius:2px;flex:none}
+#legend .bar{height:8px;border-radius:4px;margin:4px 0}
+#legend .tick{display:flex;justify-content:space-between;color:var(--mut);font-size:10px}
+
+/* story */
+#story{padding:18px 22px}
+#story .step{font-size:11px;color:var(--accent);letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+#story h2{margin:4px 0 6px;font-size:22px;font-weight:800;line-height:1.25}
+#story p{margin:0 0 10px;font-size:14px;line-height:1.65;color:#c5d1df}
+#story .facts{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+#story .fact{padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+#story .fact b{font-size:20px;display:block;line-height:1.1}
+#story .fact span{font-size:11px;color:var(--mut)}
+#nav{display:flex;align-items:center;gap:10px;margin-top:12px}
+#nav button{background:rgba(255,255,255,.07);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:7px 14px;cursor:pointer;font:600 13px 'Noto Sans Thai'}
+#nav button.go{background:var(--accent);color:#04251a;border-color:transparent}
+#dots{display:flex;gap:6px;margin:0 auto}
+#dots i{width:22px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);cursor:pointer}
+#dots i.on{background:var(--accent)}
+.guard{margin-top:8px;font-size:11px;color:var(--warn)}
+
+/* district card */
+#card{position:relative;flex:0 1 auto!important;min-height:0;overflow:auto;padding:16px;display:none}
+#card .prov{font-size:11px;color:var(--mut);letter-spacing:.1em;text-transform:uppercase}
+#card h2{margin:2px 0 0;font-size:24px;font-weight:800}
+#card h2 small{display:block;font-size:13px;color:var(--mut);font-weight:400}
+#card .x{position:absolute;right:12px;top:10px;background:none;border:0;color:var(--mut);font-size:20px;cursor:pointer}
+.bars{margin:12px 0 4px}
+.bar2{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#1a2430}
+.bar2 i{display:block;height:100%}
+.cap{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--mut);margin:6px 0 10px}
+.cap i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.mm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.mm div{padding:8px 10px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px}
+.mm b{display:block;font-size:17px}
+.mm span{font-size:10.5px;color:var(--mut)}
+#card h5{margin:12px 0 4px;font-size:11px;letter-spacing:.1em;color:var(--mut);text-transform:uppercase}
+
+/* ranking */
+#rank{margin-top:6px;max-height:210px;overflow:auto}
+.rk{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 4px;border-radius:6px;cursor:pointer}
+.rk:hover{background:rgba(255,255,255,.06)}
+.rk .n{width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rk .t{flex:1;height:6px;background:#1a2430;border-radius:3px;overflow:hidden}
+.rk .t i{display:block;height:100%;background:var(--accent)}
+.rk .v{width:38px;text-align:right;color:var(--mut)}
+
+/* map labels */
+.dl{background:none!important;border:0!important;box-shadow:none!important;color:#dfe8f2;text-shadow:0 0 4px #000,0 0 8px #000;font-size:11px;font-weight:600;text-align:center;line-height:1.15;white-space:nowrap;padding:0!important}
+.dl small{display:block;font-weight:300;font-size:9px;color:#9fb0c4}
+.dl.sel{color:var(--accent)}
+.pl{background:none!important;border:0!important;box-shadow:none!important;color:rgba(255,255,255,.55);font-weight:800;letter-spacing:.35em;font-size:13px;text-shadow:0 0 6px #000;text-transform:uppercase}
+.px img{image-rendering:pixelated}
+.leaflet-tooltip.tt{background:#0e141c;color:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:12px}
+.leaflet-control-zoom{border:0!important}.leaflet-control-zoom a{background:var(--panel)!important;color:#fff!important;border:1px solid var(--line)!important}
+.leaflet-control-attribution{background:rgba(0,0,0,.5)!important;color:#7d8da1!important;font-size:9px}
+.leaflet-control-attribution a{color:#9fb0c4!important}
+@media (max-width:900px){#kpis,#panel{display:none!important}#rcol{left:12px;right:12px;width:auto;top:auto;max-height:70%}#modes{top:70px}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="brand" class="glass"><div class="logo">H</div><div><h1>HearthMap · Evidence Story</h1><small>เชียงใหม่ · เชียงราย · พะเยา — screening only, ไม่มีคะแนนความเหมาะสม</small></div></div>
+<div id="modes" class="glass"><button id="m-story" class="on">เล่าเรื่อง</button><button id="m-explore">สำรวจ / ซ้อนเลเยอร์</button></div>
+
+<div id="kpis" class="glass"><div class="grid" id="kpiGrid"></div>
+  <div class="note" style="margin-top:10px">ข้อมูล M1E hazard + M2A บริการครอบครัว + M2D บริบทภูมิภาค · ทุกค่าเป็น <b>หลักฐานเชิงบรรยาย</b> ไม่ใช่การจัดอันดับ</div></div>
+
+<div id="panel" class="glass">
+  <h3>เลเยอร์ (ซ้อนได้)</h3><div id="lyrs"></div>
+  <h3>ระบายสีระดับอำเภอ</h3>
+  <select id="metric"></select>
+  <h3>ตัวกรองซ้อนทับ (Overlap)</h3>
+  <label class="lyr"><input type="checkbox" id="ov-on"> แสดงเฉพาะพื้นที่ที่ผ่านทุกเงื่อนไข</label>
+  <div class="frow"><label class="lyr" style="padding:0"><input type="checkbox" id="f-dep" checked> ตัดพื้นที่ DEPRIORITIZE (hazard)</label></div>
+  <div class="frow"><label class="lyr" style="padding:0"><input type="checkbox" id="f-cau"> ตัด “ระวังเป็นพิเศษ” ด้วย</label></div>
+  <div class="frow"><label>โรงพยาบาล ≤ <b id="v-h">30</b> นาที</label><input type="range" id="f-h" min="5" max="90" value="30" step="5"></div>
+  <div class="frow"><label>ศูนย์บริการเมือง ≤ <b id="v-s">30</b> นาที</label><input type="range" id="f-s" min="5" max="90" value="30" step="5"></div>
+  <div class="frow"><label>โรงเรียนประถม ≤ <b id="v-c">20</b> นาที</label><input type="range" id="f-c" min="5" max="60" value="20" step="5"></div>
+  <div class="note">ผ่าน = ชั้น hazard ตามที่เลือก + เวลาขับรถตามถนนจริง (OSM) ไม่รวมเซลล์ที่ไม่มีถนนในระยะ snap (unresolved ≠ ไกล)</div>
+  <h3>อำเภอที่มีพื้นที่ผ่านเงื่อนไขมากสุด</h3>
+  <div class="note">สัดส่วนพื้นที่ในอำเภอที่ผ่านตัวกรอง — เป็นเพียง filter ไม่ใช่คะแนน</div>
+  <div id="rank"></div>
+</div>
+
+<div id="rcol"><div id="story" class="glass">
+  <div class="step" id="s-step"></div><h2 id="s-title"></h2><p id="s-text"></p>
+  <div class="facts" id="s-facts"></div><div class="guard" id="s-guard"></div>
+  <div id="nav"><button id="prev">← ก่อนหน้า</button><div id="dots"></div><button id="next" class="go">ถัดไป →</button></div>
+</div>
+
+<div id="card" class="glass"></div>
+<div id="legend" class="glass"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const DATA = __DATA__;
+const T = DATA.total, D = DATA.districts, byId = Object.fromEntries(D.map(d=>[d.did,d]));
+const pct = (x,d=0)=>(x*100).toFixed(d)+'%';
+const nf = n=>n.toLocaleString('en-US');
+
+/* ---------------- decode raster tiles ---------------- */
+const [W,H] = DATA.size, N = W*H;
+const ch = {}; // channel name -> Uint8Array
+function loadTile(b64){return new Promise(res=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(im,0,0);res(x.getImageData(0,0,W,H).data)};im.src='data:image/png;base64,'+b64})}
+const NAMES=[['action','flood','land'],['seis','hosp','svc'],['sch','pop','built'],['did',null,null]];
+async function decode(){
+  const tiles = await Promise.all(DATA.tiles.map(loadTile));
+  tiles.forEach((d,t)=>NAMES[t].forEach((nm,k)=>{ if(!nm) return; const a=new Uint8Array(N); for(let i=0;i<N;i++) a[i]=d[i*4+k]; ch[nm]=a; }));
+}
+
+/* ---------------- colour helpers ---------------- */
+const hex = h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+function ramp(stops){ // [[v,hex],...] -> fn(v)->[r,g,b]
+  const S=stops.map(s=>[s[0],hex(s[1])]);
+  return v=>{ if(v<=S[0][0]) return S[0][1]; for(let i=1;i<S.length;i++){ if(v<=S[i][0]){const t=(v-S[i-1][0])/(S[i][0]-S[i-1][0]);return S[i-1][1].map((c,k)=>c+(S[i][1][k]-c)*t)} } return S[S.length-1][1]; };
+}
+const timeRamp = ramp([[0,'#5ff2c0'],[10,'#3fe0a0'],[20,'#3fb6e8'],[35,'#6a6cf0'],[50,'#b04fd6'],[75,'#ff4f8b'],[120,'#ff4f8b']]);
+const popRamp  = ramp([[0,'#1a2430'],[60,'#4b3a6e'],[130,'#c0476a'],[190,'#ff9d4d'],[254,'#fff2a8']]);
+const bltRamp  = ramp([[0,'#1a2430'],[40,'#2d5f7a'],[120,'#3fb6e8'],[200,'#bff6ff'],[254,'#ffffff']]);
+const ACT = {1:['#3dd9a4','ค้นหาต่อได้ (CONTINUE)'],2:['#ffb454','ค้นหาต่อ + ระวังเป็นพิเศษ'],3:['#ff5d73','DEPRIORITIZE ระดับภูมิภาค'],4:['#6b7787','ประเมินไม่ได้ (ดินถล่มไม่มีข้อมูล เช่น แอ่งเมือง)']};
+const SEVC = {1:['#2f7d63','ไม่พบสัญญาณ'],2:['#ffb454','ต้องตรวจสอบ (VERIFY)'],3:['#ff5d73','สัญญาณแรง (STRONG)'],4:['#6b7787','ไม่ได้ประเมิน / unresolved']};
+const SEISC= {1:['#2a3340','ต่ำกว่าเกณฑ์'],2:['#c9b6ff','ต้องตรวจสอบ'],3:['#a78bfa','ต้องออกแบบรับแผ่นดินไหว'],4:['#6b7787','unresolved']};
+
+/* ---------------- layer definitions ---------------- */
+function timePaint(key,hatch=true){return (i,o,x,y)=>{const v=ch[key][i]; if(v===255){ if(!hatch) return false; if(((x+y)>>1)%4===0){o[0]=130;o[1]=145;o[2]=165;o[3]=150;return true;} o[0]=70;o[1]=80;o[2]=95;o[3]=70;return true;} const c=timeRamp(v);o[0]=c[0];o[1]=c[1];o[2]=c[2];return true;}}
+const LAYERS = [
+ {id:'action',name:'Hazard: ทิศทางการค้นหาเชิงภูมิภาค',sub:'น้ำท่วม+ดินถล่ม+ภูมิประเทศ',group:'hazard',tbl:ACT,key:'action',op:.78},
+ {id:'flood',name:'น้ำท่วม (GISTDA 2005–2023)',group:'hazard',tbl:SEVC,key:'flood',op:.8},
+ {id:'land',name:'ดินถล่ม (DMR susceptibility)',group:'hazard',tbl:SEVC,key:'land',op:.8},
+ {id:'seis',name:'แผ่นดินไหว: ต้องออกแบบรับแรงสั่น',sub:'วิศวกรรม ไม่ใช่การตัดทิ้ง',group:'hazard',tbl:SEISC,key:'seis',op:.7},
+ {id:'hosp',name:'เวลาขับไป รพ.',group:'access',time:'hosp',op:.85},
+ {id:'svc',name:'เวลาขับไปศูนย์บริการเมือง',sub:'ร้านสะดวกซื้อ/ตลาด/ธนาคาร…',group:'access',time:'svc',op:.85},
+ {id:'sch',name:'เวลาขับไป ร.ร.ประถม',group:'access',time:'sch',op:.85},
+ {id:'pop',name:'ความหนาแน่นประชากร (WorldPop 2025)',group:'context',ramp:popRamp,key:'pop',op:.9},
+ {id:'built',name:'พื้นที่ก่อสร้าง (GHSL 2020)',group:'context',ramp:bltRamp,key:'built',op:.9},
+];
+const GROUPS={hazard:'Hazard',access:'การเข้าถึงบริการ (drive-time)',context:'บริบทชุมชน'};
+
+function renderLayer(L){
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');const im=x.createImageData(W,H);const d=im.data;const o=[0,0,0,255];
+  const did=ch.did; const tp=L.time?timePaint(L.time):null;
+  if(L.tbl) ch._k=ch[L.key];
+  for(let i=0;i<N;i++){ if(!did[i]) continue; o[3]=255; const px=i%W, py=(i/W)|0; let ok;
+    if(L.tbl){const c=L.tbl[ch._k[i]]; if(!c) continue; const h=hex(c[0]); o[0]=h[0];o[1]=h[1];o[2]=h[2]; ok=true; if(L.id==='seis'&&ch._k[i]===1) o[3]=70;}
+    else if(tp) ok=tp(i,o,px,py);
+    else {const c=L.ramp(ch[L.key][i]); o[0]=c[0];o[1]=c[1];o[2]=c[2]; ok=true;}
+    if(!ok) continue; const j=i*4; d[j]=o[0];d[j+1]=o[1];d[j+2]=o[2];d[j+3]=o[3]; }
+  x.putImageData(im,0,0); return cv.toDataURL();
+}
+
+/* overlap */
+const OV={dep:true,cau:false,h:30,s:30,c:20};
+const distTotal=new Uint32Array(D.length+2), distPass=new Uint32Array(D.length+2);
+function renderOverlap(){
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');const im=x.createImageData(W,H);const d=im.data;
+  distTotal.fill(0);distPass.fill(0);
+  const A=ch.action,Hh=ch.hosp,S=ch.svc,C=ch.sch,did=ch.did; let pass=0,tot=0;
+  for(let i=0;i<N;i++){ const k=did[i]; if(!k) continue; tot++; distTotal[k]++;
+    let ok = Hh[i]<=OV.h && S[i]<=OV.s && C[i]<=OV.c;
+    if(ok&&OV.dep&&A[i]===3) ok=false; if(ok&&OV.dep&&A[i]===4) ok=false; if(ok&&OV.cau&&A[i]===2) ok=false;
+    const j=i*4;
+    if(ok){pass++;distPass[k]++;d[j]=95;d[j+1]=242;d[j+2]=192;d[j+3]=235}
+    else {d[j]=20;d[j+1]=26;d[j+2]=36;d[j+3]=150} }
+  x.putImageData(im,0,0); OV.share=pass/tot; return cv.toDataURL();
+}
+
+/* ---------------- map ---------------- */
+const map=L.map('map',{zoomControl:true,zoomSnap:.25,zoomDelta:.5,minZoom:6,attributionControl:true,preferCanvas:true}).fitBounds(DATA.bounds,{paddingTopLeft:[330,70],paddingBottomRight:[450,30]});
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri — Esri, HERE, Garmin, OSM contributors',maxZoom:15}).addTo(map);
+map.createPane('rast');map.getPane('rast').style.zIndex=250;
+map.createPane('over');map.getPane('over').style.zIndex=260;
+map.createPane('vec');map.getPane('vec').style.zIndex=400;
+const overlays={}; const state={};
+function setLayer(id,on,op){
+  const Ly=LAYERS.find(l=>l.id===id);
+  if(on){ if(!overlays[id]) overlays[id]=L.imageOverlay(renderLayer(Ly),DATA.bounds,{pane:'rast',opacity:op??Ly.op,className:'px',interactive:false});
+          overlays[id].setOpacity(op??Ly.op); overlays[id].addTo(map); state[id]=true; }
+  else if(overlays[id]){ map.removeLayer(overlays[id]); state[id]=false; }
+  syncUI(); legend();
+}
+let ovLayer=null;
+function setOverlap(on){
+  if(ovLayer){map.removeLayer(ovLayer);ovLayer=null}
+  if(on){ ovLayer=L.imageOverlay(renderOverlap(),DATA.bounds,{pane:'over',opacity:.92,className:'px',interactive:false}).addTo(map); }
+  state.ov=on; ranking(); legend();
+}
+function refreshOverlap(){ if(state.ov) setOverlap(true); }
+
+/* vectors */
+const provs=L.geoJSON(DATA.province_geojson,{pane:'vec',interactive:false,style:{color:'#ffffff',weight:1.6,opacity:.55,fill:false}}).addTo(map);
+let selId=null;
+const metrics=[
+ ['none','— ไม่ระบายสี —',null],
+ ['pop_density','ประชากร/ตร.กม.',d=>d.pop_density,'#ffd166'],
+ ['act_deprio','% พื้นที่ DEPRIORITIZE (hazard)',d=>d.act_deprio*100,'#ff5d73'],
+ ['seismic_design','% พื้นที่ที่ต้องออกแบบรับแผ่นดินไหว',d=>d.seismic_design*100,'#a78bfa'],
+ ['pop_hosp_30','% ประชากรถึง รพ. ≤30 นาที',d=>(d.pop_hosp_30||0)*100,'#5ff2c0'],
+ ['pop_svc_30','% ประชากรถึงศูนย์บริการ ≤30 นาที',d=>(d.pop_svc_30||0)*100,'#3fb6e8'],
+ ['no_road_share','% พื้นที่ไม่มีถนนในระยะ snap (unresolved)',d=>d.no_road_share*100,'#8a9bb0'],
+];
+let metric='none';
+const labelLayer=L.layerGroup().addTo(map);
+const distLayer=L.geoJSON(DATA.district_geojson,{pane:'vec',style:()=>({color:'#fff',weight:.7,opacity:.35,fillOpacity:0,fillColor:'#000'}),
+ onEachFeature:(f,l)=>{const d=byId[f.properties.did];
+  l.on('mouseover',()=>l.setStyle({weight:2,opacity:.95,color:'#5ff2c0'}));
+  l.on('mouseout',()=>distLayer.resetStyle(l));
+  l.on('click',()=>selectDist(d.did,false));
+  l.bindTooltip(`<b>${d.name_th}</b> · ${d.name}<br><span style="color:#8a9bb0">${d.prov_th}</span>`,{sticky:true,className:'tt'});
+  d._layer=l;}}).addTo(map);
+D.forEach(d=>{L.marker([d.lat,d.lon],{interactive:false,pane:'vec',icon:L.divIcon({className:'dl',html:`${d.name_th}<small>${d.name}</small>`,iconSize:[0,0]})}).addTo(labelLayer);});
+DATA.provinces.forEach(p=>{const c={TH50:[18.75,98.95],TH57:[19.92,99.85],TH56:[19.18,100.2]}[p.pcode]; L.marker(c,{interactive:false,pane:'vec',icon:L.divIcon({className:'pl',html:p.name_th+' '+p.name,iconSize:[0,0]})}).addTo(map);});
+function labelVis(){const z=map.getZoom(); labelLayer.eachLayer(m=>{m.getElement()&&(m.getElement().style.display=z<7.25?'none':'')});}
+map.on('zoomend',labelVis);
+
+function colorMetric(){
+  const m=metrics.find(x=>x[0]===metric);
+  if(!m||!m[2]){distLayer.eachLayer(l=>l.setStyle({fillOpacity:0}));legend();return}
+  const vals=D.map(m[2]), mx=Math.max(...vals), mn=Math.min(...vals);
+  distLayer.eachLayer(l=>{const d=byId[l.feature.properties.did];const t=(m[2](d)-mn)/(mx-mn||1);l.setStyle({fillColor:m[3],fillOpacity:.08+.62*Math.pow(t,.8)});});
+  legend();
+}
+function selectDist(id,fly){
+  selId=id; const d=byId[id];
+  distLayer.eachLayer(l=>l.setStyle({weight:l.feature.properties.did===id?2.4:.7,color:l.feature.properties.did===id?'#5ff2c0':'#fff',opacity:l.feature.properties.did===id?1:.35}));
+  if(fly) map.flyToBounds(d._layer.getBounds(),{paddingTopLeft:[330,60],paddingBottomRight:[450,40],duration:1.1,maxZoom:10});
+  card(d);
+}
+function bar(parts){return `<div class="bar2">${parts.map(p=>`<i style="width:${p[0]*100}%;background:${p[1]}"></i>`).join('')}</div>`}
+function card(d){
+  const c=document.getElementById('card'); c.style.display='block';
+  const ovs = state.ov? `<h5>Overlap ตามตัวกรองปัจจุบัน</h5><div class="mm"><div><b>${pct(distPass[d.did]/(distTotal[d.did]||1),0)}</b><span>ของพื้นที่อำเภอผ่านตัวกรอง</span></div></div>`:'';
+  c.innerHTML=`<button class="x" onclick="document.getElementById('card').style.display='none'">×</button>
+  <div class="prov">${d.prov_th} · ${d.prov_en}</div><h2>${d.name_th}<small>${d.name} · ${d.pcode}</small></h2>
+  <div class="mm"><div><b>${nf(d.area_km2)}</b><span>ตร.กม. ในพื้นที่ศึกษา</span></div><div><b>${nf(d.pop)}</b><span>ประชากรโมเดล (WorldPop)</span></div>
+  <div><b>${d.pop_density}</b><span>คน/ตร.กม.</span></div><div><b>${d.built_km2}</b><span>ตร.กม. ก่อสร้าง (GHSL)</span></div></div>
+  <h5>Hazard: ทิศทางการค้นหา (พื้นที่)</h5>
+  ${bar([[d.act_continue,'#3dd9a4'],[d.act_caution,'#ffb454'],[d.act_deprio,'#ff5d73'],[d.act_unres,'#6b7787']])}
+  <div class="cap"><span><i style="background:#3dd9a4"></i>ค้นหาต่อ ${pct(d.act_continue)}</span><span><i style="background:#ffb454"></i>ระวัง ${pct(d.act_caution)}</span><span><i style="background:#ff5d73"></i>deprioritize ${pct(d.act_deprio)}</span><span><i style="background:#6b7787"></i>ประเมินไม่ได้ ${pct(d.act_unres)}</span></div>
+  <div class="mm"><div><b style="color:#a78bfa">${pct(d.seismic_design)}</b><span>ต้องออกแบบรับแผ่นดินไหว</span></div><div><b>${pct(d.landslide_strong)}</b><span>ดินถล่มสัญญาณแรง</span></div>
+  <div><b>${pct(d.flood_strong+d.flood_verify)}</b><span>น้ำท่วมต้องตรวจ/แรง</span></div><div><b>${pct(d.landslide_na)}</b><span>ดินถล่ม “ยังไม่ได้ประเมิน”</span></div></div>
+  <h5>การเข้าถึง (ถ่วงน้ำหนักด้วยประชากร)</h5>
+  <div class="mm"><div><b>${d.hosp_med_pop_w==null?'–':d.hosp_med_pop_w.toFixed(0)+' นาที'}</b><span>มัธยฐานไป รพ.</span></div><div><b>${d.svc_med_pop_w==null?'–':d.svc_med_pop_w.toFixed(0)+' นาที'}</b><span>มัธยฐานไปศูนย์บริการ</span></div>
+  <div><b>${d.pop_hosp_30==null?'–':pct(d.pop_hosp_30)}</b><span>ปชก. ถึง รพ. ≤30 นาที</span></div><div><b>${d.pop_svc_30==null?'–':pct(d.pop_svc_30)}</b><span>ปชก. ถึงศูนย์บริการ ≤30 นาที</span></div></div>
+  <div class="note">${pct(d.no_road_share)} ของพื้นที่อำเภอไม่มีถนนในระยะ snap 1 กม. → “ประเมินไม่ได้” (ไม่ใช่ “ไกล”)</div>${ovs}`;
+}
+
+/* legend */
+function legend(){
+  const el=document.getElementById('legend'); let h='';
+  const vis=LAYERS.filter(l=>state[l.id]);
+  const top=vis[vis.length-1];
+  const items=[];
+  if(state.ov) items.push(`<h4>Overlap filter</h4><div class="row"><span class="sw" style="background:#5ff2c0"></span>ผ่านทุกเงื่อนไข (${pct(OV.share||0,1)} ของพื้นที่)</div><div class="row"><span class="sw" style="background:#141a24;border:1px solid #333"></span>ไม่ผ่าน / ประเมินไม่ได้</div>`);
+  vis.slice().reverse().forEach(l=>{
+    let s=`<h4>${l.name}</h4>`;
+    if(l.tbl) s+=Object.values(l.tbl).map(c=>`<div class="row"><span class="sw" style="background:${c[0]}"></span>${c[1]}</div>`).join('');
+    else if(l.time) s+=`<div class="bar" style="background:linear-gradient(90deg,#5ff2c0,#3fb6e8,#6a6cf0,#b04fd6,#ff4f8b)"></div><div class="tick"><span>0</span><span>15</span><span>30</span><span>60</span><span>90+ นาที</span></div><div class="row" style="margin-top:6px"><span class="sw" style="background:repeating-linear-gradient(45deg,#8291a5 0 2px,#46505f 2px 4px)"></span>ไม่มีถนนใกล้ (unresolved)</div>`;
+    else s+=`<div class="bar" style="background:linear-gradient(90deg,#1a2430,#c0476a,#ff9d4d,#fff2a8)"></div><div class="tick"><span>ต่ำ</span><span>สูง</span></div>`;
+    items.push(s);});
+  if(metric!=='none'){const m=metrics.find(x=>x[0]===metric); items.push(`<h4>อำเภอ: ${m[1]}</h4><div class="bar" style="background:linear-gradient(90deg,${m[3]}22,${m[3]})"></div><div class="tick"><span>${Math.min(...D.map(m[2])).toFixed(0)}</span><span>${Math.max(...D.map(m[2])).toFixed(0)}</span></div>`);}
+  el.innerHTML=items.join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">'); el.style.display=items.length?'block':'none';
+}
+
+/* ---------------- explore UI ---------------- */
+function buildPanel(){
+  const box=document.getElementById('lyrs'); let h='';
+  Object.keys(GROUPS).forEach(g=>{h+=`<div class="note" style="margin-top:8px">${GROUPS[g]}</div>`;LAYERS.filter(l=>l.group===g).forEach(l=>{
+    h+=`<label class="lyr"><input type="checkbox" data-l="${l.id}"> <span>${l.name}${l.sub?`<br><small style="margin:0">${l.sub}</small>`:''}</span></label>`;});});
+  box.innerHTML=h;
+  box.querySelectorAll('input').forEach(i=>i.onchange=()=>setLayer(i.dataset.l,i.checked));
+  const sel=document.getElementById('metric'); sel.innerHTML=metrics.map(m=>`<option value="${m[0]}">${m[1]}</option>`).join('');
+  sel.onchange=()=>{metric=sel.value;colorMetric()};
+  const bind=(id,k,out,num)=>{const e=document.getElementById(id);e.oninput=()=>{OV[k]=num?+e.value:e.checked;if(out)document.getElementById(out).textContent=e.value;refreshOverlap();}};
+  bind('f-h','h','v-h',1);bind('f-s','s','v-s',1);bind('f-c','c','v-c',1);bind('f-dep','dep',null);bind('f-cau','cau',null);
+  document.getElementById('ov-on').onchange=e=>setOverlap(e.target.checked);
+}
+function syncUI(){document.querySelectorAll('#lyrs input').forEach(i=>i.checked=!!state[i.dataset.l]);document.getElementById('ov-on').checked=!!state.ov;}
+function ranking(){
+  const box=document.getElementById('rank'); if(!state.ov){box.innerHTML='<div class="note">เปิด “แสดงเฉพาะพื้นที่ที่ผ่านทุกเงื่อนไข” เพื่อดูอันดับ</div>';return}
+  const rows=D.map(d=>({d,v:distPass[d.did]/(distTotal[d.did]||1)})).sort((a,b)=>b.v-a.v).slice(0,14);
+  box.innerHTML=rows.map(r=>`<div class="rk" data-id="${r.d.did}"><span class="n">${r.d.name_th}</span><span class="t"><i style="width:${r.v*100}%"></i></span><span class="v mono">${pct(r.v)}</span></div>`).join('');
+  box.querySelectorAll('.rk').forEach(e=>e.onclick=()=>selectDist(+e.dataset.id,true));
+}
+
+/* ---------------- story ---------------- */
+const P=T;
+const STEPS=[
+ {t:'ภาพรวม',h:'3 จังหวัด 52 อำเภอ บนกริด 500 เมตร',x:`เราซ้อนหลักฐานจากหลายแหล่งลงบนกริด ${nf(DATA.meta.cells)} เซลล์ ครอบคลุมเชียงใหม่ เชียงราย พะเยา — ประชากรโมเดล ${(P.pop/1e6).toFixed(2)} ล้านคน บนพื้นที่ ${nf(Math.round(P.area_km2))} ตร.กม. ชุมชนกระจุกในแอ่งเมืองและหุบเขา ที่เหลือส่วนใหญ่เป็นป่าเขา`,
+  facts:[[nf(DATA.meta.cells),'เซลล์ 500 ม.'],[(P.pop/1e6).toFixed(2)+' ล.','ประชากร (WorldPop 2025)'],[nf(Math.round(P.built_km2))+' กม²','พื้นที่ก่อสร้าง (GHSL)'],[nf(DATA.meta.pois),'จุดบริการ (OSM)']],
+  layers:['pop'],metric:'none',view:null},
+ {t:'ชั้นที่ 1 · ภัยธรรมชาติทางน้ำและลาดชัน',h:'ที่ไหนควร “ค้นหาต่อ” และที่ไหนควรถอย',x:`รวมน้ำท่วมย้อนหลัง 2005–2023, ความเสี่ยงดินถล่ม (DMR) และภูมิประเทศ เป็นทิศทางการค้นหาระดับภูมิภาค — ${pct(P.act_deprio)} ของพื้นที่เป็น DEPRIORITIZE (ส่วนมากเป็นเขาสูงชัน/ดินถล่มแรง) ส่วน ${pct(P.act_continue)} ค้นหาต่อได้`,
+  facts:[[pct(P.act_continue),'ค้นหาต่อได้'],[pct(P.act_caution),'ระวังเป็นพิเศษ'],[pct(P.act_deprio),'deprioritize'],[pct(P.act_unres,1),'ประเมินไม่ได้ (ส่วนใหญ่แอ่งเมือง)']],
+  layers:['action'],metric:'act_deprio',guard:'Provisional: นโยบาย BALANCED + FLOOD_ANY_SOURCE ยังไม่ใช่ production truth · ไม่ใช่ “ปลอดภัย” หรือ “ปลูกได้”'},
+ {t:'ชั้นที่ 2 · แผ่นดินไหวและรอยเลื่อน',h:'ครึ่งหนึ่งของภูมิภาคต้องออกแบบรับแรงสั่น',x:`${pct(P.seismic_design)} ของพื้นที่อยู่ในโซนความสั่นสะเทือนที่ต้อง “ออกแบบโครงสร้างรับแผ่นดินไหว” — นี่คือเงื่อนไขทางวิศวกรรม ไม่ใช่เหตุให้ตัดพื้นที่ทิ้ง ผลตอบสนองของชั้นดินจริงต้องตรวจเฉพาะแปลง`,
+  facts:[[pct(P.seismic_design),'ต้องออกแบบรับแผ่นดินไหว'],['≠ ตัดทิ้ง','เป็นภาระวิศวกรรม']],
+  layers:['seis'],metric:'seismic_design',guard:'ไม่ประเมินการขยายคลื่นของชั้นดิน (ground response not assessed)'},
+ {t:'ชั้นที่ 3 · โรงพยาบาล',h:'เวลาขับรถจริงไป รพ. ตามถนน OSM',x:`คำนวณเส้นทางจริงจากทุกเซลล์ที่มีถนนเชื่อมไปยังโรงพยาบาลสาธารณะ — ประชากรราว ${pct(P.pop_hosp_30)} อยู่ภายใน 30 นาที (มัธยฐาน ${P.hosp_med_pop_w.toFixed(0)} นาที) ส่วนลายขีดเทาคือพื้นที่ที่ไม่มีถนนในระยะ snap จึง “ประเมินไม่ได้” — ไม่ได้แปลว่าไกล`,
+  facts:[[pct(P.pop_hosp_30),'ปชก. ≤30 นาที'],[P.hosp_med_pop_w.toFixed(0)+' นาที','มัธยฐานถ่วงประชากร'],[pct(P.no_road_share),'พื้นที่ unresolved (ไม่มีถนน)']],
+  layers:['hosp'],metric:'pop_hosp_30',guard:'ตรวจย้อนหลังถึงชั้นสูง (higher-level hospital) ยังเลื่อนไว้'},
+ {t:'ชั้นที่ 4 · ชีวิตประจำวัน',h:'ศูนย์บริการเมือง: ร้านค้า ตลาด ธนาคาร ปั๊ม ร้านยา',x:`รวม ${nf(DATA.meta.pois)} จุดบริการจาก OSM แล้วรวมเป็นกลุ่มบริการหลัก (service cluster) — ประชากร ${pct(P.pop_svc_30)} อยู่ภายใน 30 นาทีจากศูนย์บริการ มัธยฐาน ${P.svc_med_pop_w.toFixed(0)} นาที`,
+  facts:[[pct(P.pop_svc_30),'ปชก. ≤30 นาที'],[P.svc_med_pop_w.toFixed(0)+' นาที','มัธยฐานถ่วงประชากร']],
+  layers:['svc'],metric:'pop_svc_30',guard:'OSM ครอบคลุมไม่เท่ากันทุกพื้นที่ — ใช้เป็นหลักฐานบริบท ไม่ใช่รายการครบถ้วน'},
+ {t:'ซ้อนทับ · เฉพาะ filter ไม่ใช่คะแนน',h:'พื้นที่ที่ผ่านพร้อมกันหลายเงื่อนไข',x:`ซ้อน: ไม่ถูก deprioritize + ถึง รพ. ≤30 นาที + ศูนย์บริการ ≤30 นาที + โรงเรียนประถม ≤20 นาที — ลากแถบใน “สำรวจ” เพื่อปรับเงื่อนไขเองและดูอำเภอที่มีพื้นที่ผ่านมากสุด`,
+  facts:[],factsFn:()=>[[pct(OV.share||0,1),'ของพื้นที่ผ่านทุกเงื่อนไข'],[`${OV.h}/${OV.s}/${OV.c}`,'นาที (รพ./บริการ/ร.ร.)']],
+  layers:[],overlap:true,metric:'none',guard:'ผลลัพธ์นี้ไม่ใช่ “โซนแนะนำ” — ยังไม่มีเกณฑ์ใดผ่านสถานะ READY และ scoring ปิดอยู่'},
+ {t:'ข้อควรระวัง',h:'อะไรที่แผนที่นี้ยัง “ไม่บอก”',x:'ยังไม่มีคะแนนความเหมาะสม ไม่มีราคาที่ดิน สิทธิ์ครอบครอง ผังเมือง ประปา/ไฟฟ้าระดับแปลง หรือสภาพชั้นดินจริง ขั้นถัดไปคือเลือกโซนที่ต้องการดูใกล้ขึ้น แล้วค่อยลงไปที่ระดับแปลงด้วยการตรวจสอบภาคสนาม',
+  facts:[[nf(DATA.meta.factories_aoi),'โรงงาน DIW ในพื้นที่ (ระดับตำบล)'],['0','ตัวชี้วัดที่ READY']],layers:['action','hosp'],opacities:{action:.35,hosp:.45},metric:'none'},
+];
+let cur=0, mode='story';
+function renderStep(){
+  const s=STEPS[cur];
+  Object.keys(state).forEach(k=>{if(k!=='ov'&&state[k]) setLayer(k,false)});
+  if(state.ov) setOverlap(false);
+  (s.layers||[]).forEach(id=>setLayer(id,true,s.opacities?.[id]));
+  if(s.overlap){Object.assign(OV,{dep:true,cau:false,h:30,s:30,c:20}); setOverlap(true);}
+  metric=s.metric||'none'; document.getElementById('metric').value=metric; colorMetric();
+  document.getElementById('s-step').textContent=`${String(cur+1).padStart(2,'0')} / ${String(STEPS.length).padStart(2,'0')} · ${s.t}`;
+  document.getElementById('s-title').textContent=s.h; document.getElementById('s-text').textContent=s.x;
+  const f=s.factsFn?s.factsFn():s.facts;
+  document.getElementById('s-facts').innerHTML=f.map(a=>`<div class="fact"><b>${a[0]}</b><span>${a[1]}</span></div>`).join('');
+  document.getElementById('s-guard').textContent=s.guard?'⚠ '+s.guard:'';
+  document.getElementById('dots').innerHTML=STEPS.map((_,i)=>`<i class="${i===cur?'on':''}" data-i="${i}"></i>`).join('');
+  document.querySelectorAll('#dots i').forEach(e=>e.onclick=()=>{cur=+e.dataset.i;renderStep()});
+  document.getElementById('prev').style.visibility=cur?'visible':'hidden';
+  document.getElementById('next').textContent=cur===STEPS.length-1?'เริ่มสำรวจ →':'ถัดไป →';
+  legend();
+}
+document.getElementById('prev').onclick=()=>{cur=Math.max(0,cur-1);renderStep()};
+document.getElementById('next').onclick=()=>{if(cur===STEPS.length-1)setMode('explore');else{cur++;renderStep()}};
+function setMode(m){
+  mode=m; const ex=m==='explore';
+  document.getElementById('m-story').classList.toggle('on',!ex);document.getElementById('m-explore').classList.toggle('on',ex);
+  document.getElementById('story').style.display=ex?'none':'block';
+  document.getElementById('panel').style.display=ex?'block':'none';
+  document.getElementById('kpis').style.display=ex?'none':'block';
+  if(ex){syncUI();ranking();} else renderStep();
+}
+document.getElementById('m-story').onclick=()=>setMode('story');
+document.getElementById('m-explore').onclick=()=>setMode('explore');
+document.addEventListener('keydown',e=>{if(mode!=='story')return;if(e.key==='ArrowRight')document.getElementById('next').click();if(e.key==='ArrowLeft')document.getElementById('prev').click();});
+
+/* KPI */
+document.getElementById('kpiGrid').innerHTML=[
+ ['a',nf(DATA.meta.cells),'เซลล์ 500 ม.'],['b',(T.pop/1e6).toFixed(2)+' ล.','ประชากรโมเดล'],['w',pct(T.act_deprio),'พื้นที่ deprioritize'],['s',pct(T.seismic_design),'ต้องออกแบบรับแผ่นดินไหว'],
+ ['b',pct(T.pop_hosp_30),'ปชก. ≤30 นาที จาก รพ.'],['a',nf(DATA.meta.pois),'จุดบริการ OSM']
+].map(k=>`<div class="kpi ${k[0]}"><b>${k[1]}</b><span>${k[2]}</span></div>`).join('');
+
+decode().then(()=>{buildPanel();labelVis();setMode('story');});
+</script>
+</body>
+</html>
