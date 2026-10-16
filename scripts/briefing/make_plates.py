@@ -457,9 +457,9 @@ def footer(fig, sources: str, y=0.012):
     )
 
 
-def save(fig, name: str):
+def save(fig, name: str, *, transparent: bool = False):
     MAPS.mkdir(parents=True, exist_ok=True)
-    fig.savefig(MAPS / f"{name}.png", dpi=150)
+    fig.savefig(MAPS / f"{name}.png", dpi=150, transparent=transparent)
     plt.close(fig)
     print("wrote", MAPS / f"{name}.png")
 
@@ -619,7 +619,7 @@ def plate_hazard(c: Ctx) -> dict:
         frame(ax, c)
         put_labels(ax, c, size=6.8)
         ax.set_title(ttl, fontsize=11, fontweight="bold", loc="left")
-        legend(ax, items, loc="lower right", fontsize=6.6)
+        legend(ax, items, loc="lower right", fontsize=8)
     header(
         fig,
         "ฐานข้อมูลภัยธรรมชาติ: มีหลักฐานอะไรอยู่แล้วบ้าง",
@@ -769,7 +769,7 @@ def plate_edu_health(c: Ctx) -> dict:
             band_legend_items(other),
             title="Baseline Drive Time (นาที)",
             loc="lower right",
-            fontsize=6.4,
+            fontsize=7.8,
         )
         ok = np.isfinite(v)
         facts[stem] = {
@@ -1235,12 +1235,156 @@ def plate_evidence_state() -> dict:
         "Evidence state per family requirement × decision stage (config/family-evaluability.yaml, M2C + M2D.1 + M2D.1e)",
         "สถานะเป็นหมวดหมู่ ไม่ใช่คะแนนความเชื่อมั่น และไม่ถูกรวมเป็นตัวเลขเดียว · ยังไม่มีรายการใดเป็น READY · FAMILY_SCORING_ALLOWED = false",
     )
-    save(fig, "07-evidence-state")
+    save(fig, "07b-evidence-state-detail")
     return {"regional_screening_state_counts": counts, "entries": nrow}
 
 
+# Evidence families for the main-report matrix. Every non-irrelevant evaluability entry belongs to exactly one family
+# (tested); hazard is not in family-evaluability.yaml and is described from the M1E artifact itself.
+EVIDENCE_FAMILIES = [
+    ("ภัยธรรมชาติ", "Hazard", None),
+    ("การศึกษา", "Education", ["EDU-KG", "EDU-PRIMARY", "EDU-LOWSEC", "EDU-UPSEC", "ALT-CHOICES"]),
+    ("สาธารณสุข", "Healthcare", ["HC-PRIMARY", "HC-HOSPITAL", "HC-REGIONAL", "HC-CAPABILITY"]),
+    ("การตั้งถิ่นฐาน / ความสงบ", "Settlement / peacefulness", ["SETTLE-PEACE"]),
+    ("บริการในเมือง", "Town services", ["TOWN-SERVICES"]),
+    (
+        "อุตสาหกรรม / เหมือง / สถานบันเทิง",
+        "Industry / mining / nightlife",
+        ["NUIS-INDUSTRIAL", "NUIS-MINING", "NUIS-NIGHTLIFE"],
+    ),
+    ("ราคาที่ดิน", "Land price", ["LAND-PRICE"]),
+    ("ไฟฟ้า / ไฟเบอร์", "Electricity / fiber", ["ELEC-GRID", "FIBER"]),
+    ("น้ำ", "Water", ["WATER-PWA", "WATER-LOCAL", "WATER-VILLAGE", "WATER-GROUND"]),
+    (
+        "ถนนและทางเข้าออก",
+        "Road network, legal / all-weather access, noise",
+        ["ROAD-A-NETWORK", "ROAD-B-LEGAL", "ROAD-C-ALLWEATHER", "ROAD-D-SURFACE", "ROAD-E-NOISE"],
+    ),
+    ("ภูมิประเทศ / แปลง", "Terrain & parcel", ["TERRAIN-PREF", "SITE-IMPROVE", "PARCEL-AREA"]),
+]
+HAZARD_STATES = {  # from outputs/m1e: integration_status PROVISIONAL, production_truth False, parcel hand-off checklist
+    "REGIONAL_SCREENING": ["M1E_PROVISIONAL"],
+    "CANDIDATE_ZONE_COMPARISON": ["M1E_PROVISIONAL"],
+    "PARCEL_SHORTLIST": ["PARCEL_VERIFICATION_ONLY"],
+    "PRE_PURCHASE_VERIFICATION": ["PARCEL_VERIFICATION_ONLY"],
+}
+M1E_PROVISIONAL = ("PROVISIONAL (M1E)", "#D9CFB8")
+
+
+def plate_evidence_families() -> dict:
+    plan = yaml.safe_load(EVALUABILITY.read_text("utf-8"))
+    assert plan["scoring_gate"]["FAMILY_SCORING_ALLOWED"] is False
+    by_id = {e["id"]: e for e in plan["entries"] if not e["id"].startswith("IRR-")}
+    grouped = [i for _, _, ids in EVIDENCE_FAMILIES if ids for i in ids]
+    assert sorted(grouped) == sorted(by_id), (
+        "every evaluability entry must sit in exactly one family"
+    )
+    haz = pd.read_parquet(HAZARD, columns=["integration_status", "production_truth"])
+    assert set(haz["integration_status"]) == {"PROVISIONAL"} and not haz["production_truth"].any()
+
+    def chips(ids, stage):
+        states = (
+            HAZARD_STATES[stage] if ids is None else [by_id[i]["stages"][stage][0] for i in ids]
+        )
+        out: dict[str, int] = {}
+        for s in states:
+            out[s] = out.get(s, 0) + 1
+        return out
+
+    fig = new_fig(13, 9.0)
+    ax = fig.add_axes([0.02, 0.11, 0.96, 0.75])
+    nrow = len(EVIDENCE_FAMILIES)
+    for r, (th, en, ids) in enumerate(EVIDENCE_FAMILIES):
+        y = nrow - 1 - r
+        ax.add_patch(
+            Rectangle((-1.55, y + 0.02), 5.55, 0.96, facecolor="#F1EEE7" if r % 2 else PAPER, lw=0)
+        )
+        for k, (stage, _) in enumerate(STAGES):
+            cs = chips(ids, stage)
+            n = len(cs)
+            h = 0.86 / n
+            for j, (state, cnt) in enumerate(sorted(cs.items(), key=lambda kv: -kv[1])):
+                grp, col = M1E_PROVISIONAL if state == "M1E_PROVISIONAL" else STATE_GROUP[state]
+                yy = y + 0.07 + (n - 1 - j) * h
+                ax.add_patch(
+                    Rectangle(
+                        (k + 0.03, yy), 0.92, h - 0.04, facecolor=col, edgecolor=PAPER, lw=0.8
+                    )
+                )
+                dark = col in ("#3E5C76", "#7895AE", "#9B6A5C", "#A39C90")
+                lab = grp.replace(" REQUIRED", "").replace(" / NOT EVALUABLE", "")
+                ax.text(
+                    k + 0.49,
+                    yy + (h - 0.04) / 2,
+                    lab + (f"  ×{cnt}" if ids and len(ids) > 1 else ""),
+                    ha="center",
+                    va="center",
+                    fontsize=6.4 if n > 2 else 7,
+                    color=PAPER if dark else INK,
+                )
+        ax.text(-0.08, y + 0.58, th, ha="right", va="center", fontsize=10.5, fontweight="bold")
+        ax.text(-0.08, y + 0.28, en, ha="right", va="center", fontsize=7, color=MUTED)
+    for k, (_, lab) in enumerate(STAGES):
+        ax.text(
+            k + 0.49, nrow + 0.15, lab, ha="center", va="bottom", fontsize=9.5, fontweight="bold"
+        )
+    ax.set_xlim(-1.55, len(STAGES))
+    ax.set_ylim(-0.05, nrow + 0.85)
+    ax.set_axis_off()
+    cmap = {g: col for g, col in STATE_GROUP.values()}
+    order = [
+        "KNOWN WITH LIMITATIONS",
+        "PARTIAL",
+        "PROXY ONLY",
+        "UNRESOLVED / NOT EVALUABLE",
+        "BLOCKED BY SOURCE GAP",
+        "PARCEL VERIFICATION REQUIRED",
+        "FIELD VERIFICATION REQUIRED",
+        "NOT USED (by design)",
+    ]
+    lg_ax = fig.add_axes([0.02, 0.0, 0.96, 0.09])
+    lg_ax.set_axis_off()
+    legend(
+        lg_ax,
+        [
+            *[(g, cmap[g]) for g in order],
+            ("PROVISIONAL (M1E hazard actions; review PENDING)", M1E_PROVISIONAL[1]),
+        ],
+        loc="center",
+        ncol=3,
+        fontsize=7.4,
+    )
+    header(
+        fig,
+        "สถานะของหลักฐานตามตระกูลข้อมูล",
+        "Evidence state by family × decision stage — broad view (full requirement-level matrix in the appendix)",
+        "แต่ละช่องแสดงทุกสถานะที่มีในตระกูลนั้น (×n = จำนวนความต้องการ) ไม่รวมเป็นตัวเลขเดียว · ยังไม่มีรายการใดเป็น KNOWN (READY) · FAMILY_SCORING_ALLOWED = false",
+    )
+    save(fig, "07-evidence-state")
+    return {"families": len(EVIDENCE_FAMILIES)}
+
+
+def plate_cover(c: Ctx) -> None:
+    """Restrained AOI visual for the cover: relief, built form and boundaries only (no text, no data claims)."""
+    fig = plt.figure(figsize=(7.2, 7.8))
+    ax = fig.add_axes([0, 0, 1, 1])
+    relief(ax, c, alpha=0.62)
+    built = c.raster(c.df["built_ghsl2020_intensity_fraction_of_nominal_grid_cell"].to_numpy())
+    img = np.zeros((*built.shape, 4))
+    img[..., :3] = to_rgba("#6B4A35")[:3]
+    img[..., 3] = np.clip(np.nan_to_num(built) / 0.35, 0, 1) * 0.75
+    show_rgba(ax, c, img, zorder=3)
+    c.dist.boundary.plot(ax=ax, color="#B7B1A5", linewidth=0.25, zorder=5)
+    c.prov.boundary.plot(ax=ax, color="#2E5550", linewidth=1.0, zorder=6)
+    ax.set_xlim(c.extent[0] - 4000, c.extent[1] + 4000)
+    ax.set_ylim(c.extent[2] - 4000, c.extent[3] + 4000)
+    ax.set_aspect("equal")
+    ax.set_axis_off()
+    save(fig, "cover-aoi", transparent=True)
+
+
 def plate_concept(c: Ctx) -> None:
-    fig = new_fig(14, 8.6)
+    fig = new_fig(12, 7.37)  # same layout, ~17% larger text when shown full-width
     W = fig.add_axes([0, 0, 1, 1])
     W.set_xlim(0, 100)
     W.set_ylim(0, 62)
@@ -1370,7 +1514,9 @@ def main() -> int:
     facts["town_services_median_min_among_routable"] = plate_town_services(c)
     facts["industry"] = plate_industry(c)
     facts["evidence_state"] = plate_evidence_state()
+    facts["evidence_families"] = plate_evidence_families()
     plate_concept(c)
+    plate_cover(c)
     (OUT / "briefing-facts.json").write_text(
         json.dumps(facts, ensure_ascii=False, indent=1), encoding="utf-8"
     )

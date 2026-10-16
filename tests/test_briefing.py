@@ -49,17 +49,69 @@ def test_briefing_states_the_gates_explicitly():
         assert needle in TEXT, needle
 
 
+def _table_rows(section: str) -> list[str]:
+    return [r for r in section.splitlines() if r.startswith("| ") and "---" not in r][1:]
+
+
 def test_no_map_title_or_reference_area_implies_suitability():
     alts = re.findall(r"!\[([^\]]*)\]", TEXT)
-    assert len(alts) == 10
+    assert len(alts) == 12
     for alt in alts:
         assert not re.search(r"suitab|best|score|rank|recommend|เหมาะสม|ดีที่สุด|แนะนำ", alt, re.I), alt
-    section = TEXT.split("## 17.")[1].split("## ภาคผนวก")[0]
-    rows = [r for r in section.splitlines() if r.startswith("| ") and "---" not in r][1:]
-    assert len(rows) >= 11
-    for r in rows:
-        assert not re.search(r"\b(BEST|GOOD|BAD|RECOMMENDED|WORST)\b", r), r
-        assert "candidate zone" not in r.lower()
+    main = TEXT.split("## 16. ")[1].split("## ภาคผนวก")[0]
+    full = TEXT.split("### F. ")[1].split("### G. ")[0]
+    assert 8 <= len(_table_rows(main)) <= 10 and len(_table_rows(full)) == 13
+    for section in (main, full):
+        # the non-ranking disclaimer sits with each table, not on a page of its own
+        assert "BEST / GOOD / BAD / RECOMMENDED" in section.split("|", 1)[0]
+        for r in _table_rows(section):
+            assert not re.search(r"\b(BEST|GOOD|BAD|RECOMMENDED|WORST)\b", r), r
+            assert "candidate zone" not in r.lower()
+
+
+def test_peacefulness_is_never_presented_as_directly_proxied():
+    assert "ความหนาแน่นประชากรแทน" not in TEXT
+    assert "แต่ไม่ใช่ความสงบเอง" in TEXT
+    assert "population intensity ≠ built form ≠ peacefulness" in TEXT
+
+
+def test_cover_is_presentation_first_and_states_draft_and_scoring():
+    cover = TEXT.split("<!-- /cover -->")[0]
+    assert "DRAFT · SCORING OFF · 16 OCT 2026" in cover
+    assert "ภาพรวมข้อมูลพื้นที่และสิ่งที่เราเข้าใจได้แล้ว" in cover
+    assert "Chiang Mai · Chiang Rai · Phayao" in cover
+    for implementation_detail in ("1e21a14", "outputs/", "scripts/", "canonical", "render"):
+        assert implementation_detail not in cover, implementation_detail
+    colophon = TEXT.split("### H. Colophon")[1]
+    for moved in ("1e21a14", "publish_plates.py", "make_plates.py", "render_html.py", "canonical"):
+        assert moved in colophon, moved
+
+
+def test_trust_boundary_is_one_two_column_page_and_keeps_all_items():
+    sec = TEXT.split("## 13. ")[1].split("## 14. ")[0]
+    assert "<!-- columns -->" in sec and "This boundary is intentional." in sec
+    can = sec.split("WHAT WE CAN SEE NOW")[1].split("WHAT WE CANNOT CLAIM YET")[0]
+    cannot = sec.split("WHAT WE CANNOT CLAIM YET")[1]
+    assert can.count("\n- ") == 7 and cannot.count("\n- ") == 12
+
+
+def test_layout_markers_are_balanced():
+    assert TEXT.count("<!-- landscape -->") == TEXT.count("<!-- /landscape -->")
+    assert len(re.findall(r"<!-- grid \w+ -->", TEXT)) == TEXT.count("<!-- /grid -->")
+    assert TEXT.count("<!-- columns -->") == TEXT.count("<!-- /columns -->") == 1
+    assert TEXT.count("<!-- cover -->") == TEXT.count("<!-- /cover -->") == 1
+
+
+def test_evidence_family_matrix_covers_every_requirement_once():
+    pytest.importorskip("matplotlib")
+    mod = _load(PLATES, "briefing_make_plates_families")
+    plan = yaml.safe_load((ROOT / "config/family-evaluability.yaml").read_text("utf-8"))
+    ids = sorted(e["id"] for e in plan["entries"] if not e["id"].startswith("IRR-"))
+    grouped = [i for _, _, members in mod.EVIDENCE_FAMILIES if members for i in members]
+    assert sorted(grouped) == ids
+    families = {en for _, en, _ in mod.EVIDENCE_FAMILIES}
+    for want in ("Hazard", "Education", "Healthcare", "Town services", "Land price", "Water"):
+        assert want in families, want
 
 
 def test_plates_read_only_current_corrected_artifacts():
@@ -82,7 +134,7 @@ def test_plates_read_only_current_corrected_artifacts():
 
 def test_every_referenced_plate_is_generated_published_and_tracked_safely():
     src = PLATES.read_text("utf-8")
-    saved = set(re.findall(r'save\(fig, "([^"]+)"\)', src))
+    saved = set(re.findall(r'save\(fig, "([^"]+)"', src))
     links = re.findall(r"!\[[^\]]*\]\(([^)]+)\)", TEXT)
     assert links and all(link.startswith("hearthmap-briefing-v0.1/assets/") for link in links)
     referenced = {Path(link).stem for link in links}

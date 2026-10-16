@@ -26,6 +26,7 @@ ASSETS = ROOT / "docs/product/hearthmap-briefing-v0.1/assets"
 MAX_BYTES = 1_000_000
 MAX_CHANNEL_ERROR = 12  # of 255
 PUBLISHED = (
+    "cover-aoi",
     "00-hearthmap-overview",
     "01-hazard-foundation",
     "02-routing-accessibility",
@@ -35,6 +36,7 @@ PUBLISHED = (
     "05b-town-services-sensitivity",
     "06-industry-mining-context",
     "07-evidence-state",
+    "07b-evidence-state-detail",
     "08-future-product-concept",
 )
 
@@ -52,6 +54,11 @@ def main() -> int:
             shutil.copyfile(src, dst)
         else:
             with Image.open(src) as im:
+                if "A" in im.getbands() and im.getchannel("A").getextrema()[0] < 255:
+                    print(
+                        f"{name}: has transparency and exceeds {MAX_BYTES:,} bytes; refusing a lossy RGB palette"
+                    )
+                    return 1
                 rgb = im.convert("RGB")
                 pal = rgb.quantize(
                     colors=256, method=Image.Quantize.MAXCOVERAGE, dither=Image.Dither.NONE
