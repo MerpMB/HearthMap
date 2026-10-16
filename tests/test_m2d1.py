@@ -345,7 +345,7 @@ def test_evaluability_states_follow_the_correction_and_nothing_becomes_ready():
         yaml.safe_load((ROOT / "config/human-qa.yaml").read_text("utf-8"))["gates"][
             "m2d_human_visual_signoff"
         ]["status"]
-        == "PENDING"
+        == "PASSED"
     )
 
 

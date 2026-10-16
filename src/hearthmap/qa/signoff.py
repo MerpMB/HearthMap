@@ -24,6 +24,12 @@ class SignoffRecord(BaseModel):
     reviewer_role: str | None = None
     result: str | None = None
     reviewed_material: str
+    # optional review record details (M2D signoff): what was observed, what is NOT resolved, backlog items and notes  # noqa: E501
+    observations_reported: tuple[str, ...] = ()
+    known_non_blocking_limitations_not_resolved: tuple[str, ...] = ()
+    family_scoring: str | None = None
+    visualization_backlog: tuple[dict[str, str], ...] = ()
+    note: str | None = None
 
     @model_validator(mode="after")
     def _complete(self) -> SignoffRecord:

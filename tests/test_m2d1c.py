@@ -343,7 +343,7 @@ def test_no_scoring_unchanged_routing_and_immutable_hazards():
         yaml.safe_load((ROOT / "config/human-qa.yaml").read_text("utf-8"))["gates"][
             "m2d_human_visual_signoff"
         ]["status"]
-        == "PENDING"
+        == "PASSED"
     )
 
 

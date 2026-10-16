@@ -65,9 +65,34 @@ gates:
     result: null
     reviewed_material: M2A family and infrastructure review maps (outputs/m2a-review/), not yet reviewed
   m2d_human_visual_signoff:
-    # M2D Wave-1 regional-context evidence review is a separate gate; nothing reviewed, nothing inferred. Never mark PASSED without a user report.
-    status: PENDING
-    review_date: null
-    reviewer_role: null
-    result: null
-    reviewed_material: M2D Wave-1 regional-context review maps (outputs/m2d-review/), not yet reviewed
+    # Recorded from the project user's and architecture reviewer's report. This gate does NOT enable scoring and does not resolve any limitation below.
+    status: PASSED
+    review_date: "2026-10-16"
+    reviewer_role: project user and architecture reviewer
+    result: no blocking systemic spatial anomaly observed
+    reviewed_material: M2D review artifacts (outputs/m2d-review/) - WorldPop population intensity, GHSL built form, settlement/urban calibration context, routing unresolved-settlement QA, canonical edge analysis origins, boundary-limited accessibility context, town-service components and CORE/BROADER sensitivity, DIW tambon industrial context, DPIM mining/stone-crushing administrative context, OSM industrial/quarry context, evidence completeness
+    observations_reported:
+      - major settlement patterns align plausibly with known northern Thailand urban and valley geography
+      - no obvious CRS displacement or raster/geometry shift
+      - unresolved routing is concentrated in sparse, mountainous, low-built-up terrain
+      - canonical edge-origin corrections appear along the outer AOI boundary, not as internal province seams
+      - no artificial discontinuity along internal Chiang Mai / Chiang Rai / Phayao boundaries
+      - population and built-form evidence remain visually distinct
+      - administrative-resolution DIW/DPIM evidence is shown as context, not exact facility location
+      - town-service definition sensitivity remains visible and unresolved
+      - evidence gaps are shown as gaps, not positive evidence
+    known_non_blocking_limitations_not_resolved:
+      - destination catalogues are boundary limited
+      - current education truth is stale/partial
+      - CORE vs BROADER town-service semantics are not selected
+      - DIW and DPIM lack exact facility geometry for some evidence
+      - OSM completeness varies
+      - dense-urban-core thresholds are not calibrated
+      - land-market evidence has not been acquired
+      - fiber/electricity/legal-access parcel truth remains later-stage verification
+    family_scoring: FAMILY_SCORING_ALLOWED remains false
+    visualization_backlog:
+      - id: M2A-EDU-LEGEND-ACCOUNTING
+        status: OPEN_NON_BLOCKING
+        item: The historical M2A education-facility review map reports 4,413 plotted institutions while the visible category legend does not account for all plotted records. Investigate legend/category accounting if the M2A human-review artifact is regenerated.
+    note: The M2A images reviewed with M2D are historical (pre M2A.2 origin correction) and must NOT be used to mark the current corrected M2A human gate as PASSED (m2a_human_visual_signoff stays PENDING).

@@ -295,8 +295,8 @@ def test_osm_industry_kinds_are_distinct_and_lifecycle_is_recorded():
 # -- gates, registry, secrets -----------------------------------------------------------------------------------
 def test_gates_scoring_stays_off_and_m2d_signoff_is_pending():
     qa = yaml.safe_load((ROOT / "config/human-qa.yaml").read_text("utf-8"))["gates"]
-    assert qa["m2d_human_visual_signoff"]["status"] == "PENDING"
-    assert qa["m2d_human_visual_signoff"]["review_date"] is None
+    assert qa["m2d_human_visual_signoff"]["status"] == "PASSED"
+    assert qa["m2d_human_visual_signoff"]["review_date"] == "2026-10-16"
     assert qa["m2a_human_visual_signoff"]["status"] == "PENDING"
     plan = load_plan()
     assert plan["scoring_gate"]["FAMILY_SCORING_ALLOWED"] is False
