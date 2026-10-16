@@ -108,3 +108,52 @@ def area_fraction(cells: np.ndarray, polys: np.ndarray, n_cells: int) -> np.ndar
     inter = shapely.area(shapely.intersection(cells[ci], merged))
     out[ci] = np.clip(inter / shapely.area(cells[ci]), 0, 1)
     return out
+
+
+def assign_max_overlap(
+    cells: np.ndarray,
+    cell_group: np.ndarray,
+    polys: np.ndarray,
+    poly_group: np.ndarray,
+    poly_ids: np.ndarray,
+    centroid_first: bool = False,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Administrative unit of each cell, restricted to units of the cell's OWN group (province).
+
+    With ``centroid_first`` a cell keeps the own-group unit that contains its centroid (this preserves the usual assignment for
+    ordinary cells); only cells whose centroid is NOT in an own-group unit fall back to the own-group unit that overlaps the cell most.
+    A centroid join alone mislabels edge cells: the grid keeps cells that only partly cover the AOI, so their centroid can lie in a
+    neighbouring province or outside Thailand. Cells with no own-group unit overlapping them get "" (unknown, never a neighbour label).
+
+    Returns (ids, overlap_share_of_cell, method).
+    """
+    polys = shapely.make_valid(polys)
+    tree = shapely.STRtree(polys)
+    n = len(cells)
+    ids = np.full(n, "", dtype=object)
+    share = np.zeros(n)
+    method = np.full(n, "NO_OVERLAPPING_UNIT_IN_OWN_GROUP", dtype=object)
+    done = np.zeros(n, dtype=bool)
+    if centroid_first:
+        ci, pi = tree.query(shapely.centroid(cells), predicate="within")
+        keep = cell_group[ci] == poly_group[pi]
+        ci, pi = ci[keep], pi[keep]
+        ids[ci], method[ci] = poly_ids[pi], "CENTROID_IN_OWN_GROUP_UNIT"
+        done[ci] = True
+        share[ci] = shapely.area(shapely.intersection(cells[ci], polys[pi])) / shapely.area(
+            cells[ci]
+        )
+    ci, pi = tree.query(cells, predicate="intersects")
+    keep = (cell_group[ci] == poly_group[pi]) & ~done[ci]
+    ci, pi = ci[keep], pi[keep]
+    inter = shapely.area(shapely.intersection(cells[ci], polys[pi]))
+    pos = inter > 0  # a unit that only touches the cell edge is not an overlap
+    ci, pi, inter = ci[pos], pi[pos], inter[pos]
+    if len(ci):
+        order = np.lexsort((-inter, ci))  # per cell, largest overlap first
+        ci, pi, inter = ci[order], pi[order], inter[order]
+        first = np.r_[True, ci[1:] != ci[:-1]]
+        ids[ci[first]] = poly_ids[pi[first]]
+        share[ci[first]] = inter[first] / shapely.area(cells[ci[first]])
+        method[ci[first]] = "MAX_OVERLAP_WITHIN_OWN_GROUP"
+    return ids, share, method

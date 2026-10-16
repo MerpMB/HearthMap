@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "m1a"))
 from common import CANONICAL, PROCESSED  # noqa: E402
 
-from hearthmap.context.settlement import GridIndex  # noqa: E402
+from hearthmap.context.settlement import GridIndex, assign_max_overlap  # noqa: E402
 from hearthmap.context.stats import QUANTILES, weighted_coverage  # noqa: E402
 
 OUT = Path("outputs/m2d")
@@ -138,23 +138,46 @@ def main() -> int:
         OUT / "tables" / "routing-unresolved-settlement-distributions.csv", index=False
     )
 
-    # district for the review table and cause inspection (descriptive; the snap rule is not touched)
-    adm2 = gpd.read_file(
+    # district for the review table: the ADM2 unit of the cell's OWN province that overlaps the cell most (authoritative COD hierarchy).
+    # A centroid join against all of Thailand is NOT used for the label: edge cells keep only a fraction of their area inside the AOI, so
+    # their centroid can lie in a neighbouring province (M2D.1b: Tha Wang Pha, Nan, for a cell that is 18% in Phayao's Pong district).
+    adm2_all = gpd.read_file(
         next(Path("data/raw/boundaries-ocha-cod-ab").glob("*/tha_admin_boundaries.gdb.zip")),
         layer="tha_admin2",
     ).to_crs(CANONICAL)
+    adm2 = adm2_all[adm2_all["adm1_pcode"].isin(PROV)].reset_index(drop=True)
     grid = (
         gpd.read_file(PROCESSED / "grid.gpkg", layer="analysis_grid_500m")
         .sort_values("cell_id")
         .reset_index(drop=True)
     )
-    cen = gpd.GeoDataFrame(geometry=grid.geometry.centroid, crs=CANONICAL)
+    d_ids, d_share, d_method = assign_max_overlap(
+        grid.geometry.to_numpy(),
+        grid["majority_pcode"].to_numpy(),
+        adm2.geometry.to_numpy(),
+        adm2["adm1_pcode"].to_numpy(),
+        adm2["adm2_pcode"].to_numpy(),
+        centroid_first=True,
+    )
+    lookup = adm2.set_index("adm2_pcode")
+    district = lookup["adm2_name"].reindex(d_ids).fillna("").to_numpy()
+    district_th = lookup["adm2_name1"].reindex(d_ids).fillna("").to_numpy()
+    # explicit CONTEXT fields (never used as the administrative label): where the cell centroid falls nationwide
+    cen_pts = grid.geometry.centroid
+    cen = gpd.GeoDataFrame(geometry=cen_pts, crs=CANONICAL)
     j = gpd.sjoin(
-        cen, adm2[["adm2_name", "adm2_name1", "geometry"]], how="left", predicate="within"
+        cen,
+        adm2_all[["adm1_pcode", "adm1_name", "adm2_name", "geometry"]],
+        how="left",
+        predicate="within",
     )
     j = j[~j.index.duplicated()].reindex(range(n))
-    district = j["adm2_name"].fillna("").to_numpy()
-    district_th = j["adm2_name1"].fillna("").to_numpy()
+    centroid_adm1 = j["adm1_name"].fillna("outside Thailand / no unit").to_numpy()
+    centroid_adm2 = j["adm2_name"].fillna("").to_numpy()
+    centroid_in_reported_province = j["adm1_pcode"].to_numpy() == grid["majority_pcode"].to_numpy()
+    lonlat = gpd.GeoSeries(cen_pts, crs=CANONICAL).to_crs(4326)
+    clon, clat = lonlat.x.to_numpy(), lonlat.y.to_numpy()
+    cov_frac = grid["coverage_fraction"].to_numpy()
     dsnap = df["road_snap_distance_m"].to_numpy()
     frag = m2a["road_any_fragment_distance_m"].to_numpy()
     ctx_road = m2a["road_access_context"].to_numpy()
@@ -193,8 +216,18 @@ def main() -> int:
         {
             "grid_id": df["cell_id"].to_numpy()[sel],
             "province": df["majority_pcode"].map(PROV).to_numpy()[sel],
+            "province_pcode": df["majority_pcode"].to_numpy()[sel],
+            "district_pcode": d_ids[sel],
             "district": district[sel],
             "district_th": district_th[sel],
+            "district_assignment_method": d_method[sel],
+            "district_overlap_share_of_cell": d_share[sel].round(3),
+            "aoi_coverage_fraction_of_cell": cov_frac[sel].round(3),
+            "cell_centroid_lon": clon[sel].round(5),
+            "cell_centroid_lat": clat[sel].round(5),
+            "centroid_in_reported_province": centroid_in_reported_province[sel],
+            "centroid_nationwide_adm1_context": centroid_adm1[sel],
+            "centroid_nationwide_adm2_context": centroid_adm2[sel],
             "modelled_population": pop[sel].round(1),
             "built_up_m2": built[sel].round(0),
             "built_up_fraction": frac[sel],
@@ -204,7 +237,7 @@ def main() -> int:
             "unresolved_reason": df["service_convenience_store_unresolved_reason"].to_numpy()[sel],
             "in_top_population_list": [i in top_pop for i in sel],
             "in_top_built_up_list": [i in top_built for i in sel],
-            "evidence_note": "QA context: modelled population (alpha) and GHSL built-up; unresolved is not routing failure and not a rejection",
+            "evidence_note": "QA context: modelled population (alpha) and GHSL built-up are summed over the whole 500 m cell, including any part outside the AOI; unresolved is not routing failure and not a rejection",
         }
     ).sort_values("modelled_population", ascending=False)
     review.to_csv(REVIEW / "routing-unresolved-settlement-overlap.csv", index=False)

@@ -34,7 +34,13 @@ from hearthmap.context.semantics import (  # noqa: E402
     COLUMN_LINEAGE_RULES,
     SOURCE_SEMANTICS,
 )
-from hearthmap.context.settlement import CELL_KM2, GridIndex, aggregate_to_grid, area_fraction  # noqa: E402
+from hearthmap.context.settlement import (  # noqa: E402
+    CELL_KM2,
+    GridIndex,
+    aggregate_to_grid,
+    area_fraction,
+    assign_max_overlap,
+)
 from hearthmap.context.stats import distribution_table, stat_with_denominator  # noqa: E402
 from hearthmap.enums import Confidence  # noqa: E402
 from hearthmap.family import load_config, multi_source_dijkstra  # noqa: E402
@@ -319,14 +325,19 @@ def main() -> int:
             admin3["adm1_name1"], admin3["adm2_name1"], admin3["adm3_name1"], strict=True
         )
     ]
-    j = gpd.sjoin(
-        gpd.GeoDataFrame(geometry=cen_geo, crs=CANONICAL),
-        admin3[["adm3_pcode", "geometry"]],
-        how="left",
-        predicate="within",
+    # tambon of a cell: the tambon of the cell's OWN (majority) province that overlaps it most. A centroid join mislabels edge cells
+    # (the grid keeps cells that only partly cover the AOI, and their centroid can lie in a neighbouring province or outside Thailand).
+    tb_ids, tb_share, tb_method = assign_max_overlap(
+        cell_polys,
+        grid["majority_pcode"].to_numpy(),
+        admin3.geometry.to_numpy(),
+        admin3["adm1_pcode"].to_numpy(),
+        admin3["adm3_pcode"].to_numpy(),
+        centroid_first=True,
     )
-    j = j[~j.index.duplicated()]
-    out["diw_tambon_pcode"] = j["adm3_pcode"].reindex(range(n_cells)).fillna("").to_numpy()
+    out["diw_tambon_pcode"] = tb_ids
+    out["diw_tambon_assignment_method"] = tb_method
+    out["diw_tambon_overlap_share_of_cell"] = tb_share.round(4)
     out["dpim_tambon_pcode"] = out["diw_tambon_pcode"]
 
     d = one_version("industry-diw-factories")

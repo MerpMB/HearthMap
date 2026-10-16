@@ -44,7 +44,7 @@ fragment, road-access context, unresolved reason); it has no suitability, rankin
 Among the 1,507 settlement-like unresolved cells:
 - **1,152 (77%) lie 1-2 km from the routable network** - just beyond the snap radius (about 16,400 of the 22,500 modelled people). A snap-radius sensitivity study would recover most of them, but that is a routing-policy change and needs a separate review; the snap distance was not changed.
 - **225** lie 2-5 km and 12 lie farther: settlement reached only by minor roads or tracks that the primary-to-unclassified OSM graph does not hold (missing minor roads), or modelled people in places with no mapped road at all.
-- **118 sit within 1 km of an isolated OSM road fragment** that is not connected to the main network (disconnected segments or topology gaps). The single highest cell (Tha Wang Pha, Phayao; 295 modelled people, 29,205 m2 built-up) is 58 m from such a fragment and 10.4 km from the routable graph.
+- **118 sit within 1 km of an isolated OSM road fragment** that is not connected to the main network (disconnected segments or topology gaps). The single highest cell (G500-E001332-N004224, Phayao / Pong; 295 modelled people, 29,205 m2 built-up) is 58 m from such a fragment and 10.4 km from the routable graph. **Correction (M2D.1b):** this report first labelled it "Tha Wang Pha, Phayao"; Tha Wang Pha is in Nan. The cell is only 18% inside the AOI (Phayao / Pong), so most of its modelled population lies outside the AOI. See [m2d1b-admin-label-integrity.md](m2d1b-admin-label-integrity.md).
 - A WorldPop or GHSL model artefact cannot be excluded for isolated high cells; both products are modelled and partly dependent.
 
 ## Town-service statistics
