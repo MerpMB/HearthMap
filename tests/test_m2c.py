@@ -216,7 +216,7 @@ def test_missing_evidence_never_becomes_positive_evidence():
                 "PARTIAL",
             }
     bad = plan_copy()
-    entry(bad, "TOWN-SERVICES")["stages"]["REGIONAL_SCREENING"][0] = (
+    entry(bad, "LAND-PRICE")["stages"]["REGIONAL_SCREENING"][0] = (
         "PARTIAL"  # no evidence exists at all
     )
     assert any("PARTIAL with no evidence" in x for x in errors(bad))
