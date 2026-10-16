@@ -54,17 +54,111 @@ def test_project_state_allows_calibration_and_forbids_scoring():
         "allowed": False
     }
     assert "education register remains incomplete" in ps.reason
-    assert r.status == "AWAITING_USER_INPUT"
+    assert r.status == "PARTIALLY_POPULATED_INPUT_PASS_1"
 
 
-def test_every_requirement_is_unset_no_invented_defaults():
+PASS_1 = {
+    "education.kindergarten.importance": "PREFERENCE",
+    "education.kindergarten.preferred_max_drive_minutes": 15,
+    "education.kindergarten.absolute_max_drive_minutes": 25,
+    "education.primary.importance": "MUST",
+    "education.primary.preferred_max_drive_minutes": 15,
+    "education.primary.absolute_max_drive_minutes": 25,
+    "education.lower_secondary.importance": "MUST",
+    "education.lower_secondary.preferred_max_drive_minutes": 20,
+    "education.lower_secondary.absolute_max_drive_minutes": 30,
+    "education.upper_secondary.importance": "STRONG_PREFERENCE",
+    "education.upper_secondary.preferred_max_drive_minutes": 25,
+    "education.upper_secondary.absolute_max_drive_minutes": 40,
+    "healthcare.hospital.importance": "MUST",
+    "healthcare.hospital.preferred_max_drive_minutes": 20,
+    "healthcare.hospital.absolute_max_drive_minutes": 35,
+    "healthcare.regional_or_referral_hospital.importance": "STRONG_PREFERENCE",
+    "healthcare.regional_or_referral_hospital.preferred_max_drive_minutes": 45,
+    "healthcare.regional_or_referral_hospital.absolute_max_drive_minutes": 75,
+    "urban_access.preferred_drive_time_to_town_services": 35,
+    "urban_access.preferred_drive_time_to_town_services_importance": "STRONG_PREFERENCE",
+    "livability.avoid_dense_urban_core": True,
+    "livability.avoid_dense_urban_core_importance": "STRONG_PREFERENCE",
+}
+
+
+def plain(v):
+    return v.value if hasattr(v, "value") else v
+
+
+def test_only_the_explicit_input_pass_1_decisions_are_set():
     r = load_requirements()
     ls = leaves(r)
-    assert len(ls) == 65
-    assert all(
-        v == UNSET for _, v in ls
-    )  # populated only with explicit user decisions; none given yet
-    assert check_requirements(r) == []  # an all-UNSET file is consistent, with no warnings
+    assert len(ls) == 67
+    got = {p: plain(v) for p, v in ls if v != UNSET}
+    assert got == PASS_1  # exactly the decisions given, nothing inferred
+    assert r.status == "PARTIALLY_POPULATED_INPUT_PASS_1"
+    assert check_requirements(r) == []  # consistent and no warnings
+
+
+def test_everything_not_decided_stays_unset():
+    r = load_requirements()
+    unset = {p for p, v in leaves(r) if v == UNSET}
+    must_stay = [
+        "education.vocational.importance", "education.university.importance", "education.university.preferred_max_drive_minutes",
+        "education.kindergarten.minimum_choices_within_preferred_time", "education.primary.minimum_choices_within_preferred_time",
+        "education.lower_secondary.minimum_choices_within_preferred_time", "education.upper_secondary.minimum_choices_within_preferred_time",
+        "healthcare.primary_healthcare.importance", "healthcare.primary_healthcare.preferred_max_drive_minutes",
+        "redundancy.number_of_primary_schools_within_time.minimum_count", "redundancy.number_of_secondary_schools_within_time.minimum_count",
+        "redundancy.number_of_hospitals_within_time.minimum_count", "urban_access.absolute_max_drive_time_to_major_city_services",
+        "urban_access.airport_importance", "urban_access.shopping_daily_services_importance",
+        "road_access.tolerate_unpaved_local_access", "road_access.minimum_all_weather_access_expectation",
+        "road_access.major_road.maximum_baseline_drive_time_to_major_road", "utilities.electricity.must_be_verified_before_purchase",
+        "utilities.water.well_water_acceptable", "utilities.telecom.minimum_requirement", "livability.preferred_population_density",
+        "livability.tolerate_tourism_activity", "livability.tolerate_nightlife", "livability.industrial_nuisance_tolerance",
+        "livability.agricultural_surroundings_preference", "land.budget_thb", "land.preferred_area_rai", "land.minimum_area_rai",
+        "land.maximum_area_rai", "land.terrain_tolerance",
+    ]  # fmt: skip
+    assert set(must_stay) <= unset
+    assert not any(
+        "quality" in p or "trauma" in p or "emergency" in p for p, _ in leaves(r)
+    )  # not requirements at all
+
+
+def test_choice_diversity_is_decision_context_not_a_gate():
+    r = load_requirements()
+    for name in ("kindergarten", "primary", "lower_secondary", "upper_secondary"):
+        assert (
+            getattr(r.education, name).minimum_choices_within_preferred_time == UNSET
+        )  # no fixed minimum number of schools
+    red = r.redundancy
+    for item in (
+        red.number_of_primary_schools_within_time,
+        red.number_of_secondary_schools_within_time,
+        red.number_of_hospitals_within_time,
+    ):
+        assert (
+            item.minimum_count == UNSET
+            and item.importance == UNSET
+            and item.within_minutes == UNSET
+        )
+    # a single reachable institution inside the preferred band is perfectly consistent with these requirements
+    assert not [
+        i for i in validate_requirements(r) if "choice" in i.message.lower() or "redundan" in i.path
+    ]
+    assert "DECISION CONTEXT" in Path("config/family-requirements.yaml").read_text("utf-8")
+
+
+def test_town_access_has_no_invented_absolute_maximum_and_pairs_are_validated():
+    r = load_requirements()
+    assert r.urban_access.preferred_drive_time_to_town_services == 35
+    assert (
+        r.urban_access.absolute_max_drive_time_to_major_city_services == UNSET
+    )  # a different item, not set
+    irrelevant = with_(livability__avoid_dense_urban_core_importance="IRRELEVANT")
+    assert any("IRRELEVANT but a requirement value is set" in e for e in errors(irrelevant))
+    no_imp = with_(urban_access__preferred_drive_time_to_town_services_importance=UNSET)
+    assert any(
+        i.severity == "WARNING" and "without an importance" in i.message
+        for i in validate_requirements(no_imp)
+    )
+    assert not errors(no_imp)
 
 
 def test_enabling_scoring_is_a_validation_error():
@@ -299,7 +393,7 @@ def test_matrix_covers_every_requirement_and_keeps_three_concepts_separate():
     req, cap = load_requirements(), load_capability()
     rows = evidence_matrix(req, cap)
     reqrows = [r for r in rows if r["kind"] == "USER_REQUIREMENT"]
-    assert len(reqrows) == len(leaves(req)) == 65
+    assert len(reqrows) == len(leaves(req)) == 67
     assert {r["requirement_path"] for r in reqrows} == {p for p, _ in leaves(req)}
     assert all(
         r["evaluation_rule"] == EVALUATION_RULE for r in rows
@@ -333,6 +427,37 @@ def test_missing_data_never_rewrites_the_user_preference():
     )
     assert rows["utilities.telecom.minimum_requirement"]["data_capability"] == "NOT_SUPPORTED"
     assert rows["education.primary.preferred_max_drive_minutes"]["needs_user_input"] is False
+
+
+def test_newly_filled_requirements_keep_their_values_and_honest_support_status():
+    rows = {
+        x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
+    }
+    for path, value in PASS_1.items():
+        assert (
+            plain(rows[path]["user_requirement_value"]) == value
+        )  # no preference was modified because of evidence gaps
+        assert (
+            rows[path]["needs_user_input"] is False
+            and rows[path]["evaluation_rule"] == EVALUATION_RULE
+        )
+    assert all(
+        rows[p]["data_capability"] == "PARTIALLY_SUPPORTED"
+        for p in PASS_1
+        if p.startswith("education.")
+    )  # education stays partial
+    assert all(
+        rows[p]["data_capability"] == "SUPPORTED_WITH_LIMITATIONS"
+        for p in PASS_1
+        if p.startswith("healthcare.")
+    )
+    assert all(
+        rows[p]["data_capability"] == "NOT_SUPPORTED"
+        for p in PASS_1
+        if p.startswith(("urban_access.", "livability."))
+    )
+    scoring = load_requirements().project_state.family_suitability_scoring
+    assert scoring == {"allowed": False}
 
 
 def test_capability_statuses_are_honest_about_current_evidence():

@@ -3,7 +3,7 @@
 Status: **calibration contract only.** Config: [`config/family-requirements.yaml`](../../config/family-requirements.yaml) (what the family wants),
 [`config/family-evidence-capability.yaml`](../../config/family-evidence-capability.yaml) (what current evidence can evaluate); code:
 `hearthmap.family.requirements`; matrix: `outputs/m2b0/requirement-evidence-matrix.csv` (`python scripts/m2b0/build_matrix.py`).
-**No cell is scored, no province is ranked, no recommendation exists.** M2B.0 ends `READY_FOR_USER_REQUIREMENT_INPUT`.
+**No cell is scored, no province is ranked, no recommendation exists.** Input pass 1 (below) has populated the first explicit decisions; M2B.0 ends `READY_FOR_NEXT_USER_REQUIREMENT_INPUT`.
 
 ## Project state
 
@@ -31,9 +31,27 @@ questions (validation raises an error if scoring is enabled here).
 
 Missing or partial data never redefines a preference (tested): a requirement value is carried into the matrix unchanged whatever its capability.
 
+## Input pass 1 (explicit user decisions only)
+
+| Requirement | Preferred | Absolute | Importance | Current evidence support |
+|---|---|---|---|---|
+| Kindergarten drive time | 15 min | 25 min | PREFERENCE | PARTIALLY_SUPPORTED (stale register) |
+| Primary school | 15 | 25 | MUST | PARTIALLY_SUPPORTED |
+| Lower secondary | 20 | 30 | MUST | PARTIALLY_SUPPORTED (pooled with upper secondary) |
+| Upper secondary | 25 | 40 | STRONG_PREFERENCE | PARTIALLY_SUPPORTED (pooled) |
+| Hospital | 20 | 35 | MUST | SUPPORTED_WITH_LIMITATIONS |
+| Regional / referral hospital | 45 | 75 | STRONG_PREFERENCE | SUPPORTED_WITH_LIMITATIONS (source typecode only) |
+| Drive time to town services | 35 | UNSET (none given) | STRONG_PREFERENCE | NOT_SUPPORTED (no town-services layer) |
+| Avoid the dense urban core | true | - | STRONG_PREFERENCE | NOT_SUPPORTED (no density/urban-core evidence) |
+
+The quieter option is preferred even if normal town access is about 30-35 minutes. **Choice diversity is decision context, not a gate:** no fixed minimum
+number of schools was requested, so every `minimum_choices_*` and redundancy count stays `UNSET`; counts and travel times are kept so alternatives can be
+compared, and a location with a single institution in the preferred band is not failed or penalised. Everything else (university, vocational, airport,
+utilities, road surface, all-weather access, telecom, land, density range, school quality, emergency capability) remains `UNSET`.
+
 ## How to fill in requirements
 
-Every value is `UNSET` today ("the owner has not decided"), not a default. Fill values with the owner; invented defaults are not product truth.
+Unstated values are `UNSET` ("the owner has not decided"), not a default. Fill values with the owner; invented defaults are not product truth.
 Minutes are `BASELINE_DRIVE_TIME` (free-flow), not commute time. Use importance instead of numeric weights:
 `MUST | STRONG_PREFERENCE | PREFERENCE | NICE_TO_HAVE | IRRELEVANT` (weights may be derived later).
 
@@ -52,7 +70,7 @@ accepting non-PWA or well water; minimum area above maximum (or preferred outsid
 `URBAN` density; enabling scoring. Warnings (not errors): `MUST`/`STRONG_PREFERENCE` with no threshold yet; thresholds without an importance;
 tolerating unpaved access while requiring all-weather access. A misspelt key is rejected rather than defaulted.
 
-## Evidence sufficiency (65 requirement leaves + 3 capability-only questions)
+## Evidence sufficiency (67 requirement leaves + 3 capability-only questions)
 
 | Group | Current capability | Why |
 |---|---|---|

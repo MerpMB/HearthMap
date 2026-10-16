@@ -108,6 +108,11 @@ capabilities:
     reason: No town-services facility layer or definition of 'town services' exists in M2A.
     evidence_columns: []
     limitations: ["Needs a definition and a facility source."]
+  urban_access.preferred_drive_time_to_town_services_importance:
+    status: NOT_SUPPORTED
+    reason: Importance of an item that cannot yet be evaluated (no town-services layer).
+    evidence_columns: []
+    limitations: []
   urban_access.absolute_max_drive_time_to_major_city_services:
     status: NOT_SUPPORTED
     reason: No major-city service reference points were defined or routed.
@@ -131,6 +136,11 @@ capabilities:
   livability.avoid_dense_urban_core:
     status: NOT_SUPPORTED
     reason: No urban-core or built-up delineation has been acquired.
+    evidence_columns: []
+    limitations: []
+  livability.avoid_dense_urban_core_importance:
+    status: NOT_SUPPORTED
+    reason: Importance of an item that cannot yet be evaluated (no urban-core or density evidence).
     evidence_columns: []
     limitations: []
   livability.tolerate_tourism_activity:

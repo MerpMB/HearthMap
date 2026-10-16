@@ -138,6 +138,7 @@ class Utilities(_M):
 
 class UrbanAccess(_M):
     preferred_drive_time_to_town_services: Num = UNSET
+    preferred_drive_time_to_town_services_importance: Imp = UNSET
     absolute_max_drive_time_to_major_city_services: Num = UNSET
     airport_importance: Imp = UNSET
     shopping_daily_services_importance: Imp = UNSET
@@ -148,6 +149,7 @@ class Livability(_M):
         Unset | Literal["REMOTE", "RURAL", "PERI_URBAN", "SUBURBAN", "URBAN"]
     ) = UNSET
     avoid_dense_urban_core: Flag = UNSET
+    avoid_dense_urban_core_importance: Imp = UNSET
     tolerate_tourism_activity: Tolerance = UNSET
     tolerate_nightlife: Tolerance = UNSET
     industrial_nuisance_tolerance: Tolerance = UNSET
@@ -282,6 +284,16 @@ def validate_requirements(req: Requirements) -> list[Issue]:
         if _set(imp) is False and th:
             warn(path, "thresholds set without an importance")
 
+    def pair(path: str, value: Any, importance: Any, flag: bool = False) -> None:
+        """A scalar requirement with its own importance field (value without importance warns; IRRELEVANT with a value fails)."""
+        active = value is True if flag else _set(value)
+        if importance is Importance.IRRELEVANT and active:
+            err(path, "importance IRRELEVANT but a requirement value is set")
+        elif active and not _set(importance):
+            warn(path, "value set without an importance")
+        elif importance in (Importance.MUST, Importance.STRONG_PREFERENCE) and not active:
+            warn(path, f"importance {importance.value} but no value is set yet")
+
     ed = req.education
     for name in ("kindergarten", "primary", "lower_secondary", "upper_secondary"):
         s: Stage = getattr(ed, name)
@@ -360,9 +372,24 @@ def validate_requirements(req: Requirements) -> list[Issue]:
         err("utilities.water", "requires municipal/PWA service but also accepts well water")
 
     ua = req.urban_access
-    check_obj("urban_access", ua)
+    pair(
+        "urban_access.preferred_drive_time_to_town_services",
+        ua.preferred_drive_time_to_town_services,
+        ua.preferred_drive_time_to_town_services_importance,
+    )
+    if (
+        _set(ua.absolute_max_drive_time_to_major_city_services)
+        and ua.absolute_max_drive_time_to_major_city_services < 0
+    ):
+        err("urban_access.absolute_max_drive_time_to_major_city_services", "negative value")
 
     lv = req.livability
+    pair(
+        "livability.avoid_dense_urban_core",
+        lv.avoid_dense_urban_core,
+        lv.avoid_dense_urban_core_importance,
+        flag=True,
+    )
     if lv.avoid_dense_urban_core is True and lv.preferred_population_density == "URBAN":
         err("livability", "avoids the dense urban core but prefers URBAN density")
 

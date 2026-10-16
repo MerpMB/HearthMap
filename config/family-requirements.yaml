@@ -10,8 +10,8 @@
 #   MUST | STRONG_PREFERENCE | PREFERENCE | NICE_TO_HAVE | IRRELEVANT
 # minutes are BASELINE_DRIVE_TIME (free-flow class speeds), not real commute time.
 schema_version: 1
-version: "0.1.0"
-status: AWAITING_USER_INPUT
+version: "0.1.1"
+status: PARTIALLY_POPULATED_INPUT_PASS_1
 
 project_state:
   family_infrastructure_evidence:
@@ -26,24 +26,24 @@ project_state:
 
 education:
   kindergarten:
-    importance: UNSET
-    preferred_max_drive_minutes: UNSET
-    absolute_max_drive_minutes: UNSET
+    importance: PREFERENCE
+    preferred_max_drive_minutes: 15
+    absolute_max_drive_minutes: 25
     minimum_choices_within_preferred_time: UNSET
   primary:
-    importance: UNSET
-    preferred_max_drive_minutes: UNSET
-    absolute_max_drive_minutes: UNSET
+    importance: MUST
+    preferred_max_drive_minutes: 15
+    absolute_max_drive_minutes: 25
     minimum_choices_within_preferred_time: UNSET
   lower_secondary:
-    importance: UNSET
-    preferred_max_drive_minutes: UNSET
-    absolute_max_drive_minutes: UNSET
+    importance: MUST
+    preferred_max_drive_minutes: 20
+    absolute_max_drive_minutes: 30
     minimum_choices_within_preferred_time: UNSET
   upper_secondary:
-    importance: UNSET
-    preferred_max_drive_minutes: UNSET
-    absolute_max_drive_minutes: UNSET
+    importance: STRONG_PREFERENCE
+    preferred_max_drive_minutes: 25
+    absolute_max_drive_minutes: 40
     minimum_choices_within_preferred_time: UNSET
   vocational:
     importance: UNSET
@@ -56,15 +56,16 @@ healthcare:   # no trauma/emergency capability is requested here: that is a futu
     importance: UNSET
     preferred_max_drive_minutes: UNSET
   hospital:
-    importance: UNSET
-    preferred_max_drive_minutes: UNSET
-    absolute_max_drive_minutes: UNSET
+    importance: MUST
+    preferred_max_drive_minutes: 20
+    absolute_max_drive_minutes: 35
   regional_or_referral_hospital:
-    importance: UNSET
-    preferred_max_drive_minutes: UNSET
-    absolute_max_drive_minutes: UNSET
+    importance: STRONG_PREFERENCE
+    preferred_max_drive_minutes: 45
+    absolute_max_drive_minutes: 75
 
-redundancy:   # resilience should not depend only on the nearest facility; a requirement, not a score
+redundancy:   # INPUT PASS 1: the owner wants no fixed minimum number of schools. Multiple reachable alternatives are shown as DECISION CONTEXT (counts and travel times) for comparison; nothing here gates or penalises a location with a single option. Numeric minimums stay UNSET on purpose.
+  # resilience should not depend only on the nearest facility; a requirement, not a score
   number_of_primary_schools_within_time:
     importance: UNSET
     minimum_count: UNSET
@@ -99,14 +100,18 @@ utilities:    # tolerance for uncertainty, not a claim that utility evidence is 
     verification_stage: UNSET      # SCREENING | SHORTLIST | PARCEL_PURCHASE
 
 urban_access:
-  preferred_drive_time_to_town_services: UNSET
+  preferred_drive_time_to_town_services: 35
+  preferred_drive_time_to_town_services_importance: STRONG_PREFERENCE
+  # no absolute maximum town-access time was given; absolute_max_drive_time_to_major_city_services is a different item and stays UNSET
   absolute_max_drive_time_to_major_city_services: UNSET
   airport_importance: UNSET
   shopping_daily_services_importance: UNSET
 
 livability:   # placeholders for later livability modelling; not evaluated in M2B.0
   preferred_population_density: UNSET        # REMOTE | RURAL | PERI_URBAN | SUBURBAN | URBAN
-  avoid_dense_urban_core: UNSET
+  avoid_dense_urban_core: true
+  avoid_dense_urban_core_importance: STRONG_PREFERENCE
+  # stated preference: a peaceful / lower-density setting even if normal town access is about 30-35 minutes
   tolerate_tourism_activity: UNSET           # NONE | LOW | MODERATE | HIGH
   tolerate_nightlife: UNSET
   industrial_nuisance_tolerance: UNSET
