@@ -12,6 +12,7 @@ five evidence concepts apart (exists, resolution, freshness, completeness, evalu
 - `HC-PRIMARY` Primary healthcare travel time
 - `HC-HOSPITAL` Hospital travel time
 - `HC-REGIONAL` Regional / referral hospital travel time
+- `TOWN-SERVICES` Town-services access (preferred 35 min)
 
 Cells with no road access or beyond the search limit stay unresolved, never passing. Facility type is not capability.
 
@@ -42,7 +43,6 @@ Missing evidence triggers verification or new evidence work, never rejection and
 - `EDU-PRIMARY` Primary school travel time
 - `EDU-LOWSEC` Lower secondary travel time
 - `EDU-UPSEC` Upper secondary travel time
-- `TOWN-SERVICES` Town-services access (preferred 35 min)
 - `LAND-PRICE` Bare-land purchase price ceiling (THB 500,000)
 - `ELEC-GRID` Grid electricity at the parcel (before purchase)
 - `WATER-GROUND` Water path - groundwater / well
@@ -50,6 +50,8 @@ Missing evidence triggers verification or new evidence work, never rejection and
 - `ROAD-A-NETWORK` Road access A - network accessibility (OSM routing)
 - `ROAD-C-ALLWEATHER` Road access C - all-weather vehicle access
 - `ROAD-E-NOISE` Road access E - residential exposure to major-road noise
+- `NUIS-INDUSTRIAL` Industrial nuisance avoidance
+- `NUIS-MINING` Mining / quarry / crushing nuisance avoidance
 - `NUIS-NIGHTLIFE` Nightlife concentration avoidance
 - `SETTLE-PEACE` Quiet, lower-density setting (avoid the dense urban core)
 - `TERRAIN-PREF` Gentle / rolling terrain preference
@@ -125,9 +127,7 @@ rule-based and independent of how easy a dataset is to obtain.
 - P0 evidence for EDU-PRIMARY is PARTIAL at REGIONAL_SCREENING
 - P0 evidence for EDU-LOWSEC is PARTIAL at REGIONAL_SCREENING
 - P0 evidence for EDU-UPSEC is PARTIAL at REGIONAL_SCREENING
-- P0 evidence for TOWN-SERVICES is PARTIAL at REGIONAL_SCREENING
 - P0 evidence for LAND-PRICE is BLOCKED_BY_SOURCE_GAP at REGIONAL_SCREENING
-- P0 evidence for SETTLE-PEACE is PARTIAL at REGIONAL_SCREENING
 - the owner has not reviewed the interpretation of each evaluable requirement or authorised scoring
 
 Criteria already satisfied by the plan:

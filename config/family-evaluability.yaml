@@ -192,10 +192,10 @@ entries:
     requirement_paths: [urban_access.preferred_drive_time_to_town_services, urban_access.hard_limit_policy]
     importance_path: urban_access.preferred_drive_time_to_town_services_importance
     evidence_families: [EF-03]
-    evidence: {exists: PARTIAL, resolution: "500 m cell, baseline drive time to OSM service POIs by component (M2D)", freshness: ACCEPTABLE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "component POIs exist and are routed on the frozen network, but the bundle and cluster definitions are not owner-approved, OSM completeness varies and the 35-minute preference is not activated"}
+    evidence: {exists: "YES", resolution: "500 m cell, baseline drive time to OSM service POIs by component (M2D)", freshness: ACCEPTABLE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "component accessibility only: the town-services bundle is NOT YET DEFINED, CORE and BROADER clusters are candidate definitions, OSM completeness varies, and about 43% of cells have no road within 1 km (unresolved, not zero)"}
     stages:
-      REGIONAL_SCREENING: [PARTIAL, "component-level OSM drive times exist; no bundle definition is approved and OSM completeness varies"]
-      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "show per-component drive times; CORE and BROADER cluster definitions are reported side by side and neither is selected"]
+      REGIONAL_SCREENING: [READY_WITH_LIMITATIONS, "READY WITH LIMITATIONS FOR COMPONENT ACCESSIBILITY ONLY (per-component baseline drive time, routable cells only); the requirement-level town-services bundle is not yet defined"]
+      CANDIDATE_ZONE_COMPARISON: [READY_WITH_LIMITATIONS, "component accessibility only, with unresolved cells shown; CORE and BROADER cluster definitions stay candidate definitions and neither is selected"]
       PARCEL_SHORTLIST: [NOT_EVALUABLE, "re-measure once defined"]
       PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "drive the route to the actual services"]
     allowed_use: "descriptive per-component drive times and counts; no weighted service score and no threshold activation (the hard limit is case by case, no number is derived)"
@@ -438,10 +438,11 @@ entries:
     importance_path: livability.avoid_industrial_nuisance.importance
     evidence_families: [EF-09]
     buffer_authorised: false
+    proxy_semantics: "DIW tambon-level register counts and OSM located industrial geometry indicate where industry is recorded, not where a nuisance is experienced; the register has no coordinates and no row-level status"
     evidence: {exists: PARTIAL, resolution: "OSM industrial features (located) and the DIW register at tambon level (no coordinates, no operating status)", freshness: ACCEPTABLE, completeness: LOW, safety: NOT_SAFE_REGIONALLY, safety_reason: "FACTORY_PRESENT is not NUISANCE_CONFIRMED; the register cannot place a factory and carries no status; no buffer is authorised"}
     stages:
       REGIONAL_SCREENING: [NOT_EVALUABLE, "local phenomenon"]
-      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "located OSM features and tambon-level DIW counts as context only; type, scale and status are not located"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "DIW tambon administrative context plus OSM located context; neither proves nuisance"]
       PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "visit: smell, noise, dust, truck traffic"]
       PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm with neighbours and local authority"]
     allowed_use: "future context-aware proximity information; no buffer or exclusion is authorised"
@@ -456,10 +457,11 @@ entries:
     importance_path: livability.avoid_mining_quarry_nuisance.importance
     evidence_families: [EF-10]
     buffer_authorised: false
-    evidence: {exists: PARTIAL, resolution: "OSM quarry polygons (located), DPIM current concessions (province only) and a 2016 DPIM snapshot plus DIW type 301-304 records (tambon)", freshness: ACCEPTABLE, completeness: LOW, safety: NOT_SAFE_REGIONALLY, safety_reason: "no source locates a pit or a stone-crushing plant with current status; legacy concessions are LEGACY_CONTEXT and an expired concession is not an active mine; no buffer is authorised"}
+    proxy_semantics: "DPIM tambon-level licence-register context (stone crushing, concessions) and OSM quarry geometry indicate recorded mining activity, not a current operating site or a nuisance; licence status is not operating status and no source gives coordinates for licences"
+    evidence: {exists: PARTIAL, resolution: "DPIM official licence exports at tambon level (no coordinates), DPIM open API at province level only, OSM quarry geometry, DIW type 301-304 records at tambon level", freshness: ACCEPTABLE, completeness: LOW, safety: NOT_SAFE_REGIONALLY, safety_reason: "no source places a licensed plant or pit to a point; LICENCE_STATUS is not current operating status; legacy concessions are LEGACY_CONTEXT; no buffer is authorised"}
     stages:
       REGIONAL_SCREENING: [NOT_EVALUABLE, "local phenomenon"]
-      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "OSM quarry polygons and tambon-level register counts as context only; active status is unknown"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "tambon-level licence context and OSM quarry geometry only; exact location of licensed plants is not available (BLOCKED_BY_LOCATION at point resolution)"]
       PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "visit: dust, blasting, truck routes"]
       PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm active status and plans with the local authority"]
     allowed_use: "future context-aware proximity information; no exclusion radius is authorised"
@@ -494,10 +496,11 @@ entries:
     importance_path: livability.avoid_dense_urban_core_importance
     evidence_families: [EF-13]
     peace_is_multi_signal: true
-    evidence: {exists: PARTIAL, resolution: "500 m cell population (WorldPop) and built-up surface (GHSL) as independent signals, plus OSM road density", freshness: ACCEPTABLE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "settlement intensity exists, but night lights and POI intensity are not acquired, the dense-core meaning needs owner input, and population density alone is not peace"}
+    proxy_semantics: "population intensity (modelled, WorldPop), built-form intensity (GHSL), road density and OSM POI intensity are descriptive settlement signals; peacefulness itself is not observed, WorldPop and GHSL are partly dependent, and no urban-core definition is selected"
+    evidence: {exists: PARTIAL, resolution: "500 m cell population (WorldPop, modelled), built-up surface (GHSL), OSM road density and POI intensity as separate descriptive signals", freshness: ACCEPTABLE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "peacefulness is not directly observed; WorldPop and GHSL are partly dependent; night lights are not acquired; the dense-core meaning needs owner input"}
     stages:
-      REGIONAL_SCREENING: [PARTIAL, "population and built-form intensity exist as separate signals; no interpretation of dense core or peace is authorised"]
-      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "multi-signal context only (population, built form, road density); no scalar livability score"]
+      REGIONAL_SCREENING: [PROXY_ONLY, "several descriptive signals exist but peacefulness itself is not observed; no interpretation of dense core is authorised"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "multi-signal descriptive context only (population, built form, road density, POI intensity); no scalar livability score"]
       PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "visit at different times"]
       PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm the neighbourhood character"]
     allowed_use: "multi-signal livability context once acquired; no scalar livability score"

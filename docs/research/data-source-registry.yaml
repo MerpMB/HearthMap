@@ -1758,6 +1758,8 @@ sources:
   confidence: LOW
   known_limitations:
   - Modelled people, not a census; allocation follows built-settlement covariates, so it is partly correlated with the built-form layer.
+  - PRODUCT CLASS MODELLED_POPULATION_ESTIMATE (estimate_year 2025, release R2025A, version v1, about 100 m, people per pixel, EPSG:4326, product_status ALPHA, DOI 10.5258/SOTON/WP00839); it is never census-observed population.
+  - worldpop_depends_partly_on_ghsl = true - the R2025A method uses GHSL BUILT-S/BUILT-V, building footprints and other covariates, so it is NOT independent of builtup-ghsl-r2023a; a high rank correlation between them is not corroboration or validation.
   - Alpha release. Population intensity is not peacefulness, quiet or livability.
   analytical_suitability: POPULATION_INTENSITY_EVIDENCE per 500 m cell. Not a peacefulness or urban-penalty signal.
   local_raw_path: data/raw/population-worldpop-r2025a/R2025A-v1-2025/
@@ -1791,6 +1793,7 @@ sources:
   expected_update_frequency: Multi-year
   confidence: LOW
   known_limitations:
+  - GHSL is a covariate of the WorldPop R2025A model, so population and built form are partly dependent sources.
   - Satellite-derived built-up surface, not a building count and not population.
   - The 2020 epoch is modelled from the 2018 observation; recent construction is missing.
   analytical_suitability: BUILT_FORM_INTENSITY_EVIDENCE independent of population.
@@ -1892,6 +1895,7 @@ sources:
   analytical_suitability: Located industrial/quarry context. FACTORY_PRESENT is not NUISANCE_CONFIRMED; no exclusion buffer is authorised.
   local_raw_path: data/raw/osm-industry-aoi/overpass-2026-10-16/
   processing_status: PROCESSED
+  notes: SUPERSEDED in M2D.1 by osm-industry-geom-aoi (real geometries). This bounding-box extract is retained for provenance only and is no longer used by the build.
 - id: industry-diw-factories
   name: DIW factory registers (class 2, class 3, waste and recycling types 101/105/106)
   category: environment
@@ -1922,6 +1926,7 @@ sources:
   expected_update_frequency: Not stated (observed monthly refresh)
   confidence: LOW
   known_limitations:
+  - Source-level inclusion semantics (catalogue data_source) - the factory database OUTSIDE industrial estates; whether closed or cancelled factories are excluded is NOT documented for these resources, so record_status is UNKNOWN for every row (no ACTIVE inference). A row-level status field does not exist; source-level inclusion is documented separately.
   - No coordinates, so the registers can give tambon-level counts only, never a distance or a buffer.
   - No operating status; a register entry is not evidence that a factory operates or causes nuisance.
   - Address text matched to tambon names; unmatched records are kept out of cell counts and reported.
@@ -1959,24 +1964,76 @@ sources:
   known_limitations:
   - No coordinates in either source; a concession cannot be placed on the grid.
   - The legacy 2016 snapshot is LEGACY_CONTEXT only; an expired concession is not an active mine.
+  - The open API is PROVINCE_ADMIN_CONTEXT only and is never mapped to cells; the official concession export (mining-dpim-licence-exports) has tambon resolution and includes expired records.
   - The current API lists royalty payers; it is not a complete register of quarries, stone-crushing plants or small-scale operations.
   analytical_suitability: Province-level current concession context and tambon-level legacy context only.
   local_raw_path: data/raw/mining-dpim-concessions/dpim-api-2026-10-16/
   processing_status: PROCESSED
-- id: mining-dpim-stone-crushing-licences
-  name: DPIM stone crushing / grinding licence and quarry location databases
+- id: mining-dpim-licence-exports
+  name: DPIM official public licence exports - stone crushing/grinding plants and mining concessions
   category: environment
   priority: useful
-  verification_status: NEEDS_RESEARCH
-  role: null
-  permitted_uses: []
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
   publisher: Department of Primary Industries and Mines (DPIM)
-  landing_page: https://www.dpim.go.th
-  access_method: No public structured export found (catalog.dpim.go.th lists documents and royalty-payer data only; app.dpim.go.th did not respond)
-  last_access_attempt: '2026-10-16'
-  confidence: UNKNOWN
+  dataset_title: Stone crushing/grinding licence database (facstone_report) and concession database (concession_report), XML export
+  landing_page: https://www-old.dpim.go.th/datacenter
+  data_endpoint: https://dses.dpim.go.th/xmlreportservices/generate.do (reportname=facstone_report or concession_report, reqProvinceLocation=50/56/57, include-expired by omitting expireDt)
+  access_method: Public GET built by the official report pages' own Export-to-XML button; one request per report and province, no authentication, no bypass. The access-controlled quarry query page (www1.dpim.go.th/qry/quarry.php) returned 403 and was not used.
+  format: XML (TIS-620)
+  source_crs: none - the exports carry no coordinates
+  coverage: Three AOI provinces; 46 stone-crushing licence records (22 register status opened, 16 deregistered, 3 halted, 1 awaiting notice, 4 without a status) and 88 concession records (62 expired, 17 unexpired, 7 renewed, 2 without a status)
+  spatial_resolution: Tambon (codes and names); no street address, no coordinates
+  temporal_coverage: Snapshot 2026-10-16; dates are Buddhist-era dd/mm/yyyy
+  last_update: Live system
+  last_verified: '2026-10-16'
+  verification_evidence: Export pages read; form parameters and the status vocabulary (03 opened, 02 halted, 04 renewed, 06 expired, 01 deregistered, 08 awaiting operation notice) taken from the page; six exports parsed; tambon codes matched to the boundary set. Operator names, tax ids and holder names were removed before storage (documented in the manifest).
+  license_or_usage_notes: No licence or terms are stated on the export pages (public government system). Treated as public-information use for non-commercial local research; re-check before any redistribution.
+  expected_update_frequency: Live
+  confidence: LOW
   known_limitations:
-  - No coordinate-bearing, current register of quarries or stone-crushing plants was found; manual import or a formal data request would be needed.
-  local_raw_path: null
-  processing_status: NOT_ACQUIRED
-  notes: DIW type 301 (stone crushing) gives tambon-level counts; OSM quarry polygons give located context. Neither is a status register.
+  - LICENCE_STATUS is not CURRENT_OPERATING_STATUS; an unexpired or opened licence does not prove the plant or mine operates today, and expiry date and status can disagree.
+  - Tambon resolution only - no coordinates and no address, so no distance, buffer or local-presence claim may be derived.
+  - Possibly incomplete for small or unlicensed operations; exports were taken once on 2026-10-16.
+  analytical_suitability: Tambon-level licence-register context (licence number, register status, dates, mineral or product) for stone crushing and concessions.
+  local_raw_path: data/raw/mining-dpim-licence-exports/dpim-dses-2026-10-16/
+  processing_status: PROCESSED
+- id: osm-industry-geom-aoi
+  name: OpenStreetMap industrial and quarry features with geometry for the AOI (Overpass)
+  category: environment
+  priority: useful
+  verification_status: VERIFIED
+  role: SECONDARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: OpenStreetMap contributors
+  dataset_title: 'OSM nwr landuse=quarry|industrial, man_made=works, industrial=* (out tags geom)'
+  landing_page: https://www.openstreetmap.org/copyright
+  data_endpoint: https://maps.mail.ru/osm/tools/overpass/api/interpreter (area ISO3166-2 TH-50/56/57)
+  access_method: Overpass API POST, one query per province
+  format: Overpass JSON (out tags geom)
+  source_crs: EPSG:4326
+  coverage: Chiang Mai, Chiang Rai, Phayao
+  spatial_resolution: Point and polygon geometry
+  temporal_coverage: Snapshot 2026-10-16
+  last_update: Continuous
+  last_verified: '2026-10-16'
+  verification_evidence: 301 elements returned (209 Chiang Mai, 81 Chiang Rai, 11 Phayao); 298 became geometries (211 industrial landuse polygons, 36 quarry polygons, 23 works polygons and 23 works points, a few single features); 3 relations had no assemblable geometry and were dropped.
+  license_or_usage_notes: ODbL 1.0.
+  dataset_licence: ODbL 1.0
+  expected_update_frequency: Continuous
+  confidence: LOW
+  known_limitations:
+  - Points and polygons are different evidence and are never summed into one feature count; area fractions come from polygons only.
+  - An OSM polygon is not an operating-status or nuisance claim; completeness varies.
+  analytical_suitability: Located industrial and quarry geometry context. FACTORY_PRESENT is not NUISANCE_CONFIRMED; no buffer is authorised.
+  local_raw_path: data/raw/osm-industry-geom-aoi/overpass-geom-2026-10-16/
+  processing_status: PROCESSED

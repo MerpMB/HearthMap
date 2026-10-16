@@ -58,7 +58,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P0
 - **Purpose:** Give 'town services within about 35 minutes' an operational meaning and evidence.
 - **Requirement served:** TOWN-SERVICES (STRONG_PREFERENCE)
-- **Current state:** M2D (2026-10-16): OSM component POIs (grocery, convenience, market, pharmacy, bank/ATM, fuel, public administration, general retail) are acquired and routed per component; two cluster definitions (CORE, BROADER) are reported without choosing one. The bundle definition still needs owner approval and the 35-minute preference is not activated.
+- **Current state:** M2D/M2D.1: OSM component POIs (grocery, convenience, market, pharmacy, bank/ATM, fuel, public administration, general retail) are acquired and routed per component (about 43% of cells have no road within 1 km and stay unresolved). CORE and BROADER cluster definitions are CANDIDATE_DEFINITIONs; neither is selected. The bundle definition still needs owner approval and the 35-minute preference is not activated.
 - **Candidate sources (listed, not verified):**
   - OSM POIs (supermarket, pharmacy, bank/ATM, fuel, market, municipal offices) (registry `osm-facilities-aoi`) - ACQUIRED for schools/health only; other POIs not acquired
   - Department of Energy Business fuel-station registry - CANDIDATE_UNVERIFIED
@@ -94,7 +94,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P0
 - **Purpose:** A multi-signal picture of settlement intensity for the quiet, lower-density preference (no scalar livability score).
 - **Requirement served:** SETTLE-PEACE (STRONG_PREFERENCE)
-- **Current state:** M2D (2026-10-16): WorldPop R2025A population and GHS-BUILT-S 2020 built-up surface acquired as independent signals, plus OSM road density. Night-time lights, POI intensity and building footprints (GISTDA deferred) remain open; the dense-core meaning needs owner input.
+- **Current state:** M2D/M2D.1: WorldPop R2025A (MODELLED_POPULATION_ESTIMATE, alpha) and GHS-BUILT-S 2020 built-up surface are acquired as semantically different but PARTLY DEPENDENT signals (WorldPop uses GHSL covariates), plus OSM road density and OSM POI intensity as DESCRIPTIVE_CONTEXT. Night-time lights and building footprints (GISTDA deferred) remain open; no numeric dense-urban-core definition is chosen.
 - **Candidate sources (listed, not verified):**
   - Population raster (registry `population-grids`) - NEEDS_RESEARCH
   - Built-up surface / building footprints - CANDIDATE_UNVERIFIED
@@ -113,7 +113,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P1
 - **Purpose:** Context-aware evidence of factories and industrial areas for the avoid-industrial-nuisance preference.
 - **Requirement served:** NUIS-INDUSTRIAL (STRONG_PREFERENCE)
-- **Current state:** M2D (2026-10-16): OSM industrial features (located) and the DIW factory registers (tambon level only: no coordinates, no operating status) are acquired. FACTORY_PRESENT is not NUISANCE_CONFIRMED and no buffer is authorised.
+- **Current state:** M2D/M2D.1: OSM industrial geometry (points and polygons kept apart) and the DIW factory registers (tambon level only: no coordinates, no row-level status, record_status UNKNOWN; source-level scope is the database outside industrial estates) are acquired. FACTORY_PRESENT is not NUISANCE_CONFIRMED and no buffer is authorised.
 - **Candidate sources (listed, not verified):**
   - Department of Industrial Works factory register (registry `nuisance-sources`) - NEEDS_RESEARCH
   - Industrial Estate Authority estate polygons - CANDIDATE_UNVERIFIED
@@ -131,7 +131,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P1
 - **Purpose:** Active mining and quarry operations for the avoid-mining-nuisance preference.
 - **Requirement served:** NUIS-MINING (STRONG_PREFERENCE)
-- **Current state:** M2D (2026-10-16): OSM quarry polygons (located), DPIM current concessions via the public API (province level, no coordinates), a 2016 DPIM snapshot (tambon, LEGACY_CONTEXT) and DIW type 301-304 records (tambon) are acquired. No source locates a stone-crushing plant or gives current operating status.
+- **Current state:** M2D.1: the official DPIM licence exports (stone crushing/grinding licences, 46 AOI records; mining concessions, 88 AOI records incl. expired) are acquired at tambon resolution with register status and dates but no coordinates or address, plus OSM quarry geometry, the DPIM open API (province only) and a 2016 legacy snapshot (LEGACY_CONTEXT). LICENCE_STATUS is not current operating status. Whether an official request for exact locations would materially help is assessed in the M2D.1 findings.
 - **Candidate sources (listed, not verified):**
   - Department of Primary Industries and Mines concessions and quarry permits (registry `nuisance-sources`) - NEEDS_RESEARCH
   - Crushing-plant / industrial-works records - CANDIDATE_UNVERIFIED
