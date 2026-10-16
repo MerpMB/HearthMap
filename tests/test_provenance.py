@@ -147,6 +147,13 @@ def test_repository_registry_verification_state_m1a():
         # M2A.2 (2026-10-16): public MoPH hospital point layers
         "facility-moph-hospital-update68",
         "facility-moph-hospital-update69",
+        # M2D (2026-10-16): Wave-1 regional context sources, data opened and profiled
+        "population-worldpop-r2025a",
+        "builtup-ghsl-r2023a",
+        "osm-service-pois-aoi",
+        "osm-industry-aoi",
+        "industry-diw-factories",
+        "mining-dpim-concessions",
     }
     # Every verified source was actually acquired and processed locally.
     assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)

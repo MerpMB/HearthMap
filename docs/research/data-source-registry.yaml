@@ -1563,7 +1563,7 @@ sources:
   - Assessed values are for taxation/fees and can differ strongly from market prices.
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: Needed for M3. Determine whether bulk or only per-parcel lookup is available.
+  notes: Needed for M3. Determine whether bulk or only per-parcel lookup is available. M2D (2026-10-16) deferred acquisition only; the Treasury D-Value appraisal is OFFICIAL_APPRAISAL_CONTEXT research (assessed value, not market price) and the P0 land-price gap is not downgraded.
 - id: crime-police-statistics
   name: Crime statistics
   category: safety
@@ -1703,7 +1703,7 @@ sources:
   - OSM coverage of these features is likely partial.
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: Candidates - OSM landuse tags, mining concessions (DPIM - to confirm), industrial estate registries.
+  notes: Candidates - OSM landuse tags, mining concessions (DPIM - to confirm), industrial estate registries. PARTLY SUPERSEDED in M2D by osm-industry-aoi, industry-diw-factories and mining-dpim-concessions (acquired); landfills, industrial-estate polygons and large livestock farms remain open.
 - id: population-grids
   name: Gridded population / built-up surface (e.g. GHSL, WorldPop)
   category: population
@@ -1726,4 +1726,257 @@ sources:
   - Modelled, not counted; dasymetric allocation errors in rural areas.
   local_raw_path: null
   processing_status: NOT_ACQUIRED
-  notes: Urban intensity / density for livability and access-to-services context.
+  notes: Urban intensity / density for livability and access-to-services context. SUPERSEDED in M2D by population-worldpop-r2025a and builtup-ghsl-r2023a (acquired); kept as the original research record.
+- id: population-worldpop-r2025a
+  name: WorldPop R2025A v1 Thailand 2025 constrained population count (100 m)
+  category: population
+  priority: useful
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: WorldPop, University of Southampton
+  dataset_title: tha_pop_2025_CN_100m_R2025A_v1 (Thailand, 2025, constrained, 100 m)
+  landing_page: https://hub.worldpop.org/geodata/summary?id=G2_CN_POP_R25A_100m
+  data_endpoint: https://hub.worldpop.org/rest/data/pop/G2_CN_POP_R25A_100m?iso3=THA (GeoTIFF linked from the record)
+  access_method: Direct GeoTIFF download (no key)
+  format: GeoTIFF float32, people per ~100 m pixel
+  source_crs: EPSG:4326
+  coverage: Thailand (national raster; AOI window used)
+  spatial_resolution: 3 arc-second (~100 m)
+  temporal_coverage: 2025 (alpha release 2025-09-01)
+  last_update: Release 2025-09-01
+  last_verified: '2026-10-16'
+  verification_evidence: Raster downloaded and sha256-registered; metadata read from the hub REST record and the release statement; national sum about 71.6M; AOI window sum 3.36M inside the analysis grid. Unconstrained 2025 file does not exist (404), only the constrained product.
+  license_or_usage_notes: CC BY 4.0 (hub footer and GeoTIFF tag); DOI 10.5258/SOTON/WP00839.
+  dataset_licence: CC BY 4.0
+  methodology: Top-down random-forest dasymetric allocation aligned to UN WPP 2024 totals, using GHSL / Google / Microsoft built settlement as covariates.
+  expected_update_frequency: Annual
+  confidence: LOW
+  known_limitations:
+  - Modelled people, not a census; allocation follows built-settlement covariates, so it is partly correlated with the built-form layer.
+  - Alpha release. Population intensity is not peacefulness, quiet or livability.
+  analytical_suitability: POPULATION_INTENSITY_EVIDENCE per 500 m cell. Not a peacefulness or urban-penalty signal.
+  local_raw_path: data/raw/population-worldpop-r2025a/R2025A-v1-2025/
+  processing_status: PROCESSED
+- id: builtup-ghsl-r2023a
+  name: GHS-BUILT-S R2023A built-up surface, epoch 2020, 3 arc-second (EPSG:4326)
+  category: population
+  priority: useful
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: European Commission, Joint Research Centre (GHSL)
+  dataset_title: GHS-BUILT-S R2023A - built-up surface grid (Pesaresi and Politis 2023)
+  landing_page: https://human-settlement.emergency.copernicus.eu/ghs_buS2023.php
+  data_endpoint: https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_BUILT_S_GLOBE_R2023A/GHS_BUILT_S_E2020_GLOBE_R2023A_4326_3ss/V1-0/tiles
+  access_method: Direct zip download of four 10-degree tiles (no key)
+  format: GeoTIFF uint16 in zip, m2 of built-up surface per cell
+  source_crs: EPSG:4326
+  coverage: AOI covered by tiles R7_C28, R7_C29, R8_C28, R8_C29
+  spatial_resolution: 3 arc-second (~92 m)
+  temporal_coverage: Epoch 2020 (interpolated; latest observed epoch 2018)
+  last_update: R2023A
+  last_verified: '2026-10-16'
+  verification_evidence: Four tiles downloaded and read through GDAL; AOI built-up surface about 333 km2 inside the analysis grid. Licence read from search results and the WorldPop citation only; the JRC portal rejected a direct fetch.
+  license_or_usage_notes: Reuse with acknowledgement (JRC open data; CC BY 4.0 per JRC policy, not read from the portal in this session). DOI 10.2905/9F06F36F-4B11-47EC-ABB0-4F8B7B1D72EA.
+  dataset_licence: CC BY 4.0 per JRC policy (not read directly)
+  expected_update_frequency: Multi-year
+  confidence: LOW
+  known_limitations:
+  - Satellite-derived built-up surface, not a building count and not population.
+  - The 2020 epoch is modelled from the 2018 observation; recent construction is missing.
+  analytical_suitability: BUILT_FORM_INTENSITY_EVIDENCE independent of population.
+  local_raw_path: data/raw/builtup-ghsl-r2023a/R2023A-E2020-4326-3ss-V1-0/
+  processing_status: PROCESSED
+- id: buildings-gistda-footprint
+  name: GISTDA Thailand building footprints (feature API)
+  category: land_use
+  priority: useful
+  verification_status: CANDIDATE
+  role: null
+  acquisition_status: DEFERRED
+  source_state: SOURCE_EXISTS_AGENT_ACCESSIBLE
+  availability: AVAILABLE
+  last_access_attempt: '2026-10-16'
+  permitted_uses: []
+  publisher: GISTDA
+  dataset_title: thailand-buildings-footprint (OGC features, 2569 vintage)
+  landing_page: https://api-gateway.gistda.or.th/api/2.0/resources/features/thailand-buildings-footprint
+  access_method: API key query parameter, bbox/limit/offset paging
+  access_restrictions: Registered key required; the catalogue states 'License not specified' and the collection is not public.
+  format: GeoJSON features (polygons)
+  coverage: Thailand (45,408,682 footprints; multi-source Google, Microsoft, OSM, MPA, UAV)
+  last_verified: '2026-10-16'
+  verification_evidence: Counts-only assessment (outputs/m2d-review/gistda-buildings-assessment.json). A 1x1 km urban window returns about 2.7k footprints in 0.2 s; the AOI-envelope count returned HTTP 504 after 60 s.
+  license_or_usage_notes: No licence or bulk-extraction terms stated.
+  confidence: UNKNOWN
+  known_limitations:
+  - DEFERRED, not rejected - no stated licence or bulk terms, bulk extraction impractical through this gateway, merged-source completeness not uniform.
+  - The service echoes the caller's api_key inside response links; raw responses must not be stored unless links are stripped (and the transformation documented).
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: GHS-BUILT-S is used as the independent built-form source until GISTDA terms and a feasible extraction route are confirmed.
+- id: osm-service-pois-aoi
+  name: OpenStreetMap town-service and nightlife-candidate POIs for the AOI (Overpass)
+  category: land_use
+  priority: useful
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: OpenStreetMap contributors
+  dataset_title: 'OSM nwr shop=supermarket|grocery|convenience|department_store|mall|variety_store|general|hardware|doityourself|greengrocer, amenity=marketplace|pharmacy|bank|atm|fuel|townhall|bar|pub|nightclub|stripclub|karaoke_box, healthcare=pharmacy, office=government'
+  landing_page: https://www.openstreetmap.org/copyright
+  data_endpoint: https://maps.mail.ru/osm/tools/overpass/api/interpreter (area ISO3166-2 TH-50/56/57)
+  access_method: Overpass API POST, one query per province
+  format: Overpass JSON (out tags center)
+  source_crs: EPSG:4326
+  coverage: Chiang Mai, Chiang Rai, Phayao
+  spatial_resolution: Point (way/relation centres)
+  temporal_coverage: Snapshot 2026-10-16
+  last_update: Continuous
+  last_verified: '2026-10-16'
+  verification_evidence: 6,134 service and nightlife elements returned over three provinces; tag families tallied into separate components; same-component duplicates within 40 m collapsed.
+  license_or_usage_notes: ODbL 1.0.
+  dataset_licence: ODbL 1.0
+  expected_update_frequency: Continuous
+  confidence: LOW
+  known_limitations:
+  - Completeness varies by area and tagging style; absence of a POI is not absence of a service.
+  - Businesses open and close; no opening status is recorded here.
+  analytical_suitability: Component-level service presence and baseline drive time. No weighted service score; nightlife is a separate candidate layer.
+  local_raw_path: data/raw/osm-service-pois-aoi/overpass-2026-10-16/
+  processing_status: PROCESSED
+- id: osm-industry-aoi
+  name: OpenStreetMap industrial and quarry land-use features for the AOI (Overpass)
+  category: environment
+  priority: useful
+  verification_status: VERIFIED
+  role: SECONDARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: OpenStreetMap contributors
+  dataset_title: 'OSM nwr landuse=quarry|industrial, man_made=works, industrial=*'
+  landing_page: https://www.openstreetmap.org/copyright
+  data_endpoint: https://maps.mail.ru/osm/tools/overpass/api/interpreter (area ISO3166-2 TH-50/56/57)
+  access_method: Overpass API POST, one query per province
+  format: Overpass JSON (out tags center bb)
+  source_crs: EPSG:4326
+  coverage: Chiang Mai, Chiang Rai, Phayao
+  spatial_resolution: Point (centre) plus bounding box
+  temporal_coverage: Snapshot 2026-10-16
+  last_update: Continuous
+  last_verified: '2026-10-16'
+  verification_evidence: 301 features returned over three provinces (Chiang Mai 209, Chiang Rai 81, Phayao 11); kinds tallied (215 industrial landuse, 46 works, 37 quarry, 3 other). The query used out bb, which returns bounding boxes without centres for ways, so the centre is the box midpoint.
+  license_or_usage_notes: ODbL 1.0.
+  dataset_licence: ODbL 1.0
+  expected_update_frequency: Continuous
+  confidence: LOW
+  known_limitations:
+  - An OSM quarry or industrial polygon is not an operating-status or nuisance claim; polygons can be stale or missing.
+  - Centre points only are used for distance context.
+  analytical_suitability: Located industrial/quarry context. FACTORY_PRESENT is not NUISANCE_CONFIRMED; no exclusion buffer is authorised.
+  local_raw_path: data/raw/osm-industry-aoi/overpass-2026-10-16/
+  processing_status: PROCESSED
+- id: industry-diw-factories
+  name: DIW factory registers (class 2, class 3, waste and recycling types 101/105/106)
+  category: environment
+  priority: useful
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Industrial Works (DIW)
+  dataset_title: factype2, factype3, factype101-105-106 (CSV)
+  landing_page: https://diw-dataset.diw.go.th
+  data_endpoint: https://diw-dataset.diw.go.th/api/3/action/package_show?id=factype2 (and factype3, factype101-105-106)
+  access_method: CKAN package_show then CSV download (no key)
+  format: CSV (UTF-8 with BOM)
+  source_crs: none - the registers carry no coordinates
+  coverage: Thailand; 2,061 unique AOI factory records
+  spatial_resolution: Tambon (address text) only
+  temporal_coverage: Resource modified 2026-10-01; licence year per record (Buddhist era)
+  last_update: '2026-10-01'
+  last_verified: '2026-10-16'
+  verification_evidence: Three CSVs downloaded; columns inspected (registration id, type code, class, licence year, name, activity, address down to tambon, capital, workers, horsepower, industry group). No coordinates and no operating-status field exist.
+  license_or_usage_notes: Open Data Common (catalogue); the data.go.th mirror of factype2/3 lists Creative Commons Attributions and excludes industrial estates.
+  dataset_licence: Open Data Common
+  licence_discrepancy: data.go.th mirror states Creative Commons Attributions for factype2/3; the DIW catalogue states Open Data Common.
+  expected_update_frequency: Not stated (observed monthly refresh)
+  confidence: LOW
+  known_limitations:
+  - No coordinates, so the registers can give tambon-level counts only, never a distance or a buffer.
+  - No operating status; a register entry is not evidence that a factory operates or causes nuisance.
+  - Address text matched to tambon names; unmatched records are kept out of cell counts and reported.
+  analytical_suitability: Tambon-level industrial and stone-crushing (type 301) context. Not a point layer.
+  local_raw_path: data/raw/industry-diw-factories/diw-ckan-2026-10-16/
+  processing_status: PROCESSED
+- id: mining-dpim-concessions
+  name: DPIM mining concessions - current open API and 2016 legacy snapshot
+  category: environment
+  priority: useful
+  verification_status: VERIFIED
+  role: PRIMARY
+  metadata_verified: true
+  data_verified: true
+  acquisition_status: ACQUIRED
+  permitted_uses:
+  - REGIONAL_SCREENING
+  publisher: Department of Primary Industries and Mines (DPIM)
+  dataset_title: ข้อมูลผู้มีหน้าที่ชำระค่าภาคหลวงแร่ (open API) and ข้อมูลประทานบัตร 2016-06-21 snapshot (data.go.th)
+  landing_page: https://catalog.dpim.go.th/dataset/mineralroyaltypayer
+  data_endpoint: https://open.dpim.go.th/public/openapi/concession/search
+  access_method: Public JSON API, no key; legacy CSV from data.go.th
+  format: JSON (current), CSV TIS-620 (legacy)
+  source_crs: none - neither source carries coordinates
+  coverage: Current API 879 records nationally, 18 in the AOI provinces; legacy snapshot 3,141 records nationally
+  spatial_resolution: Province (current), tambon (legacy)
+  temporal_coverage: Current API snapshot 2026-10-16; legacy snapshot 2016-06-21
+  last_update: Catalogue metadata 2025
+  last_verified: '2026-10-16'
+  verification_evidence: API called once and parsed; fields listed in the data dictionary; holder names, tax ids and customer ids removed before storage (documented in the manifest). Legacy CSV decoded as TIS-620 and profiled.
+  license_or_usage_notes: Current API dataset - Creative Commons Attribution Share-Alike (catalogue); legacy snapshot - Creative Commons Attributions (data.go.th).
+  dataset_licence: CC BY-SA (current), CC BY (legacy)
+  expected_update_frequency: Not stated
+  confidence: LOW
+  known_limitations:
+  - No coordinates in either source; a concession cannot be placed on the grid.
+  - The legacy 2016 snapshot is LEGACY_CONTEXT only; an expired concession is not an active mine.
+  - The current API lists royalty payers; it is not a complete register of quarries, stone-crushing plants or small-scale operations.
+  analytical_suitability: Province-level current concession context and tambon-level legacy context only.
+  local_raw_path: data/raw/mining-dpim-concessions/dpim-api-2026-10-16/
+  processing_status: PROCESSED
+- id: mining-dpim-stone-crushing-licences
+  name: DPIM stone crushing / grinding licence and quarry location databases
+  category: environment
+  priority: useful
+  verification_status: NEEDS_RESEARCH
+  role: null
+  permitted_uses: []
+  publisher: Department of Primary Industries and Mines (DPIM)
+  landing_page: https://www.dpim.go.th
+  access_method: No public structured export found (catalog.dpim.go.th lists documents and royalty-payer data only; app.dpim.go.th did not respond)
+  last_access_attempt: '2026-10-16'
+  confidence: UNKNOWN
+  known_limitations:
+  - No coordinate-bearing, current register of quarries or stone-crushing plants was found; manual import or a formal data request would be needed.
+  local_raw_path: null
+  processing_status: NOT_ACQUIRED
+  notes: DIW type 301 (stone crushing) gives tambon-level counts; OSM quarry polygons give located context. Neither is a status register.
