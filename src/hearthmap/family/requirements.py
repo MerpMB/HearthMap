@@ -72,6 +72,7 @@ class Education(_M):
 class PrimaryHealthcare(_M):
     importance: Imp = UNSET
     preferred_max_drive_minutes: Num = UNSET
+    absolute_max_drive_minutes: Num = UNSET  # not a hard gate: the owner set none
 
 
 class HospitalReq(_M):
@@ -123,6 +124,13 @@ class RoadAccess(_M):
 
 
 class Electricity(_M):
+    """Actual usable public/grid electricity at the parcel. Capacity, transformer, phase, cost and reliability are NOT requirements here."""
+
+    grid_service_required: Flag = UNSET
+    importance: Imp = UNSET
+    verification_stage: (
+        Unset | Literal["SCREENING", "SHORTLIST", "PARCEL_PURCHASE", "BEFORE_PURCHASE"]
+    ) = UNSET
     must_be_verified_before_purchase: Flag = UNSET
     tolerate_regional_uncertainty_during_screening: Flag = UNSET
 
@@ -166,6 +174,14 @@ class UrbanAccess(_M):
     shopping_daily_services_importance: Imp = UNSET
 
 
+class AvoidPref(_M):
+    """A residential-exposure avoidance PREFERENCE (not a hard exclusion). Distances/buffers are UNSET until the owner gives them."""
+
+    value: Flag = UNSET
+    importance: Imp = UNSET
+    buffer_distance_m: Num = UNSET
+
+
 class Livability(_M):
     preferred_population_density: (
         Unset | Literal["REMOTE", "RURAL", "PERI_URBAN", "SUBURBAN", "URBAN"]
@@ -176,6 +192,15 @@ class Livability(_M):
     tolerate_nightlife: Tolerance = UNSET
     industrial_nuisance_tolerance: Tolerance = UNSET
     agricultural_surroundings_preference: Imp = UNSET
+    # INPUT PASS 3 avoidance preferences (residential exposure; context-dependent, never a blanket exclusion of mapped features)
+    avoid_industrial_nuisance: AvoidPref = AvoidPref()
+    avoid_mining_quarry_nuisance: AvoidPref = AvoidPref()
+    avoid_major_road_noise: AvoidPref = (
+        AvoidPref()
+    )  # separate from ACCESS to a major road (road_access.major_road)
+    avoid_nightlife_concentration: AvoidPref = (
+        AvoidPref()
+    )  # residential nuisance, not restaurants or normal town services
 
 
 class PurchaseBudget(_M):
@@ -194,6 +219,10 @@ class Land(_M):
     preferred_area_rai: Num = UNSET
     minimum_area_rai: Num = UNSET
     maximum_area_rai: Num = UNSET
+    terrain_preference: Unset | Literal["FLAT", "GENTLE_ROLLING", "HILLY"] = (
+        UNSET  # what is liked, not what is tolerated
+    )
+    terrain_preference_importance: Imp = UNSET
     terrain_tolerance: Unset | Literal["FLAT_ONLY", "GENTLE", "MODERATE", "STEEP_ACCEPTABLE"] = (
         UNSET
     )
@@ -215,6 +244,7 @@ class HazardContract(_M):
     m1e_actions_immutable: bool
     site_improvement_willingness_overrides_hazard_actions: bool
     family_access_offsets_hazard_actions: bool
+    terrain_preference_overrides_hazard_actions: bool
 
 
 class Requirements(_M):
@@ -369,6 +399,16 @@ def validate_requirements(req: Requirements) -> list[Issue]:
 
     hc = req.healthcare
     check_obj("healthcare.primary_healthcare", hc.primary_healthcare)
+    pc = hc.primary_healthcare
+    if (
+        _set(pc.preferred_max_drive_minutes)
+        and _set(pc.absolute_max_drive_minutes)
+        and pc.preferred_max_drive_minutes > pc.absolute_max_drive_minutes
+    ):
+        err(
+            "healthcare.primary_healthcare",
+            f"preferred time {pc.preferred_max_drive_minutes} > absolute maximum {pc.absolute_max_drive_minutes}",
+        )
     for name in ("hospital", "regional_or_referral_hospital"):
         h: HospitalReq = getattr(hc, name)
         p = f"healthcare.{name}"
@@ -403,6 +443,8 @@ def validate_requirements(req: Requirements) -> list[Issue]:
         err("hazard_contract", "willingness to improve a site must never override a hazard action")
     if hc_.family_access_offsets_hazard_actions:
         err("hazard_contract", "family access must never offset a hazard action")
+    if hc_.terrain_preference_overrides_hazard_actions:
+        err("hazard_contract", "a terrain preference must never override a hazard action")
 
     ra = req.road_access
     check_obj("road_access.major_road", ra.major_road)
@@ -470,7 +512,26 @@ def validate_requirements(req: Requirements) -> list[Issue]:
     ):
         err("urban_access.absolute_max_drive_time_to_major_city_services", "negative value")
 
+    el = req.utilities.electricity
+    pair(
+        "utilities.electricity.grid_service_required",
+        el.grid_service_required,
+        el.importance,
+        flag=True,
+    )
+
     lv = req.livability
+    for name, tolerance in (
+        ("avoid_industrial_nuisance", lv.industrial_nuisance_tolerance),
+        ("avoid_nightlife_concentration", lv.tolerate_nightlife),
+    ):
+        a: AvoidPref = getattr(lv, name)
+        pair(f"livability.{name}", a.value, a.importance, flag=True)
+        if a.value is True and tolerance == "HIGH":
+            err(f"livability.{name}", "avoidance preferred but the matching tolerance is HIGH")
+    for name in ("avoid_mining_quarry_nuisance", "avoid_major_road_noise"):
+        a = getattr(lv, name)
+        pair(f"livability.{name}", a.value, a.importance, flag=True)
     pair(
         "livability.avoid_dense_urban_core",
         lv.avoid_dense_urban_core,
@@ -481,6 +542,12 @@ def validate_requirements(req: Requirements) -> list[Issue]:
         err("livability", "avoids the dense urban core but prefers URBAN density")
 
     ld = req.land
+    pair("land.terrain_preference", ld.terrain_preference, ld.terrain_preference_importance)
+    if ld.terrain_preference in ("GENTLE_ROLLING", "HILLY") and ld.terrain_tolerance == "FLAT_ONLY":
+        err(
+            "land",
+            f"terrain preference {ld.terrain_preference} contradicts terrain tolerance FLAT_ONLY",
+        )
     if (
         _set(ld.minimum_area_rai)
         and _set(ld.maximum_area_rai)
@@ -564,27 +631,149 @@ def _capability_key(path: str) -> str:
         return ".".join(parts[:2])
     if parts[0] == "urban_access":
         return path
+    if parts[0] == "livability" and len(parts) == 3:
+        return ".".join(parts[:2])  # avoid_* preference objects share one capability
     return path
 
 
+def irrelevant_prefixes(req: Requirements) -> list[str]:
+    """Dimensions the owner marked IRRELEVANT: ``<block>.importance`` or ``<name>_importance`` equal to IRRELEVANT."""
+    out = []
+    for path, value in leaves(req):
+        if value is Importance.IRRELEVANT or value == "IRRELEVANT":
+            out.append(
+                path[: -len(".importance")]
+                if path.endswith(".importance")
+                else path[: -len("_importance")]
+                if path.endswith("_importance")
+                else path
+            )
+    return out
+
+
 def evidence_matrix(req: Requirements, cap: dict[str, Any]) -> list[dict[str, Any]]:
-    """One row per requirement leaf (plus capability-only questions). USER_REQUIREMENT, DATA_CAPABILITY, EVALUATION_RULE stay separate columns."""
+    """One row per requirement leaf (plus capability-only questions).
+
+    USER_REQUIREMENT, DATA_CAPABILITY and EVALUATION_RULE stay separate columns. A dimension marked IRRELEVANT is
+    reported as such (``NOT_APPLICABLE_IRRELEVANT``): it needs no evidence and is excluded from future evaluation, but its
+    underlying capability is still shown for information.
+    """
     rows: list[dict[str, Any]] = []
     caps = cap["capabilities"]
+    irr = irrelevant_prefixes(req)
     for path, value in leaves(req):
         key = _capability_key(path)
         c = caps.get(key) or caps.get(path)
         if c is None:
             raise KeyError(f"no data-capability entry for requirement {path} (expected {key})")
+        excluded = any(
+            path == pre or path.startswith(pre + ".") or path == pre + "_importance" for pre in irr
+        )
+        if value == UNSET:
+            state = "EXCLUDED_IRRELEVANT" if excluded else "UNSET"
+        else:
+            state = "EXCLUDED_IRRELEVANT" if excluded else "SET"
+        shown = (
+            "|".join(value)
+            if isinstance(value, list)
+            else value.value
+            if hasattr(value, "value")
+            else int(value)
+            if isinstance(value, float) and value.is_integer()
+            else value
+        )
         rows.append({
-            "requirement_path": path, "kind": "USER_REQUIREMENT", "user_requirement_value": "|".join(value) if isinstance(value, list) else value.value if hasattr(value, "value") else value,
-            "data_capability": c["status"], "evidence_stage": c.get("evidence_stage", "REGIONAL_EVIDENCE"), "capability_reason": c["reason"], "evidence_columns": "|".join(c.get("evidence_columns", [])),
-            "limitations": " ".join(c.get("limitations", [])), "evaluation_rule": EVALUATION_RULE, "needs_user_input": value == UNSET,
+            "requirement_path": path, "kind": "USER_REQUIREMENT", "user_requirement_value": shown, "requirement_state": state,
+            "data_capability": "NOT_APPLICABLE_IRRELEVANT" if excluded else c["status"], "underlying_capability": c["status"],
+            "evidence_stage": c.get("evidence_stage", "REGIONAL_EVIDENCE"), "capability_reason": c["reason"],
+            "evidence_columns": "|".join(c.get("evidence_columns", [])), "limitations": " ".join(c.get("limitations", [])),
+            "evaluation_rule": EVALUATION_RULE, "evaluation_use": "EXCLUDED_BY_USER" if excluded else "NONE_ACTIVE",
+            "needs_user_input": value == UNSET and not excluded,
         })  # fmt: skip
     for key, c in cap.get("capability_only", {}).items():
         rows.append({
-            "requirement_path": key, "kind": "CAPABILITY_ONLY_FUTURE_VERIFICATION", "user_requirement_value": "n/a",
-            "data_capability": c["status"], "evidence_stage": c.get("evidence_stage", "REGIONAL_EVIDENCE"), "capability_reason": c["reason"], "evidence_columns": "|".join(c.get("evidence_columns", [])),
-            "limitations": " ".join(c.get("limitations", [])), "evaluation_rule": EVALUATION_RULE, "needs_user_input": False,
+            "requirement_path": key, "kind": "CAPABILITY_ONLY_FUTURE_VERIFICATION", "user_requirement_value": "n/a", "requirement_state": "n/a",
+            "data_capability": c["status"], "underlying_capability": c["status"], "evidence_stage": c.get("evidence_stage", "REGIONAL_EVIDENCE"),
+            "capability_reason": c["reason"], "evidence_columns": "|".join(c.get("evidence_columns", [])), "limitations": " ".join(c.get("limitations", [])),
+            "evaluation_rule": EVALUATION_RULE, "evaluation_use": "NONE_ACTIVE", "needs_user_input": False,
         })  # fmt: skip
     return rows
+
+
+# -- closure summary -------------------------------------------------------------------------------------
+def _block(path: str) -> str:
+    parts = path.split(".")
+    return (
+        ".".join(parts[:-1])
+        if len(parts) > 2 or (len(parts) == 2 and parts[0] in {"education", "healthcare"})
+        else path
+    )
+
+
+def _group(rows: list[dict[str, Any]], with_value: bool = True) -> list[str]:
+    out: dict[str, list[str]] = {}
+    for r in rows:
+        path = r["requirement_path"]
+        sec = path.split(".")[0]
+        label = path[len(sec) + 1 :]
+        out.setdefault(sec, []).append(
+            f"`{label}` = {r['user_requirement_value']}" if with_value else f"`{label}`"
+        )
+    return [f"- **{sec}**: " + "; ".join(items) for sec, items in out.items()]
+
+
+def render_summary(req: Requirements, cap: dict[str, Any]) -> str:
+    """Family Requirements v0.1 closure snapshot, generated from the config (never hand-edited, drift is tested)."""
+    rows = [r for r in evidence_matrix(req, cap) if r["kind"] == "USER_REQUIREMENT"]
+    active = [r for r in rows if r["requirement_state"] == "SET"]
+    irrelevant = sorted({p for p in irrelevant_prefixes(req)})
+    unset = [r for r in rows if r["requirement_state"] == "UNSET"]
+    not_eval = [
+        r
+        for r in active
+        if r["underlying_capability"] == "NOT_SUPPORTED"
+        and r["evidence_stage"] != "USER_REQUIREMENT_ONLY"
+    ]
+    parcel = [
+        r for r in active if r["evidence_stage"] in ("PARCEL_VERIFICATION", "FIELD_VERIFICATION")
+    ]
+    lines = [
+        "# Family requirements v0.1 - closure summary",
+        "",
+        f"State: **{req.status.split()[0]}** (config version {req.version}). Calibrated, not complete: **an intentional UNSET is valid product truth.**",
+        "Suitability scoring is **not authorised** (`family_suitability_scoring.allowed: false`) and every evaluation rule is `NOT_ACTIVE_UNTIL_SCORING_MILESTONE`.",
+        "Generated by `python scripts/m2b0/write_summary.py` from `config/family-requirements.yaml` and `config/family-evidence-capability.yaml`.",
+        "",
+        "Hazard contract: M1E hazard actions are immutable; willingness to improve a site, a terrain preference and family access never override or offset them.",
+        "",
+        f"## A. Active user requirements ({len(active)} values)",
+        "",
+        *_group(active),
+        "",
+        f"## B. Explicitly irrelevant dimensions ({len(irrelevant)})",
+        "",
+        *[
+            f"- `{p}` - excluded from future evaluation: no reward for proximity, no penalty for distance."
+            for p in irrelevant
+        ],
+        "",
+        f"## C. Intentionally UNSET / case-by-case ({len(unset)} values)",
+        "",
+        "Not missing work: the owner has not decided, or said to decide case by case. Nothing is filled in to look complete.",
+        "",
+        f"- **hard town/city maximum**: policy `{req.urban_access.hard_limit_policy}`; `urban_access.absolute_max_drive_time_to_major_city_services` stays UNSET",
+        *_group(unset, with_value=False),
+        "",
+        f"## D. Active requirements currently not evaluable with regional evidence ({len(not_eval)} values)",
+        "",
+        "`NOT_SUPPORTED` describes the data, never the requirement; missing evidence triggers verification or new evidence work, not rejection.",
+        "Tolerances and policies that are user requirements only (site-improvement willingness, the case-by-case town limit) need no evidence and are not listed here.",
+        "",
+        *_group(not_eval, with_value=False),
+        "",
+        f"## E. Requirements that must be verified at the parcel / in the field ({len(parcel)} values)",
+        "",
+        *_group(parcel, with_value=False),
+        "",
+    ]
+    return "\n".join(lines)

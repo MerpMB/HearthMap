@@ -3,7 +3,7 @@
 # This file never changes what the family wants and activates no evaluation rule (EVALUATION_RULE is NOT_ACTIVE everywhere).
 # evidence_columns name columns of outputs/m2a2/family-infrastructure-evidence.parquet (checked by a test when the artifact exists).
 schema_version: 1
-version: "0.1.1"
+version: "0.1.2"
 evidence_artifact: outputs/m2a2/family-infrastructure-evidence.parquet
 evaluation_rule: NOT_ACTIVE_UNTIL_SCORING_MILESTONE
 
@@ -99,7 +99,7 @@ capabilities:
   utilities.electricity:
     status: NOT_SUPPORTED
     evidence_stage: PARCEL_VERIFICATION
-    reason: PEA Power Map has no verified machine-readable source; every cell is NOT_ASSESSED and parcel verification is always required.
+    reason: PEA Power Map has no verified machine-readable source; every cell is NOT_ASSESSED. Grid service must be verified for the parcel BEFORE PURCHASE; missing regional evidence triggers verification, never rejection. Connection capacity, transformer, phase, cost and reliability are not assessed and not required here.
     evidence_columns: [electricity_service_potential, electricity_parcel_verification_required]
     limitations: ["Planning information from PEA would never guarantee service."]
   utilities.water:
@@ -107,7 +107,7 @@ capabilities:
     evidence_stage: FIELD_VERIFICATION
     reason: No PWA service-area polygons are published; every cell is NON_PWA_OR_UNKNOWN_SERVICE, which is not 'no water' and is NOT confirmation that an acceptable non-PWA system exists. Acceptance of a village/municipal system depends on field verification of its reliability.
     evidence_columns: [water_service_context, water_service_verification_required]
-    limitations: ["Outside PWA is not absence of water; field verification is required."]
+    limitations: ["Outside PWA is not absence of water; field verification is required.", "Well/groundwater is accepted as a possible primary source, but existence, yield, quality, drilling legality and cost are parcel-level verification issues."]
   utilities.telecom:
     status: NOT_SUPPORTED
     evidence_stage: PARCEL_VERIFICATION
@@ -160,6 +160,30 @@ capabilities:
     reason: Importance of an item that cannot yet be evaluated (no urban-core or density evidence).
     evidence_columns: []
     limitations: []
+  livability.avoid_industrial_nuisance:
+    status: NOT_SUPPORTED
+    evidence_stage: EVIDENCE_MISSING
+    reason: No industrial-facility layer has been acquired. Future evidence must distinguish active vs inactive, facility type, scale, distance and likely nuisance pathway (noise, dust, truck traffic); a mapped factory is not automatically a nuisance.
+    evidence_columns: []
+    limitations: ["Requirement capture only: no buffer distance or nuisance model is active; not a hard exclusion."]
+  livability.avoid_mining_quarry_nuisance:
+    status: NOT_SUPPORTED
+    evidence_stage: EVIDENCE_MISSING
+    reason: No mine, quarry or stone-crushing layer has been acquired. Future evidence must distinguish active vs inactive, type, scale and nuisance pathway (noise, dust, blasting, truck traffic).
+    evidence_columns: []
+    limitations: ["Requirement capture only: no buffer distance or nuisance model is active; not a hard exclusion."]
+  livability.avoid_major_road_noise:
+    status: NOT_SUPPORTED
+    evidence_stage: EVIDENCE_MISSING
+    reason: No road-noise proxy (traffic volume, road class buffer, noise map) has been built. Residential exposure to major-road noise is a different concept from ACCESS to a major road (road_access.major_road) and must not be collapsed into it.
+    evidence_columns: []
+    limitations: ["The OSM road class and nearest-major-road distance describe access/connectivity, not noise exposure; no evaluation is active."]
+  livability.avoid_nightlife_concentration:
+    status: NOT_SUPPORTED
+    evidence_stage: EVIDENCE_MISSING
+    reason: No validated nightlife-concentration evidence exists. Nightlife nuisance is not the existence of restaurants or normal town services, and generic POI density must not be used as a penalty without a validated method.
+    evidence_columns: []
+    limitations: ["Requirement capture only; no evaluation is active."]
   livability.tolerate_tourism_activity:
     status: NOT_SUPPORTED
     reason: No tourism-activity evidence has been acquired.
@@ -208,6 +232,18 @@ capabilities:
     status: NOT_SUPPORTED
     evidence_stage: PARCEL_VERIFICATION
     reason: Parcel size is a parcel-level attribute.
+    evidence_columns: []
+    limitations: []
+  land.terrain_preference:
+    status: PARTIALLY_SUPPORTED
+    evidence_stage: REGIONAL_EVIDENCE
+    reason: Regional slope statistics from a 30 m DSM (M1B) could describe terrain character, but no slope-degree range for 'gentle / rolling' has been defined. Data availability is not permission to evaluate, and no evaluation is active.
+    evidence_columns: []
+    limitations: ["Terrain preference stays subordinate to M1E hazard truth; it never overrides landslide, flood, seismic, deprioritization or verification actions."]
+  land.terrain_preference_importance:
+    status: PARTIALLY_SUPPORTED
+    evidence_stage: REGIONAL_EVIDENCE
+    reason: Importance of a terrain preference whose evaluation is not active.
     evidence_columns: []
     limitations: []
   land.terrain_tolerance:

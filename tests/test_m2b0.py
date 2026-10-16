@@ -55,7 +55,7 @@ def test_project_state_allows_calibration_and_forbids_scoring():
         "allowed": False
     }
     assert "education register remains incomplete" in ps.reason
-    assert r.status == "PARTIALLY_POPULATED_INPUT_PASS_2"
+    assert r.status == "FAMILY_REQUIREMENTS_V0_1_CALIBRATED"
 
 
 PASS_1 = {
@@ -105,21 +105,44 @@ PASS_2 = {
     "land.willingness_to_build_retaining_structures": True,
     "land.willingness_to_grade_or_fill": True,
 }  # fmt: skip
-EXPECTED = PASS_1 | PASS_2
+PASS_3 = {
+    "healthcare.primary_healthcare.importance": "PREFERENCE",
+    "healthcare.primary_healthcare.preferred_max_drive_minutes": 15,
+    "utilities.electricity.grid_service_required": True,
+    "utilities.electricity.importance": "MUST",
+    "utilities.electricity.verification_stage": "BEFORE_PURCHASE",
+    "utilities.electricity.must_be_verified_before_purchase": True,
+    "utilities.electricity.tolerate_regional_uncertainty_during_screening": True,
+    "utilities.water.well_water_acceptable": True,
+    "land.terrain_preference": "GENTLE_ROLLING",
+    "land.terrain_preference_importance": "PREFERENCE",
+    "urban_access.airport_importance": "IRRELEVANT",
+    "education.university.importance": "IRRELEVANT",
+    "education.vocational.importance": "IRRELEVANT",
+    "livability.avoid_industrial_nuisance.value": True,
+    "livability.avoid_industrial_nuisance.importance": "STRONG_PREFERENCE",
+    "livability.avoid_mining_quarry_nuisance.value": True,
+    "livability.avoid_mining_quarry_nuisance.importance": "STRONG_PREFERENCE",
+    "livability.avoid_major_road_noise.value": True,
+    "livability.avoid_major_road_noise.importance": "STRONG_PREFERENCE",
+    "livability.avoid_nightlife_concentration.value": True,
+    "livability.avoid_nightlife_concentration.importance": "STRONG_PREFERENCE",
+}  # fmt: skip
+EXPECTED = PASS_1 | PASS_2 | PASS_3
 
 
 def plain(v):
     return v.value if hasattr(v, "value") else v
 
 
-def test_only_the_explicit_input_decisions_of_passes_1_and_2_are_set():
+def test_only_the_explicit_input_decisions_of_passes_1_to_3_are_set():
     r = load_requirements()
     ls = leaves(r)
-    assert len(ls) == 79
+    assert len(ls) == 97
     got = {p: plain(v) for p, v in ls if v != UNSET}
     assert got == EXPECTED  # exactly the decisions given, nothing inferred
-    assert len(PASS_1) == 22 and len(PASS_2) == 19
-    assert r.status == "PARTIALLY_POPULATED_INPUT_PASS_2"
+    assert len(PASS_1) == 22 and len(PASS_2) == 19 and len(PASS_3) == 21
+    assert r.status == "FAMILY_REQUIREMENTS_V0_1_CALIBRATED"
     assert check_requirements(r) == []  # consistent and no warnings
 
 
@@ -127,23 +150,26 @@ def test_everything_not_decided_stays_unset():
     r = load_requirements()
     unset = {p for p, v in leaves(r) if v == UNSET}
     must_stay = [
-        "education.vocational.importance", "education.university.importance", "education.university.preferred_max_drive_minutes",
+        "education.university.preferred_max_drive_minutes",
         "education.kindergarten.minimum_choices_within_preferred_time", "education.primary.minimum_choices_within_preferred_time",
         "education.lower_secondary.minimum_choices_within_preferred_time", "education.upper_secondary.minimum_choices_within_preferred_time",
-        "healthcare.primary_healthcare.importance", "healthcare.primary_healthcare.preferred_max_drive_minutes",
+        "healthcare.primary_healthcare.absolute_max_drive_minutes",
         "redundancy.number_of_primary_schools_within_time.minimum_count", "redundancy.number_of_secondary_schools_within_time.minimum_count",
         "redundancy.number_of_hospitals_within_time.minimum_count", "urban_access.absolute_max_drive_time_to_major_city_services",
-        "urban_access.airport_importance", "urban_access.shopping_daily_services_importance",
+        "urban_access.shopping_daily_services_importance",
         "road_access.major_road.importance", "road_access.major_road.maximum_baseline_drive_time_to_major_road",
         "road_access.route_redundancy_importance",
-        "utilities.electricity.must_be_verified_before_purchase", "utilities.electricity.tolerate_regional_uncertainty_during_screening",
-        "utilities.water.well_water_acceptable", "livability.preferred_population_density",
-        "livability.tolerate_tourism_activity", "livability.tolerate_nightlife", "livability.industrial_nuisance_tolerance",
-        "livability.agricultural_surroundings_preference",
+        "livability.preferred_population_density", "livability.tolerate_tourism_activity", "livability.tolerate_nightlife",
+        "livability.industrial_nuisance_tolerance", "livability.agricultural_surroundings_preference",
+        "livability.avoid_industrial_nuisance.buffer_distance_m", "livability.avoid_mining_quarry_nuisance.buffer_distance_m",
+        "livability.avoid_major_road_noise.buffer_distance_m", "livability.avoid_nightlife_concentration.buffer_distance_m",
         "land.land_purchase_budget.preferred_thb", "land.house_construction_budget_thb",
         "land.preferred_area_rai", "land.minimum_area_rai", "land.maximum_area_rai", "land.terrain_tolerance",
     ]  # fmt: skip
     assert set(must_stay) <= unset
+    assert (
+        len(unset) == 35
+    )  # 34 open items + the university time that sits inside an IRRELEVANT dimension
     assert not any(
         "quality" in p or "trauma" in p or "emergency" in p for p, _ in leaves(r)
     )  # not requirements at all
@@ -440,7 +466,7 @@ def test_matrix_covers_every_requirement_and_keeps_three_concepts_separate():
     req, cap = load_requirements(), load_capability()
     rows = evidence_matrix(req, cap)
     reqrows = [r for r in rows if r["kind"] == "USER_REQUIREMENT"]
-    assert len(reqrows) == len(leaves(req)) == 79
+    assert len(reqrows) == len(leaves(req)) == 97
     assert {r["requirement_path"] for r in reqrows} == {p for p, _ in leaves(req)}
     assert all(
         r["evaluation_rule"] == EVALUATION_RULE for r in rows
@@ -639,14 +665,19 @@ def test_access_requirements_are_must_but_not_provable_regionally():
     ]  # unpaved + all-weather is not a contradiction
 
 
-def test_water_accepts_non_pwa_only_after_field_verification_and_well_stays_unset():
+def test_water_accepts_non_pwa_only_after_field_verification_and_well_water_is_allowed():
     w = load_requirements().utilities.water
     assert (
         w.require_municipal_or_PWA_service is False
         and w.accept_non_PWA_system_if_field_verified is True
     )
     assert w.must_be_verified_before_purchase is True and w.importance == Importance.MUST
-    assert w.well_water_acceptable == UNSET  # not inferred from accepting village water
+    assert (
+        w.well_water_acceptable is True
+    )  # input pass 3: groundwater is an acceptable possible source
+    assert (
+        w.require_municipal_or_PWA_service is False
+    )  # the earlier water requirements are unchanged
     rows = {
         x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
     }
@@ -694,12 +725,8 @@ def test_fiber_is_a_must_that_missing_evidence_cannot_weaken():
     )
 
 
-def test_electricity_stays_unset_and_town_limit_is_case_by_case():
+def test_town_limit_is_case_by_case_and_shopping_has_no_separate_threshold():
     r = load_requirements()
-    assert (
-        r.utilities.electricity.must_be_verified_before_purchase == UNSET
-        and r.utilities.electricity.tolerate_regional_uncertainty_during_screening == UNSET
-    )
     ua = r.urban_access
     assert (
         ua.preferred_drive_time_to_town_services == 35
@@ -709,6 +736,10 @@ def test_electricity_stays_unset_and_town_limit_is_case_by_case():
         ua.absolute_max_drive_time_to_major_city_services == UNSET
         and ua.hard_limit_policy == "CASE_BY_CASE"
     )  # 'case by case' is not a number
+    assert (
+        ua.shopping_daily_services_importance == UNSET
+    )  # no independently invented daily-essentials threshold
+    assert not any("shopping" in p and isinstance(v, float) for p, v in leaves(r))
     rows = {x["requirement_path"]: x for x in evidence_matrix(r, load_capability())}
     assert rows["urban_access.hard_limit_policy"]["evidence_stage"] == "USER_REQUIREMENT_ONLY"
 
@@ -774,3 +805,224 @@ def test_not_supported_is_not_failure_and_no_hazard_columns_enter_the_matrix():
         "USER_REQUIREMENT_ONLY",
     }
     assert [i for i in validate_requirements(load_requirements()) if i.severity == "ERROR"] == []
+
+
+# -- input pass 3 / closure --------------------------------------------------------------------------
+def test_grid_electricity_is_a_must_verified_before_purchase_and_missing_evidence_only_triggers_verification():
+    e = load_requirements().utilities.electricity
+    assert (
+        e.grid_service_required is True
+        and e.importance == Importance.MUST
+        and e.verification_stage == "BEFORE_PURCHASE"
+    )
+    assert (
+        e.must_be_verified_before_purchase is True
+        and e.tolerate_regional_uncertainty_during_screening is True
+    )  # verify, never reject
+    assert not any(
+        k in type(e).model_fields
+        for k in ("capacity", "transformer", "phase", "connection_cost", "reliability")
+    )  # nothing inferred
+    rows = {
+        x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
+    }
+    r = rows["utilities.electricity.grid_service_required"]
+    assert (
+        r["data_capability"] == "NOT_SUPPORTED"
+        and r["evidence_stage"] == "PARCEL_VERIFICATION"
+        and r["user_requirement_value"] is True
+    )
+    assert "never rejection" in r["capability_reason"]
+    assert any(
+        i.severity == "ERROR"
+        for i in validate_requirements(
+            with_(
+                utilities__electricity={"grid_service_required": True, "importance": "IRRELEVANT"}
+            )
+        )
+    )
+
+
+def test_primary_healthcare_is_a_preference_not_a_gate_and_hospital_rules_are_unchanged():
+    h = load_requirements().healthcare
+    assert (
+        h.primary_healthcare.preferred_max_drive_minutes == 15
+        and h.primary_healthcare.importance == Importance.PREFERENCE
+    )
+    assert h.primary_healthcare.absolute_max_drive_minutes == UNSET  # not a hard gate
+    assert (
+        h.hospital.importance,
+        h.hospital.preferred_max_drive_minutes,
+        h.hospital.absolute_max_drive_minutes,
+    ) == (Importance.MUST, 20, 35)
+    assert (
+        h.regional_or_referral_hospital.importance,
+        h.regional_or_referral_hospital.preferred_max_drive_minutes,
+        h.regional_or_referral_hospital.absolute_max_drive_minutes,
+    ) == (Importance.STRONG_PREFERENCE, 45, 75)
+    rows = {
+        x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
+    }
+    assert (
+        rows["healthcare.primary_healthcare.preferred_max_drive_minutes"]["data_capability"]
+        == "SUPPORTED_WITH_LIMITATIONS"
+    )
+
+
+def test_terrain_preference_is_non_numeric_and_subordinate_to_hazards():
+    ld = load_requirements().land
+    assert (
+        ld.terrain_preference == "GENTLE_ROLLING"
+        and ld.terrain_preference_importance == Importance.PREFERENCE
+    )
+    assert (
+        ld.terrain_tolerance == UNSET
+    )  # not 'steep is acceptable' and not 'any slope is acceptable'
+    assert not any(
+        "slope" in p or "degree" in p for p, _ in leaves(load_requirements())
+    )  # no slope-degree range invented
+    assert any(
+        "contradicts terrain tolerance" in e
+        for e in errors(with_(land__terrain_tolerance="FLAT_ONLY"))
+    )  # a preference conflicting with a stated tolerance fails
+    bad = base()
+    bad["hazard_contract"]["terrain_preference_overrides_hazard_actions"] = True
+    with pytest.raises(RequirementConflict):
+        check_requirements(Requirements(**bad))
+    assert load_requirements().hazard_contract.terrain_preference_overrides_hazard_actions is False
+    rows = {
+        x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
+    }
+    assert (
+        rows["land.terrain_preference"]["data_capability"] == "PARTIALLY_SUPPORTED"
+        and rows["land.terrain_preference"]["evaluation_rule"] == EVALUATION_RULE
+    )
+
+
+def test_irrelevant_dimensions_are_excluded_from_evaluation_in_the_matrix():
+    r = load_requirements()
+    assert r.urban_access.airport_importance == Importance.IRRELEVANT
+    assert (
+        r.education.university.importance == Importance.IRRELEVANT
+        and r.education.vocational.importance == Importance.IRRELEVANT
+    )
+    rows = {x["requirement_path"]: x for x in evidence_matrix(r, load_capability())}
+    for k in (
+        "urban_access.airport_importance",
+        "education.university.importance",
+        "education.university.preferred_max_drive_minutes",
+        "education.vocational.importance",
+    ):
+        assert (
+            rows[k]["data_capability"] == "NOT_APPLICABLE_IRRELEVANT"
+            and rows[k]["evaluation_use"] == "EXCLUDED_BY_USER"
+            and rows[k]["needs_user_input"] is False
+        )
+    assert (
+        rows["education.university.importance"]["underlying_capability"] == "PARTIALLY_SUPPORTED"
+    )  # still shown for information
+    assert [k for k, v in rows.items() if v["evaluation_use"] == "EXCLUDED_BY_USER"] == [
+        k
+        for k in rows
+        if k
+        in (
+            "education.vocational.importance",
+            "education.university.importance",
+            "education.university.preferred_max_drive_minutes",
+            "urban_access.airport_importance",
+        )
+    ]
+    # an IRRELEVANT dimension that still carries a threshold is a contradiction
+    assert any(
+        "IRRELEVANT but thresholds are set" in e
+        for e in errors(
+            with_(
+                education__university={
+                    "importance": "IRRELEVANT",
+                    "preferred_max_drive_minutes": 45,
+                }
+            )
+        )
+    )
+
+
+def test_nuisance_avoidances_are_preferences_without_buffers_or_hard_exclusions():
+    lv = load_requirements().livability
+    for name in (
+        "avoid_industrial_nuisance",
+        "avoid_mining_quarry_nuisance",
+        "avoid_major_road_noise",
+        "avoid_nightlife_concentration",
+    ):
+        a = getattr(lv, name)
+        assert (
+            a.value is True and a.importance == Importance.STRONG_PREFERENCE
+        )  # preference, not MUST
+        assert a.buffer_distance_m == UNSET  # no exclusion distance was supplied
+    assert "hard_exclusion" not in " ".join(p for p, _ in leaves(load_requirements()))
+    rows = {
+        x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
+    }
+    for name in (
+        "industrial_nuisance",
+        "mining_quarry_nuisance",
+        "major_road_noise",
+        "nightlife_concentration",
+    ):
+        r = rows[f"livability.avoid_{name}.value"]
+        assert r["data_capability"] == "NOT_SUPPORTED" and r["evidence_stage"] == "EVIDENCE_MISSING"
+    assert (
+        "not automatically a nuisance"
+        in rows["livability.avoid_industrial_nuisance.value"]["capability_reason"]
+    )
+    assert (
+        "not the existence of restaurants"
+        in rows["livability.avoid_nightlife_concentration.value"]["capability_reason"]
+    )
+    assert any(
+        "matching tolerance is HIGH" in e
+        for e in errors(with_(livability__tolerate_nightlife="HIGH"))
+    )
+
+
+def test_major_road_access_and_major_road_noise_stay_separate_concepts():
+    r = load_requirements()
+    access = {p for p, _ in leaves(r) if p.startswith("road_access.major_road")}
+    noise = {p for p, _ in leaves(r) if p.startswith("livability.avoid_major_road_noise")}
+    assert access and noise and not access & noise
+    assert (
+        r.road_access.major_road.maximum_baseline_drive_time_to_major_road == UNSET
+    )  # access threshold still unset
+    assert r.livability.avoid_major_road_noise.value is True
+    rows = {x["requirement_path"]: x for x in evidence_matrix(r, load_capability())}
+    assert (
+        "different concept" in rows["livability.avoid_major_road_noise.value"]["capability_reason"]
+    )
+
+
+SUMMARY = Path("docs/product/family-requirements-v0.1-summary.md")
+
+
+def test_closure_summary_is_generated_from_the_config_and_separates_the_five_groups():
+    from hearthmap.family.requirements import render_summary
+
+    text = render_summary(load_requirements(), load_capability())
+    assert SUMMARY.read_text("utf-8").strip() == text.strip()  # no drift from the config
+    for heading in (
+        "## A. Active user requirements",
+        "## B. Explicitly irrelevant dimensions",
+        "## C. Intentionally UNSET / case-by-case",
+        "## D. Active requirements currently not evaluable",
+        "## E. Requirements that must be verified at the parcel",
+    ):
+        assert heading in text
+    assert "FAMILY_REQUIREMENTS_V0_1_CALIBRATED" in text and "not authorised" in text
+    assert "intentional UNSET is valid product truth" in text
+    b = text.split("## B.")[1].split("## C.")[0]
+    assert (
+        "education.university" in b and "education.vocational" in b and "urban_access.airport" in b
+    )
+    d = text.split("## D.")[1].split("## E.")[0]
+    assert (
+        "willingness_to_improve_drainage" not in d
+    )  # user-requirement-only tolerances are not 'missing evidence'

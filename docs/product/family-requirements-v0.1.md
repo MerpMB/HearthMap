@@ -3,7 +3,7 @@
 Status: **calibration contract only.** Config: [`config/family-requirements.yaml`](../../config/family-requirements.yaml) (what the family wants),
 [`config/family-evidence-capability.yaml`](../../config/family-evidence-capability.yaml) (what current evidence can evaluate); code:
 `hearthmap.family.requirements`; matrix: `outputs/m2b0/requirement-evidence-matrix.csv` (`python scripts/m2b0/build_matrix.py`).
-**No cell is scored, no province is ranked, no recommendation exists.** Input passes 1 and 2 (below) have populated the explicit decisions so far; M2B.0 ends `READY_FOR_NEXT_USER_REQUIREMENT_INPUT`.
+**No cell is scored, no province is ranked, no recommendation exists.** Input passes 1-3 (below) have populated the explicit decisions; v0.1 is calibrated, not complete; M2B.0 ends `READY_FOR_NEXT_USER_REQUIREMENT_INPUT`.
 
 ## Project state
 
@@ -78,6 +78,26 @@ Remaining UNSET groups: university / vocational / primary care importance; schoo
 airport, shopping, absolute major-city limit; major-road and route-redundancy values; electricity; well water; livability beyond the urban-core
 preference (density range, tourism, nightlife, industrial nuisance, agricultural surroundings); preferred land budget and all parcel-area values; terrain tolerance.
 
+## Input pass 3 and closure (explicit user decisions only)
+
+State: **`FAMILY_REQUIREMENTS_V0_1_CALIBRATED`** - calibrated, not complete. Scoring is still not authorised. The concise snapshot (active / irrelevant /
+intentionally UNSET / not evaluable / parcel-verification) is [`family-requirements-v0.1-summary.md`](family-requirements-v0.1-summary.md), generated from the config.
+
+| Requirement | Value | Importance | Evidence support / stage |
+|---|---|---|---|
+| Grid electricity at the parcel | required, verified before purchase; missing regional evidence = verify, never reject; capacity/transformer/phase/cost/reliability not inferred | MUST | NOT_SUPPORTED / parcel verification |
+| Primary healthcare | preferred 15 min, no absolute maximum | PREFERENCE (not a gate) | SUPPORTED_WITH_LIMITATIONS |
+| Well / groundwater | acceptable as a possible primary source (existence, yield, quality, legality, cost are parcel-level questions) | - | NOT_SUPPORTED / field verification |
+| Terrain | prefers gentle / rolling terrain (`GENTLE_ROLLING`); no slope range; tolerance stays UNSET | PREFERENCE | PARTIALLY_SUPPORTED (evaluation not active) |
+| Airport, university, vocational | IRRELEVANT: no reward, no penalty, excluded from evaluation | IRRELEVANT | matrix shows `NOT_APPLICABLE_IRRELEVANT` |
+| Daily shopping / services | no separate threshold; town services (35 min) is sufficient | - | stays UNSET |
+| Avoid industrial, mining/quarry, major-road noise, nightlife concentration | preferences, **not** hard exclusions; all buffers UNSET | STRONG_PREFERENCE | NOT_SUPPORTED / evidence missing |
+
+Semantics kept explicit: **access to a major road is not exposure to major-road noise** (`road_access.major_road` vs `livability.avoid_major_road_noise`);
+a mapped factory or mine is not automatically a nuisance (future evidence must consider active/inactive, type, scale, distance and nuisance pathway);
+nightlife avoidance is about concentrated residential nuisance, not restaurants or normal town services (no generic POI-density penalty). The terrain
+preference and site-improvement willingness stay subordinate to M1E hazard truth (`hazard_contract`).
+
 ## How to fill in requirements
 
 Unstated values are `UNSET` ("the owner has not decided"), not a default. Fill values with the owner; invented defaults are not product truth.
@@ -99,7 +119,7 @@ accepting non-PWA or well water; minimum area above maximum (or preferred outsid
 `URBAN` density; enabling scoring. Warnings (not errors): `MUST`/`STRONG_PREFERENCE` with no threshold yet; thresholds without an importance;
 tolerating unpaved access while requiring all-weather access. A misspelt key is rejected rather than defaulted.
 
-## Evidence sufficiency (79 requirement leaves + 3 capability-only questions)
+## Evidence sufficiency (97 requirement leaves + 3 capability-only questions)
 
 | Group | Current capability | Why |
 |---|---|---|

@@ -10,8 +10,8 @@
 #   MUST | STRONG_PREFERENCE | PREFERENCE | NICE_TO_HAVE | IRRELEVANT
 # minutes are BASELINE_DRIVE_TIME (free-flow class speeds), not real commute time.
 schema_version: 1
-version: "0.1.2"
-status: PARTIALLY_POPULATED_INPUT_PASS_2
+version: "0.1.3"
+status: FAMILY_REQUIREMENTS_V0_1_CALIBRATED   # calibrated, NOT complete: intentional UNSET values are valid product truth; scoring stays disabled
 
 project_state:
   family_infrastructure_evidence:
@@ -30,6 +30,7 @@ hazard_contract:
   m1e_actions_immutable: true
   site_improvement_willingness_overrides_hazard_actions: false
   family_access_offsets_hazard_actions: false
+  terrain_preference_overrides_hazard_actions: false   # a preferred rolling site never overrides landslide/flood/seismic actions, deprioritization or verification
 
 education:
   kindergarten:
@@ -52,16 +53,17 @@ education:
     preferred_max_drive_minutes: 25
     absolute_max_drive_minutes: 40
     minimum_choices_within_preferred_time: UNSET
-  vocational:
-    importance: UNSET
-  university:
-    importance: UNSET
+  vocational:     # INPUT PASS 3: IRRELEVANT to this home-location decision (no reward for proximity, no penalty for distance, not used in evaluation)
+    importance: IRRELEVANT
+  university:     # INPUT PASS 3: IRRELEVANT to this home-location decision (not a statement about life in general)
+    importance: IRRELEVANT
     preferred_max_drive_minutes: UNSET
 
 healthcare:   # no trauma/emergency capability is requested here: that is a future facility-verification question
-  primary_healthcare:
-    importance: UNSET
-    preferred_max_drive_minutes: UNSET
+  primary_healthcare:   # INPUT PASS 3: a preference, not a hard gate
+    importance: PREFERENCE
+    preferred_max_drive_minutes: 15
+    absolute_max_drive_minutes: UNSET
   hospital:
     importance: MUST
     preferred_max_drive_minutes: 20
@@ -101,15 +103,19 @@ road_access:
   route_redundancy_importance: UNSET
 
 utilities:    # tolerance for uncertainty, not a claim that utility evidence is complete
-  electricity:
-    must_be_verified_before_purchase: UNSET
-    tolerate_regional_uncertainty_during_screening: UNSET
+  electricity:   # INPUT PASS 3: actual usable public/grid electricity at the parcel is required. Missing regional evidence means VERIFY, never reject.
+    grid_service_required: true
+    importance: MUST
+    verification_stage: BEFORE_PURCHASE
+    must_be_verified_before_purchase: true
+    tolerate_regional_uncertainty_during_screening: true
+    # not requirements (and not inferred): connection capacity, transformer capacity, phase, connection cost, service reliability
   water:       # INPUT PASS 2: PWA is not required; village / municipal / local-government water is acceptable ONLY once field-verified as reliable.
     importance: MUST                              # a verified, reliable supply is a condition of purchase
     must_be_verified_before_purchase: true
     accept_non_PWA_system_if_field_verified: true
     require_municipal_or_PWA_service: false
-    well_water_acceptable: UNSET                  # not stated; NOT inferred from accepting village water
+    well_water_acceptable: true                   # INPUT PASS 3: groundwater/well water may be the primary source. This does NOT mean groundwater exists, yields enough, is potable, may legally be drilled, or is affordable: all parcel-level verification
   telecom:     # INPUT PASS 2: actual fixed fiber internet is required. Missing evidence never weakens this MUST.
     minimum_requirement: FIXED_FIBER   # NONE | MOBILE_VOICE | MOBILE_DATA | FIXED_BROADBAND | FIXED_FIBER
     importance: MUST
@@ -122,14 +128,32 @@ urban_access:
   # no absolute maximum town-access time was given; absolute_max_drive_time_to_major_city_services is a different item and stays UNSET
   absolute_max_drive_time_to_major_city_services: UNSET   # 'consider it case by case': NOT converted into 45, 60 or any number
   hard_limit_policy: CASE_BY_CASE
-  airport_importance: UNSET
-  shopping_daily_services_importance: UNSET
+  airport_importance: IRRELEVANT              # INPUT PASS 3: not relevant to this home-location decision; do not evaluate or score airport access
+  shopping_daily_services_importance: UNSET  # INTENTIONAL: town services (35 min, STRONG_PREFERENCE) is accepted as sufficient; no separate daily-essentials threshold
 
 livability:   # placeholders for later livability modelling; not evaluated in M2B.0
   preferred_population_density: UNSET        # REMOTE | RURAL | PERI_URBAN | SUBURBAN | URBAN
   avoid_dense_urban_core: true
   avoid_dense_urban_core_importance: STRONG_PREFERENCE
   # stated preference: a peaceful / lower-density setting even if normal town access is about 30-35 minutes
+  # INPUT PASS 3: avoidance PREFERENCES for residential exposure. Not hard exclusions; no buffer distance or proximity threshold was given (all UNSET).
+  # Future evidence must be context-aware (active/inactive, type, scale, noise, dust, truck traffic); a mapped feature is not automatically a nuisance.
+  avoid_industrial_nuisance:         # factories / industrial facilities
+    value: true
+    importance: STRONG_PREFERENCE
+    buffer_distance_m: UNSET
+  avoid_mining_quarry_nuisance:      # mines, quarries, stone crushing
+    value: true
+    importance: STRONG_PREFERENCE
+    buffer_distance_m: UNSET
+  avoid_major_road_noise:            # RESIDENTIAL EXPOSURE to noisy major roads. NOT the same as access to a major road (road_access.major_road)
+    value: true
+    importance: STRONG_PREFERENCE
+    buffer_distance_m: UNSET
+  avoid_nightlife_concentration:     # residential nuisance from concentrated nightlife, NOT restaurants or normal town services; no generic POI-density penalty
+    value: true
+    importance: STRONG_PREFERENCE
+    buffer_distance_m: UNSET
   tolerate_tourism_activity: UNSET           # NONE | LOW | MODERATE | HIGH
   tolerate_nightlife: UNSET
   industrial_nuisance_tolerance: UNSET
@@ -144,7 +168,9 @@ land:         # will later interact with parcel screening
   preferred_area_rai: UNSET  # parcel size is not fixed yet; usable area must later be considered separately from nominal area
   minimum_area_rai: UNSET
   maximum_area_rai: UNSET
-  terrain_tolerance: UNSET   # NOT inferred from the willingness to improve a site
+  terrain_preference: GENTLE_ROLLING   # INPUT PASS 3: gentle / rolling terrain with some elevation variation rather than completely flat; FLAT | GENTLE_ROLLING | HILLY
+  terrain_preference_importance: PREFERENCE   # no slope-degree range is given or inferred; NOT 'steep is acceptable' and NOT 'any slope is acceptable'
+  terrain_tolerance: UNSET   # NOT inferred from the willingness to improve a site or from the terrain preference
   # Site-improvement tolerance (INPUT PASS 2): willing, with NO project-level limit and NO financial allowance stated yet.
   # true means "permissive / unrestricted so far". It never overrides a hazard action (see hazard_contract).
   willingness_to_improve_drainage: true
