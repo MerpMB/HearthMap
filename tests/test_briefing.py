@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / "docs/product/hearthmap-briefing-v0.1.md"
 PLATES = ROOT / "scripts/briefing/make_plates.py"
 RENDER = ROOT / "scripts/briefing/render_html.py"
+PUBLISH = ROOT / "scripts/briefing/publish_plates.py"
+ASSETS = ROOT / "docs/product/hearthmap-briefing-v0.1/assets"
 GATES = yaml.safe_load((ROOT / "config/human-qa.yaml").read_text("utf-8"))["gates"]
 TEXT = DOC.read_text("utf-8")
 
@@ -78,11 +80,19 @@ def test_plates_read_only_current_corrected_artifacts():
     assert "CANONICAL_AOI_ANALYSIS_POINT" in code
 
 
-def test_every_referenced_plate_is_generated():
+def test_every_referenced_plate_is_generated_published_and_tracked_safely():
     src = PLATES.read_text("utf-8")
     saved = set(re.findall(r'save\(fig, "([^"]+)"\)', src))
-    referenced = set(re.findall(r"outputs/briefing/maps/([^)]+)\.png", TEXT))
-    assert referenced and referenced <= saved
+    links = re.findall(r"!\[[^\]]*\]\(([^)]+)\)", TEXT)
+    assert links and all(link.startswith("hearthmap-briefing-v0.1/assets/") for link in links)
+    referenced = {Path(link).stem for link in links}
+    published = set(_load(PUBLISH, "briefing_publish_plates").PUBLISHED)
+    assert referenced == published and published <= saved
+    files = {p.stem: p for p in ASSETS.glob("*")}
+    assert set(files) == published  # only the curated plates, nothing else
+    for p in files.values():
+        assert p.suffix == ".png" and p.stat().st_size <= 1_000_000, p.name
+    assert "outputs/briefing/maps" not in "".join(links)
     for required in (
         "00-hearthmap-overview",
         "01-hazard-foundation",

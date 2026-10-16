@@ -3,7 +3,9 @@
 
 The Markdown file stays canonical. This renderer understands only the subset the briefing uses (headings, paragraphs,
 tables, lists, block quotes, images, horizontal rules, inline code/bold/italic/links and ```flow``` step diagrams), so no
-Markdown dependency is added. Images are referenced relative to the HTML file (outputs/briefing/maps/).
+Markdown dependency is added. The Markdown links the tracked snapshot (docs/product/hearthmap-briefing-v0.1/assets/);
+the HTML references the same-named build plates relative to itself (outputs/briefing/maps/). HTML and PDF are rendered
+derivatives and stay in the git-ignored outputs/briefing/.
 
 Usage:  python scripts/briefing/render_html.py [--no-pdf]
 """
@@ -23,7 +25,8 @@ SRC = ROOT / "docs/product/hearthmap-briefing-v0.1.md"
 OUT = ROOT / "outputs/briefing"
 HTML_OUT = OUT / "hearthmap-briefing-v0.1.html"
 PDF_OUT = OUT / "hearthmap-briefing-v0.1.pdf"
-IMG_PREFIX = "../../outputs/briefing/"
+# The Markdown links the tracked snapshot; the rendered HTML uses the matching build plates in outputs/briefing/maps/.
+IMG_PREFIX = "hearthmap-briefing-v0.1/assets/"
 
 CSS = """
 :root{--paper:#FAF8F3;--ink:#2B2B2B;--muted:#6E6A62;--rule:#DDD8CD;--accent:#3E5C76;--warm:#9B6A5C;--card:#FFFFFF}
@@ -80,7 +83,7 @@ def inline(text: str) -> str:
 
 def img(src: str, alt: str) -> str:
     if src.startswith(IMG_PREFIX):
-        src = src[len(IMG_PREFIX) :]
+        src = "maps/" + src[len(IMG_PREFIX) :]
     return f'<figure><img src="{src}" alt="{alt}" loading="lazy"><figcaption>{alt}</figcaption></figure>'
 
 
@@ -237,8 +240,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     missing = [
         m
-        for m in re.findall(r"\(\.\./\.\./outputs/briefing/([^)]+)\)", SRC.read_text("utf-8"))
-        if not (OUT / m).exists()
+        for m in re.findall(r"\(hearthmap-briefing-v0\.1/assets/([^)]+)\)", SRC.read_text("utf-8"))
+        if not (OUT / "maps" / m).exists()
     ]
     if missing:
         print("missing plates (run scripts/briefing/make_plates.py first):", missing)

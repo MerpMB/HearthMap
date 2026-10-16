@@ -957,7 +957,7 @@ def plate_town_services(c: Ctx) -> dict:
         "คำตอบเปลี่ยนตามนิยาม: ความต่างมากที่สุดในพื้นที่ที่บริการเบาบาง · *มัธยฐานเฉพาะเซลล์ที่มีเส้นทาง",
     )
     fig.text(0.68, 0.035, NOT_A_SCORE, fontsize=6.4, color=MUTED, wrap=True)
-    save(fig, "05b-town-services-definition-sensitivity")
+    save(fig, "05b-town-services-sensitivity")
     both = np.isfinite(core) & np.isfinite(broad)
     facts["core_median"] = round(float(np.median(core[both])), 2)
     facts["broader_median"] = round(float(np.median(broad[both])), 2)

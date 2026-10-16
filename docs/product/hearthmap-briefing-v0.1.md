@@ -11,9 +11,11 @@
 | การให้คะแนน | `FAMILY_SCORING_ALLOWED = false` — ไม่มีคะแนน ไม่มีการจัดอันดับ ไม่มีคำแนะนำ |
 | ประเภทเอกสาร | Presentation / synthesis เท่านั้น: ไม่มีการได้มาซึ่งข้อมูลใหม่ ไม่มีการเปลี่ยนนโยบายหรือ gate ใด ๆ |
 
-> **วิธีอ่านเอกสารนี้** Markdown นี้เป็นต้นฉบับหลัก (canonical) แผนที่ทุกแผ่นสร้างใหม่จาก artifact ปัจจุบันที่แก้ไขแล้ว ด้วย
-> `python scripts/briefing/make_plates.py` และไฟล์ HTML/PDF สร้างด้วย `python scripts/briefing/render_html.py`
-> ภาพและ HTML อยู่ใน `outputs/briefing/` ซึ่งไม่ถูกเก็บใน Git ตามกฎของ repository (สร้างซ้ำได้จากโค้ด)
+> **วิธีอ่านเอกสารนี้ (packaging)**
+> - **Markdown นี้** = ต้นฉบับหลักของ briefing (canonical source)
+> - **`docs/product/hearthmap-briefing-v0.1/assets/*.png`** = ภาพแผนที่ที่เผยแพร่ (published documentation snapshot, tracked) — คัดลอกจาก build ด้วย `python scripts/briefing/publish_plates.py`
+> - **`outputs/briefing/`** = build artifacts ที่สร้างซ้ำได้ (git-ignored): แผนที่ต้นฉบับจาก `python scripts/briefing/make_plates.py`
+> - **HTML / PDF** = rendered derivatives จาก `python scripts/briefing/render_html.py` เก็บใน `outputs/briefing/` เท่านั้น ไม่ commit
 
 ---
 
@@ -51,7 +53,7 @@
 
 ## 2. แผนที่ภาพรวม (Main overview map)
 
-![ภาพรวมพื้นที่ศึกษา HearthMap](../../outputs/briefing/maps/00-hearthmap-overview.png)
+![ภาพรวมพื้นที่ศึกษา HearthMap](hearthmap-briefing-v0.1/assets/00-hearthmap-overview.png)
 
 แผนที่หน้าปก (`00-hearthmap-overview.png`) แสดงสามจังหวัด เส้นแบ่งอำเภอ ถนนสายหลักจาก OSM พื้นที่สิ่งปลูกสร้างจาก GHSL บนเงาภูมิประเทศจาก DEM
 
@@ -122,7 +124,7 @@ Family Requirements v0.1 ถูก calibrate แล้ว ตัวอย่า�
 
 **คำถาม: มีหลักฐานภัยธรรมชาติประเภทใดอยู่แล้วบ้าง?** · ชั้นความจริง: DERIVED EVIDENCE (M1E provisional)
 
-![ฐานข้อมูลภัยธรรมชาติ](../../outputs/briefing/maps/01-hazard-foundation.png)
+![ฐานข้อมูลภัยธรรมชาติ](hearthmap-briefing-v0.1/assets/01-hazard-foundation.png)
 
 สี่แผงแยกกัน **ไม่มีคะแนนภัยรวม (no scalar hazard score)**:
 
@@ -145,7 +147,7 @@ Family Requirements v0.1 ถูก calibrate แล้ว ตัวอย่า�
 
 ชั้นความจริง: DERIVED EVIDENCE · โครงข่าย BASELINE_DRIVE_TIME แช่แข็ง (fingerprint `5c35e98882c3ac62`), snap 1 กม., จุดวิเคราะห์ตามสัญญา canonical AOI analysis point (M2D.1e)
 
-![ถนนและการเข้าถึง](../../outputs/briefing/maps/02-routing-accessibility.png)
+![ถนนและการเข้าถึง](hearthmap-briefing-v0.1/assets/02-routing-accessibility.png)
 
 | การถ่วงน้ำหนัก | สัดส่วนที่อยู่ในเซลล์ UNRESOLVED |
 |---|---|
@@ -168,7 +170,7 @@ Family Requirements v0.1 ถูก calibrate แล้ว ตัวอย่า�
 
 ชั้นความจริง: DERIVED EVIDENCE จาก artifact ที่แก้ไขจุดเริ่มต้นแล้ว `outputs/m2a2-origin/` (canonical AOI analysis points) — **ไม่ใช้ภาพ M2A เดิม**
 
-![การศึกษาและสาธารณสุข](../../outputs/briefing/maps/03-education-healthcare.png)
+![การศึกษาและสาธารณสุข](hearthmap-briefing-v0.1/assets/03-education-healthcare.png)
 
 | ปลายทาง | มัธยฐาน Baseline Drive Time* | เซลล์ที่มีเส้นทาง |
 |---|---|---|
@@ -199,7 +201,7 @@ Family Requirements v0.1 ถูก calibrate แล้ว ตัวอย่า�
 
 ชั้นความจริง: OBSERVED (GHSL, ดาวเทียม) + MODELLED (WorldPop) → ใช้เป็น PROXY / CONTEXT
 
-![การตั้งถิ่นฐานและสิ่งปลูกสร้าง](../../outputs/briefing/maps/04-settlement-built-form.png)
+![การตั้งถิ่นฐานและสิ่งปลูกสร้าง](hearthmap-briefing-v0.1/assets/04-settlement-built-form.png)
 
 > **population intensity ≠ built form ≠ peacefulness**
 > ความหนาแน่นประชากร ≠ ความหนาแน่นสิ่งปลูกสร้าง ≠ ความสงบ
@@ -222,7 +224,7 @@ Family Requirements v0.1 ถูก calibrate แล้ว ตัวอย่า�
 
 ชั้นความจริง: DERIVED EVIDENCE (เวลาเดินทาง) บน OBSERVED (OSM POIs 5,019 จุดหลังลบซ้ำ)
 
-![บริการในเมืองรายองค์ประกอบ](../../outputs/briefing/maps/05-town-services.png)
+![บริการในเมืองรายองค์ประกอบ](hearthmap-briefing-v0.1/assets/05-town-services.png)
 
 | องค์ประกอบ | มัธยฐาน* (นาที) | องค์ประกอบ | มัธยฐาน* (นาที) |
 |---|---|---|---|
@@ -235,7 +237,7 @@ Family Requirements v0.1 ถูก calibrate แล้ว ตัวอย่า�
 
 ### นิยามคลัสเตอร์ CORE กับ BROADER
 
-![ความอ่อนไหวของนิยามบริการในเมือง](../../outputs/briefing/maps/05b-town-services-definition-sensitivity.png)
+![ความอ่อนไหวของนิยามบริการในเมือง](hearthmap-briefing-v0.1/assets/05b-town-services-sensitivity.png)
 
 | นิยาม (ผู้สมัคร) | กฎ | มัธยฐาน* |
 |---|---|---|
@@ -254,7 +256,7 @@ Family Requirements v0.1 ถูก calibrate แล้ว ตัวอย่า�
 
 ชั้นความจริง: OBSERVED (ทะเบียน) แต่ใช้เป็น PROXY / CONTEXT เท่านั้น — สามความละเอียดเชิงพื้นที่ที่ต่างกัน
 
-![อุตสาหกรรม เหมือง และบริบทความรำคาญ](../../outputs/briefing/maps/06-industry-mining-context.png)
+![อุตสาหกรรม เหมือง และบริบทความรำคาญ](hearthmap-briefing-v0.1/assets/06-industry-mining-context.png)
 
 | ป้าย | แหล่ง | สิ่งที่บอก | สิ่งที่ไม่บอก |
 |---|---|---|---|
@@ -292,7 +294,7 @@ Family Requirements v0.1 ถูก calibrate แล้ว ตัวอย่า�
 
 ## 12. ความครบถ้วนของหลักฐาน (Evidence completeness)
 
-![สถานะของหลักฐาน](../../outputs/briefing/maps/07-evidence-state.png)
+![สถานะของหลักฐาน](hearthmap-briefing-v0.1/assets/07-evidence-state.png)
 
 ตารางนี้สร้างตรงจาก `config/family-evaluability.yaml` (M2C + M2D.1 + M2D.1e) หมวดที่ใช้:
 
@@ -363,7 +365,7 @@ FINAL — Small number of parcels worth visiting / verifying (แปลงจำ
 
 ## 16. แนวคิดผลิตภัณฑ์ในอนาคต (Future product concept)
 
-![แนวคิดหน้าจอ HearthMap ในอนาคต](../../outputs/briefing/maps/08-future-product-concept.png)
+![แนวคิดหน้าจอ HearthMap ในอนาคต](hearthmap-briefing-v0.1/assets/08-future-product-concept.png)
 
 ภาพนี้เป็น **โครงร่างแนวคิด (CONCEPT — NOT IMPLEMENTED)** ไม่มีข้อมูลจริงหรือฟังก์ชันที่ทำงานได้:
 
