@@ -64,3 +64,10 @@ gates:
     reviewer_role: null
     result: null
     reviewed_material: M2A family and infrastructure review maps (outputs/m2a-review/), not yet reviewed
+  m2d_human_visual_signoff:
+    # M2D Wave-1 regional-context evidence review is a separate gate; nothing reviewed, nothing inferred. Never mark PASSED without a user report.
+    status: PENDING
+    review_date: null
+    reviewer_role: null
+    result: null
+    reviewed_material: M2D Wave-1 regional-context review maps (outputs/m2d-review/), not yet reviewed

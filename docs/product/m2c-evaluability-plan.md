@@ -18,7 +18,6 @@ Cells with no road access or beyond the search limit stay unresolved, never pass
 ## 2. What it cannot evaluate (regionally)
 
 - `HC-CAPABILITY` Emergency / trauma / ICU capability (future verification path)
-- `TOWN-SERVICES` Town-services access (preferred 35 min)
 - `LAND-PRICE` Bare-land purchase price ceiling (THB 500,000)
 - `ELEC-GRID` Grid electricity at the parcel (before purchase)
 - `WATER-PWA` Water path - PWA service
@@ -33,7 +32,6 @@ Cells with no road access or beyond the search limit stay unresolved, never pass
 - `NUIS-INDUSTRIAL` Industrial nuisance avoidance
 - `NUIS-MINING` Mining / quarry / crushing nuisance avoidance
 - `NUIS-NIGHTLIFE` Nightlife concentration avoidance
-- `SETTLE-PEACE` Quiet, lower-density setting (avoid the dense urban core)
 - `PARCEL-AREA` Parcel size (intentionally unset)
 
 Missing evidence triggers verification or new evidence work, never rejection and never a pass.
@@ -44,6 +42,7 @@ Missing evidence triggers verification or new evidence work, never rejection and
 - `EDU-PRIMARY` Primary school travel time
 - `EDU-LOWSEC` Lower secondary travel time
 - `EDU-UPSEC` Upper secondary travel time
+- `TOWN-SERVICES` Town-services access (preferred 35 min)
 - `LAND-PRICE` Bare-land purchase price ceiling (THB 500,000)
 - `ELEC-GRID` Grid electricity at the parcel (before purchase)
 - `WATER-GROUND` Water path - groundwater / well
@@ -52,6 +51,7 @@ Missing evidence triggers verification or new evidence work, never rejection and
 - `ROAD-C-ALLWEATHER` Road access C - all-weather vehicle access
 - `ROAD-E-NOISE` Road access E - residential exposure to major-road noise
 - `NUIS-NIGHTLIFE` Nightlife concentration avoidance
+- `SETTLE-PEACE` Quiet, lower-density setting (avoid the dense urban core)
 - `TERRAIN-PREF` Gentle / rolling terrain preference
 
 Partial evidence (stale or pooled education) and labelled proxies (`PROXY_ONLY`) are never presented as verified.
@@ -88,7 +88,7 @@ Explicitly irrelevant (excluded from evaluation and prioritisation): `IRR-AIRPOR
 - `EDU-LOWSEC` Lower secondary travel time - A MUST on a stage the current artifact cannot separate, on a stale register.
 - `EDU-UPSEC` Upper secondary travel time - A strong preference on the same stale, pooled evidence.
 - `TOWN-SERVICES` Town-services access (preferred 35 min) - A strong preference with no evidence at all that decides how far from towns the search can go.
-- `LAND-PRICE` Bare-land purchase price ceiling (THB 500,000) - A MUST that can remove large parts of the search space and has no evidence yet.
+- `LAND-PRICE` Bare-land purchase price ceiling (THB 500,000) - A MUST that can remove large parts of the search space and has no evidence yet. M2D deferred acquisition only: the Treasury D-Value appraisal is recorded as OFFICIAL_APPRAISAL_CONTEXT research, not acquired, and the P0 gap is unchanged.
 - `SETTLE-PEACE` Quiet, lower-density setting (avoid the dense urban core) - A strong preference that decides which areas are too urban, with no evidence yet.
 
 ### P1 - high value for candidate comparison
@@ -125,9 +125,9 @@ rule-based and independent of how easy a dataset is to obtain.
 - P0 evidence for EDU-PRIMARY is PARTIAL at REGIONAL_SCREENING
 - P0 evidence for EDU-LOWSEC is PARTIAL at REGIONAL_SCREENING
 - P0 evidence for EDU-UPSEC is PARTIAL at REGIONAL_SCREENING
-- P0 evidence for TOWN-SERVICES is BLOCKED_BY_SOURCE_GAP at REGIONAL_SCREENING
+- P0 evidence for TOWN-SERVICES is PARTIAL at REGIONAL_SCREENING
 - P0 evidence for LAND-PRICE is BLOCKED_BY_SOURCE_GAP at REGIONAL_SCREENING
-- P0 evidence for SETTLE-PEACE is BLOCKED_BY_SOURCE_GAP at REGIONAL_SCREENING
+- P0 evidence for SETTLE-PEACE is PARTIAL at REGIONAL_SCREENING
 - the owner has not reviewed the interpretation of each evaluable requirement or authorised scoring
 
 Criteria already satisfied by the plan:

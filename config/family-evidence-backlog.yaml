@@ -39,7 +39,7 @@ families:
   - id: EF-03
     name: Town-services accessibility
     purpose: Give 'town services within about 35 minutes' an operational meaning and evidence.
-    current_state: "No town-services layer or definition exists; university and hospital times are not a proxy."
+    current_state: "M2D (2026-10-16): OSM component POIs (grocery, convenience, market, pharmacy, bank/ATM, fuel, public administration, general retail) are acquired and routed per component; two cluster definitions (CORE, BROADER) are reported without choosing one. The bundle definition still needs owner approval and the 35-minute preference is not activated."
     candidate_sources:
       - {name: "OSM POIs (supermarket, pharmacy, bank/ATM, fuel, market, municipal offices)", registry_id: osm-facilities-aoi, status: "ACQUIRED for schools/health only; other POIs not acquired"}
       - {name: "Department of Energy Business fuel-station registry", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
@@ -125,7 +125,7 @@ families:
   - id: EF-09
     name: Industrial nuisance evidence
     purpose: Context-aware evidence of factories and industrial areas for the avoid-industrial-nuisance preference.
-    current_state: "No factory register acquired; nuisance sources are NEEDS_RESEARCH in the registry."
+    current_state: "M2D (2026-10-16): OSM industrial features (located) and the DIW factory registers (tambon level only: no coordinates, no operating status) are acquired. FACTORY_PRESENT is not NUISANCE_CONFIRMED and no buffer is authorised."
     candidate_sources:
       - {name: "Department of Industrial Works factory register", registry_id: nuisance-sources, status: "NEEDS_RESEARCH"}
       - {name: "Industrial Estate Authority estate polygons", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
@@ -140,7 +140,7 @@ families:
   - id: EF-10
     name: Mining / quarry / crushing evidence
     purpose: Active mining and quarry operations for the avoid-mining-nuisance preference.
-    current_state: "No concession or permit records acquired."
+    current_state: "M2D (2026-10-16): OSM quarry polygons (located), DPIM current concessions via the public API (province level, no coordinates), a 2016 DPIM snapshot (tambon, LEGACY_CONTEXT) and DIW type 301-304 records (tambon) are acquired. No source locates a stone-crushing plant or gives current operating status."
     candidate_sources:
       - {name: "Department of Primary Industries and Mines concessions and quarry permits", registry_id: nuisance-sources, status: "NEEDS_RESEARCH"}
       - {name: "Crushing-plant / industrial-works records", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
@@ -168,7 +168,7 @@ families:
   - id: EF-12
     name: Nightlife concentration evidence
     purpose: Validated evidence of concentrated late-night venues, not restaurants.
-    current_state: "OSM venue points not acquired for this purpose; completeness unvalidated."
+    current_state: "M2D (2026-10-16): OSM bar/pub/nightclub/stripclub/karaoke_box tag candidates acquired as a separate layer; completeness unvalidated, restaurants excluded."
     candidate_sources:
       - {name: "OSM amenity=bar/pub/nightclub", registry_id: null, status: "CANDIDATE, completeness unknown"}
       - {name: "Establishment / liquor-licence records", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
@@ -182,7 +182,7 @@ families:
   - id: EF-13
     name: Settlement and peace evidence
     purpose: A multi-signal picture of settlement intensity for the quiet, lower-density preference (no scalar livability score).
-    current_state: "No population, built-up or night-lights layer is acquired."
+    current_state: "M2D (2026-10-16): WorldPop R2025A population and GHS-BUILT-S 2020 built-up surface acquired as independent signals, plus OSM road density. Night-time lights, POI intensity and building footprints (GISTDA deferred) remain open; the dense-core meaning needs owner input."
     candidate_sources:
       - {name: "Population raster", registry_id: population-grids, status: "NEEDS_RESEARCH"}
       - {name: "Built-up surface / building footprints", registry_id: null, status: "CANDIDATE_UNVERIFIED"}

@@ -19,7 +19,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 |---|---|---|---|
 | EF-01 Education register freshness | P0 | EDU-KG (PREFERENCE), EDU-PRIMARY (MUST), EDU-LOWSEC (MUST), EDU-UPSEC (STRONG_PREFERENCE), ALT-CHOICES (UNSET) | A MUST on a stage the current artifact cannot separate, on a stale register. A MUST whose travel time shapes the search space, resting on a stale register. A strong preference on the same stale, pooled evidence. |
 | EF-03 Town-services accessibility | P0 | TOWN-SERVICES (STRONG_PREFERENCE) | A strong preference with no evidence at all that decides how far from towns the search can go. |
-| EF-04 Land-price evidence | P0 | LAND-PRICE (MUST) | A MUST that can remove large parts of the search space and has no evidence yet. |
+| EF-04 Land-price evidence | P0 | LAND-PRICE (MUST) | A MUST that can remove large parts of the search space and has no evidence yet. M2D deferred acquisition only: the Treasury D-Value appraisal is recorded as OFFICIAL_APPRAISAL_CONTEXT research, not acquired, and the P0 gap is unchanged. |
 | EF-13 Settlement and peace evidence | P0 | SETTLE-PEACE (STRONG_PREFERENCE) | A strong preference that decides which areas are too urban, with no evidence yet. |
 | EF-09 Industrial nuisance evidence | P1 | NUIS-INDUSTRIAL (STRONG_PREFERENCE) | A strong avoidance preference with no usable evidence; a missed factory is costly. |
 | EF-10 Mining / quarry / crushing evidence | P1 | NUIS-MINING (STRONG_PREFERENCE) | A strong avoidance preference with no usable evidence. |
@@ -58,7 +58,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P0
 - **Purpose:** Give 'town services within about 35 minutes' an operational meaning and evidence.
 - **Requirement served:** TOWN-SERVICES (STRONG_PREFERENCE)
-- **Current state:** No town-services layer or definition exists; university and hospital times are not a proxy.
+- **Current state:** M2D (2026-10-16): OSM component POIs (grocery, convenience, market, pharmacy, bank/ATM, fuel, public administration, general retail) are acquired and routed per component; two cluster definitions (CORE, BROADER) are reported without choosing one. The bundle definition still needs owner approval and the 35-minute preference is not activated.
 - **Candidate sources (listed, not verified):**
   - OSM POIs (supermarket, pharmacy, bank/ATM, fuel, market, municipal offices) (registry `osm-facilities-aoi`) - ACQUIRED for schools/health only; other POIs not acquired
   - Department of Energy Business fuel-station registry - CANDIDATE_UNVERIFIED
@@ -94,7 +94,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P0
 - **Purpose:** A multi-signal picture of settlement intensity for the quiet, lower-density preference (no scalar livability score).
 - **Requirement served:** SETTLE-PEACE (STRONG_PREFERENCE)
-- **Current state:** No population, built-up or night-lights layer is acquired.
+- **Current state:** M2D (2026-10-16): WorldPop R2025A population and GHS-BUILT-S 2020 built-up surface acquired as independent signals, plus OSM road density. Night-time lights, POI intensity and building footprints (GISTDA deferred) remain open; the dense-core meaning needs owner input.
 - **Candidate sources (listed, not verified):**
   - Population raster (registry `population-grids`) - NEEDS_RESEARCH
   - Built-up surface / building footprints - CANDIDATE_UNVERIFIED
@@ -113,7 +113,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P1
 - **Purpose:** Context-aware evidence of factories and industrial areas for the avoid-industrial-nuisance preference.
 - **Requirement served:** NUIS-INDUSTRIAL (STRONG_PREFERENCE)
-- **Current state:** No factory register acquired; nuisance sources are NEEDS_RESEARCH in the registry.
+- **Current state:** M2D (2026-10-16): OSM industrial features (located) and the DIW factory registers (tambon level only: no coordinates, no operating status) are acquired. FACTORY_PRESENT is not NUISANCE_CONFIRMED and no buffer is authorised.
 - **Candidate sources (listed, not verified):**
   - Department of Industrial Works factory register (registry `nuisance-sources`) - NEEDS_RESEARCH
   - Industrial Estate Authority estate polygons - CANDIDATE_UNVERIFIED
@@ -131,7 +131,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P1
 - **Purpose:** Active mining and quarry operations for the avoid-mining-nuisance preference.
 - **Requirement served:** NUIS-MINING (STRONG_PREFERENCE)
-- **Current state:** No concession or permit records acquired.
+- **Current state:** M2D (2026-10-16): OSM quarry polygons (located), DPIM current concessions via the public API (province level, no coordinates), a 2016 DPIM snapshot (tambon, LEGACY_CONTEXT) and DIW type 301-304 records (tambon) are acquired. No source locates a stone-crushing plant or gives current operating status.
 - **Candidate sources (listed, not verified):**
   - Department of Primary Industries and Mines concessions and quarry permits (registry `nuisance-sources`) - NEEDS_RESEARCH
   - Crushing-plant / industrial-works records - CANDIDATE_UNVERIFIED
@@ -165,7 +165,7 @@ candidate sources are listed, not verified or acquired, and nothing here is acqu
 - **Priority:** P1
 - **Purpose:** Validated evidence of concentrated late-night venues, not restaurants.
 - **Requirement served:** NUIS-NIGHTLIFE (STRONG_PREFERENCE)
-- **Current state:** OSM venue points not acquired for this purpose; completeness unvalidated.
+- **Current state:** M2D (2026-10-16): OSM bar/pub/nightclub/stripclub/karaoke_box tag candidates acquired as a separate layer; completeness unvalidated, restaurants excluded.
 - **Candidate sources (listed, not verified):**
   - OSM amenity=bar/pub/nightclub - CANDIDATE, completeness unknown
   - Establishment / liquor-licence records - CANDIDATE_UNVERIFIED
