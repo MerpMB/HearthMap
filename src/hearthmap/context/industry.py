@@ -12,6 +12,7 @@ from datetime import date
 from typing import Any
 
 import pandas as pd
+import shapely
 
 AOI_PROVINCES_TH = {"เชียงใหม่": "TH50", "พะเยา": "TH56", "เชียงราย": "TH57"}
 # DIW "รหัสประเภท" codes for extraction / stone / aggregate related operations (type-level facts, not status)
@@ -73,7 +74,11 @@ def load_diw(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     out["is_waste_or_recycling"] = out["diw_fid"].isin({str(int(x)) for x in waste_fids})
     out["extraction_type"] = out["type_code"].map(DIW_EXTRACTION_CODES)
     out["stone_product_type"] = out["type_code"].map(DIW_STONE_PRODUCT_CODES)
-    out["operating_status"] = "NOT_PROVIDED_BY_REGISTER"
+    out["record_status"] = (
+        "UNKNOWN"  # no row-level status field; inclusion semantics are source-level and documented separately
+    )
+    out["row_level_status_field"] = "ABSENT"
+    out["source_context"] = "OUTSIDE_INDUSTRIAL_ESTATES_CLOSURE_EXCLUSION_NOT_DOCUMENTED"
     out["coordinates"] = "NOT_PROVIDED_BY_REGISTER"
     return out.reset_index(drop=True)
 
@@ -119,6 +124,67 @@ def osm_industry_frame(payload: dict[str, Any], province: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _kind(t: dict[str, str]) -> str | None:
+    return (
+        "OSM_QUARRY" if t.get("landuse") == "quarry"
+        else "OSM_INDUSTRIAL_LANDUSE" if t.get("landuse") == "industrial"
+        else "OSM_WORKS" if t.get("man_made") == "works"
+        else "OSM_INDUSTRIAL_OTHER" if "industrial" in t
+        else None
+    )  # fmt: skip
+
+
+def osm_industry_geometries(payload: dict[str, Any], province: str) -> pd.DataFrame:
+    """OSM industrial-type features as real geometries (lon/lat) with an explicit geometry class.
+
+    POINT, POLYGON (closed way or assembled multipolygon) or LINE (an unclosed way: kept, never counted as an area).
+    Point and polygon features are different evidence and must never be summed into one comparable count.
+    """
+    rows = []
+    for e in payload["elements"]:
+        t = e.get("tags", {})
+        kind = _kind(t)
+        if kind is None:
+            continue
+        geom = None
+        if e["type"] == "node":
+            geom = shapely.Point(e["lon"], e["lat"])
+        elif e["type"] == "way" and e.get("geometry"):
+            pts = [(g["lon"], g["lat"]) for g in e["geometry"]]
+            if len(pts) >= 4 and pts[0] == pts[-1]:
+                geom = shapely.Polygon(pts)
+            elif len(pts) >= 2:
+                geom = shapely.LineString(pts)
+        elif e["type"] == "relation":
+            lines = [
+                shapely.LineString([(g["lon"], g["lat"]) for g in m["geometry"]])
+                for m in e.get("members", [])
+                if m.get("geometry") and len(m["geometry"]) >= 2 and m.get("role") in ("outer", "")
+            ]
+            polys = list(shapely.polygonize(lines)) if lines else []
+            if polys:
+                geom = shapely.unary_union(polys)
+        if geom is None or geom.is_empty:
+            continue
+        if not geom.is_valid:
+            geom = geom.buffer(0)
+        cls = (
+            "POINT"
+            if geom.geom_type == "Point"
+            else "POLYGON"
+            if geom.geom_type in ("Polygon", "MultiPolygon")
+            else "LINE"
+        )
+        rows.append(
+            {
+                "osm_id": f"{e['type'][0]}{e['id']}", "province": province, "kind": kind, "geometry_class": cls, "geometry": geom,
+                "lifecycle_tag": next((k for k in t if k.startswith(("disused", "abandoned", "construction"))), ""),
+                "name": t.get("name", ""),
+            }
+        )  # fmt: skip
+    return pd.DataFrame(rows)
+
+
 def dpim_current(payload: dict[str, Any], today: date) -> pd.DataFrame:
     """Current DPIM open-API concession records (province level; PII was removed before storage).
 
@@ -158,3 +224,83 @@ def dpim_legacy(df: pd.DataFrame) -> pd.DataFrame:
     )
     out["evidence_class"] = "LEGACY_CONTEXT"
     return out.reset_index(drop=True)
+
+
+STONE_STATUS_EN = {
+    "เปิดการ": "OPENED_REGISTER_STATUS",
+    "หยุดการ": "HALTED_REGISTER_STATUS",
+    "ต่ออายุ": "RENEWED_REGISTER_STATUS",
+    "สิ้นอายุ": "EXPIRED_REGISTER_STATUS",
+    "จำหน่ายทะเบียน": "DEREGISTERED_REGISTER_STATUS",
+    "รอแจ้งประกอบกิจการ": "AWAITING_OPERATION_NOTICE_REGISTER_STATUS",
+}
+CONCESSION_STATUS_EN = {
+    "มีอายุ": "UNEXPIRED_REGISTER_STATUS",
+    "ต่ออายุ": "RENEWED_REGISTER_STATUS",
+    "สิ้นอายุ": "EXPIRED_REGISTER_STATUS",
+}
+
+
+def _be_date(v: Any) -> pd.Timestamp:
+    """dd/mm/yyyy in the Buddhist era to a Timestamp (NaT when missing or out of range)."""
+    if not v:
+        return pd.NaT
+    try:
+        d, m, y = (int(x) for x in str(v).split("/"))
+        return pd.Timestamp(year=y - 543, month=m, day=d)
+    except (ValueError, OverflowError):
+        return pd.NaT
+
+
+def dpim_export_frame(payload: dict[str, Any], kind: str) -> pd.DataFrame:
+    """Flatten a DPIM licence export (kind: 'stone' or 'concession') to one row per licence at TAMBON resolution.
+
+    LICENCE_STATUS is a register status and is never turned into a current operating status; the expiry date and the
+    status are kept as separate fields because they can disagree.
+    """
+    rows = []
+    for prov, block in payload["provinces"].items():
+        for r in block["records"]:
+            rows.append(
+                {
+                    **r,
+                    "province_code": r.get("province_code")
+                    or r.get("location_province_codd")
+                    or prov,
+                }
+            )
+    d = pd.DataFrame(rows)
+    if kind == "stone":
+        d = d.rename(
+            columns={
+                "factory_no": "licence_no",
+                "factory_status": "status_th",
+                "effective_date": "effective_be",
+                "expire_date": "expire_be",
+            }
+        )
+        status_map = STONE_STATUS_EN
+    else:
+        d = d.rename(
+            columns={
+                "concessionNo": "licence_no",
+                "concession_status": "status_th",
+                "approve_dt": "effective_be",
+                "expireDt": "expire_be",
+            }
+        )
+        status_map = CONCESSION_STATUS_EN
+    d["status_vocab"] = (
+        d["status_th"]
+        .map(status_map)
+        .where(d["status_th"].notna(), "STATUS_MISSING_IN_SOURCE")
+        .fillna("UNMAPPED_REGISTER_STATUS")
+    )
+    d["effective_date"] = d["effective_be"].map(_be_date)
+    d["expire_date"] = d["expire_be"].map(_be_date)
+    d["tambon_pcode"] = "TH" + d["tumbon_codes"].astype(str)
+    d["spatial_resolution"] = "TAMBON_ADMINISTRATIVE"
+    d["is_current_operating_status"] = (
+        False  # a licence status never proves the plant or mine operates today
+    )
+    return d.reset_index(drop=True)

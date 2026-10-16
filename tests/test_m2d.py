@@ -211,10 +211,11 @@ def test_diw_register_has_no_coordinates_or_status_and_converts_the_buddhist_yea
     r = d.iloc[0]
     assert r["licence_year_ce"] == 2007
     assert r["extraction_type"] == "STONE_CRUSHING_OR_GRINDING"
+    assert r["record_status"] == "UNKNOWN" and r["row_level_status_field"] == "ABSENT"
+    assert r["coordinates"] == "NOT_PROVIDED_BY_REGISTER"
     assert (
-        r["operating_status"] == "NOT_PROVIDED_BY_REGISTER"
-        and r["coordinates"] == "NOT_PROVIDED_BY_REGISTER"
-    )
+        not d["record_status"].str.contains("ACTIVE").any()
+    )  # source-level inclusion never becomes ACTIVE
     assert not any(c in d.columns for c in ("lat", "lon", "x", "y", "geometry"))
 
 
@@ -326,6 +327,8 @@ def test_registry_records_wave1_sources_and_defers_gistda_buildings():
         "builtup-ghsl-r2023a",
         "osm-service-pois-aoi",
         "osm-industry-aoi",
+        "osm-industry-geom-aoi",
+        "mining-dpim-licence-exports",
         "industry-diw-factories",
         "mining-dpim-concessions",
     ):
@@ -336,9 +339,11 @@ def test_registry_records_wave1_sources_and_defers_gistda_buildings():
         and g.acquisition_status.value == "DEFERRED"
         and g.local_raw_path is None
     )
-    assert reg["mining-dpim-stone-crushing-licences"].verification_status.value == "NEEDS_RESEARCH"
+    assert (
+        "mining-dpim-stone-crushing-licences" not in reg
+    )  # superseded: the official export exists
     assert "OFFICIAL_APPRAISAL_CONTEXT" in (reg["land-value-treasury-appraisal"].notes or "")
-    assert "coordinates" in reg["industry-diw-factories"].known_limitations[0]
+    assert any("coordinates" in x for x in reg["industry-diw-factories"].known_limitations)
     assert "population" in reg["population-worldpop-r2025a"].analytical_suitability.lower()
 
 
@@ -407,7 +412,9 @@ def test_artifact_unresolved_routes_are_nan_with_a_reason_never_zero():
 @needs_artifact
 def test_artifact_diw_basis_is_tambon_level_and_legacy_is_labelled():
     df = pd.read_parquet(ARTIFACT)
-    assert df["diw_evidence_basis"].eq("TAMBON_LEVEL_NO_COORDINATES_NO_OPERATING_STATUS").all()
+    assert (
+        df["diw_evidence_basis"].eq("TAMBON_ADMIN_CONTEXT_NO_COORDINATES_NO_ROW_LEVEL_STATUS").all()
+    )
     assert df["legacy_dpim_evidence_class"].eq("LEGACY_CONTEXT_2016_NOT_CURRENT").all()
     assert not [c for c in df.columns if "buffer" in c or "exclusion" in c]
 

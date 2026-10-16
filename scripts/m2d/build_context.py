@@ -29,8 +29,13 @@ from common import CANONICAL, PROCESSED, source_ref  # noqa: E402
 from hearthmap.context import SCOPE_STATEMENTS, forbidden_columns  # noqa: E402
 from hearthmap.context import industry as ind  # noqa: E402
 from hearthmap.context import services as svc  # noqa: E402
-from hearthmap.context.semantics import COLUMN_LINEAGE_RULES  # noqa: E402
-from hearthmap.context.settlement import CELL_KM2, GridIndex, aggregate_to_grid  # noqa: E402
+from hearthmap.context.semantics import (  # noqa: E402
+    CANDIDATE_DEFINITION,
+    COLUMN_LINEAGE_RULES,
+    SOURCE_SEMANTICS,
+)
+from hearthmap.context.settlement import CELL_KM2, GridIndex, aggregate_to_grid, area_fraction  # noqa: E402
+from hearthmap.context.stats import distribution_table, stat_with_denominator  # noqa: E402
 from hearthmap.enums import Confidence  # noqa: E402
 from hearthmap.family import load_config, multi_source_dijkstra  # noqa: E402
 from hearthmap.family.routing import ListGraph, bounded_reach, reverse  # noqa: E402
@@ -45,6 +50,7 @@ PROV = {"TH50": "Chiang Mai", "TH56": "Phayao", "TH57": "Chiang Rai"}
 BAND_MIN = (15, 30)
 CONTEXT_RADII_KM = (1, 2, 5)
 TODAY = date(2026, 10, 16)
+FRESH = "--fresh" in sys.argv  # ignore the routing cache (clean rebuild)
 
 
 def one_version(source_id: str) -> Path:
@@ -62,15 +68,14 @@ def read_overpass(source_id: str, suffix: str) -> dict[str, dict]:
 
 
 def euclid_counts(
-    cen: shapely.Geometry, pts_xy: np.ndarray, n_cells: int
+    cen: np.ndarray, geoms: np.ndarray, n_cells: int
 ) -> tuple[dict[int, np.ndarray], np.ndarray]:
-    """Per-cell counts of points within each context radius and nearest-point distance (km). Euclidean context, not routing."""
-    if len(pts_xy) == 0:
+    """Per-cell counts of geometries within each context radius and nearest-geometry distance (km). Euclidean context, not routing."""
+    if len(geoms) == 0:
         return {r: np.zeros(n_cells, dtype=np.int32) for r in CONTEXT_RADII_KM}, np.full(
             n_cells, np.nan
         )
-    pts = shapely.points(pts_xy)
-    tree = shapely.STRtree(pts)
+    tree = shapely.STRtree(geoms)
     counts = {}
     for r in CONTEXT_RADII_KM:
         pairs = tree.query(cen, predicate="dwithin", distance=r * 1000.0)
@@ -96,6 +101,8 @@ def main() -> int:
     cen_geo = grid.geometry.centroid
     cen = shapely.get_coordinates(cen_geo)
     cen_pts = shapely.points(cen)
+    cell_polys = grid.geometry.to_numpy()
+    area_w = grid["coverage_fraction"].to_numpy() * CELL_KM2
     gi = GridIndex(grid["cell_id"].tolist())
     out = pd.DataFrame(
         {
@@ -122,6 +129,8 @@ def main() -> int:
         out[f"population_worldpop2025_density_per_km2_mean_{tag}"] = (
             gi.smooth_mean(pop, r) / CELL_KM2
         ).round(1)
+    out["population_product_class"] = SOURCE_SEMANTICS["population"]["product_class"]
+    out["population_worldpop_depends_partly_on_ghsl"] = True
     out["population_evidence_state"] = np.where(
         pop > 0, "POPULATED_PIXELS_PRESENT", "NO_POPULATED_PIXELS_IN_MODEL"
     )
@@ -151,7 +160,7 @@ def main() -> int:
         gi.smooth_mean(rl, 1) / CELL_KM2
     ).round(2)
 
-    # descriptive agreement between the two INDEPENDENT signals (terciles of cells that have either signal; not a score)
+    # descriptive agreement between two PARTLY DEPENDENT signals (WorldPop uses GHSL as a covariate) (terciles of cells that have either signal; not a score)
     has = (pop > 0) | (built > 0)
 
     def tercile(v: np.ndarray) -> np.ndarray:
@@ -234,13 +243,46 @@ def main() -> int:
         out[f"service_{label}_unresolved_reason"] = np.where(np.isfinite(t_min), "", reason)
         print(f"  {label}: facilities={len(nodes or {})} elapsed {time.time() - t0:.0f}s")
 
-    for comp in svc.COMPONENTS:
-        route(comp.lower(), comp_nodes.get(comp), True)
+    cache_key = hashlib.sha256(
+        json.dumps(
+            {
+                "pois": sorted(sv["osm_id"].tolist()),
+                "cfg": cfg["travel_time"],
+                "net": Path("data/processed/m2a/network.npz").stat().st_size,
+                "clusters": svc.CLUSTER_DEFINITIONS,
+            },
+            sort_keys=True,
+            default=str,
+        ).encode()
+    ).hexdigest()
+    cache_pq, cache_meta = PROC / "routing_cache.parquet", PROC / "routing_cache.key"
+    cached = (
+        not FRESH
+        and cache_pq.exists()
+        and cache_meta.exists()
+        and cache_meta.read_text() == cache_key
+    )
+    before_cols = list(out.columns)
+    if cached:
+        rc = pd.read_parquet(cache_pq)
+        for c in rc.columns:
+            out[c] = rc[c].to_numpy()
+        print("routing columns loaded from cache")
+    else:
+        for comp in svc.COMPONENTS:
+            route(comp.lower(), comp_nodes.get(comp), True)
+        for name in svc.CLUSTER_DEFINITIONS:
+            col = f"cluster_{name.lower()}"
+            members = {
+                i: n for c in comp_nodes.values() for i, n in c.items() if sv.loc[i, col] >= 0
+            }
+            route(f"cluster_{name.lower()}", members, False)
+        out[[c for c in out.columns if c not in before_cols]].to_parquet(cache_pq, index=False)
+        cache_meta.write_text(cache_key)
     for name in svc.CLUSTER_DEFINITIONS:
         col = f"cluster_{name.lower()}"
-        members = {i: n for c in comp_nodes.values() for i, n in c.items() if sv.loc[i, col] >= 0}
-        route(f"cluster_{name.lower()}", members, False)
         out[f"service_cluster_{name.lower()}_poi_members"] = int((sv[col] >= 0).sum())
+        out[f"service_cluster_{name.lower()}_definition_status"] = CANDIDATE_DEFINITION
         out[f"service_cluster_{name.lower()}_definition"] = json.dumps(
             svc.CLUSTER_DEFINITIONS[name], sort_keys=True
         )
@@ -252,10 +294,17 @@ def main() -> int:
     out["service_components_with_a_route"] = out[
         [f"route_available_service_{c.lower()}" for c in svc.COMPONENTS]
     ].sum(axis=1)
-    nlc, nln = euclid_counts(cen_pts, nl[["x", "y"]].to_numpy(), n_cells)
+    nlc, nln = euclid_counts(cen_pts, shapely.points(nl[["x", "y"]].to_numpy()), n_cells)
     for r, v in nlc.items():
         out[f"nightlife_candidate_count_within_{r}km_euclidean_context"] = v
     out["nightlife_nearest_candidate_km_euclidean_diagnostic"] = nln
+    # OSM service-POI intensity (all components after duplicate collapse): DESCRIPTIVE_CONTEXT only
+    pidx = gi.locate(sxy[:, 0], sxy[:, 1])
+    poi_n = np.bincount(pidx[pidx >= 0], minlength=n_cells).astype(float)
+    out["osm_service_poi_count_500m"] = poi_n.astype(int)
+    out["osm_service_poi_density_per_km2_mean_2p5km"] = (gi.smooth_mean(poi_n, 2) / CELL_KM2).round(
+        2
+    )
     sv.drop(columns=["node"], errors="ignore").to_csv(PROC / "service_pois.csv", index=False)
     nl.to_csv(PROC / "nightlife_candidates.csv", index=False)
 
@@ -278,6 +327,7 @@ def main() -> int:
     )
     j = j[~j.index.duplicated()]
     out["diw_tambon_pcode"] = j["adm3_pcode"].reindex(range(n_cells)).fillna("").to_numpy()
+    out["dpim_tambon_pcode"] = out["diw_tambon_pcode"]
 
     d = one_version("industry-diw-factories")
     diw = ind.load_diw(
@@ -312,16 +362,64 @@ def main() -> int:
             "diw_waste_or_recycling": g["is_waste_or_recycling"].sum().astype(int),
         }
     )
+    # names state the ADMINISTRATIVE resolution: a cell inherits its tambon value and no distance or buffer is derived from it
     for c, col in (
-        ("diw_tambon_registered_factory_count", "diw_registered_factories"),
-        ("diw_tambon_extraction_related_count", "diw_extraction_related"),
-        ("diw_tambon_stone_crushing_type301_count", "diw_stone_crushing_type301"),
-        ("diw_tambon_waste_or_recycling_count", "diw_waste_or_recycling"),
+        ("diw_factory_count_tambon_context", "diw_registered_factories"),
+        ("diw_extraction_related_count_tambon_context", "diw_extraction_related"),
+        ("diw_stone_crushing_type301_count_tambon_context", "diw_stone_crushing_type301"),
+        ("diw_waste_or_recycling_count_tambon_context", "diw_waste_or_recycling"),
     ):
         out[c] = out["diw_tambon_pcode"].map(tam[col]).fillna(0).astype(int)
-    out["diw_evidence_basis"] = "TAMBON_LEVEL_NO_COORDINATES_NO_OPERATING_STATUS"
+    out["diw_spatial_resolution"] = SOURCE_SEMANTICS["diw"]["spatial_resolution"]
+    out["diw_record_status"] = SOURCE_SEMANTICS["diw"]["record_status"]
+    out["diw_evidence_basis"] = "TAMBON_ADMIN_CONTEXT_NO_COORDINATES_NO_ROW_LEVEL_STATUS"
 
-    # legacy DPIM 2016 concessions: tambon level, LEGACY_CONTEXT
+    # DPIM official licence exports: tambon resolution, register status (never operating status)
+    dl = one_version("mining-dpim-licence-exports")
+    stone = ind.dpim_export_frame(
+        json.loads((dl / "stone_crushing_licences_aoi_provinces.json").read_text("utf-8")), "stone"
+    )
+    conc = ind.dpim_export_frame(
+        json.loads((dl / "mining_concessions_aoi_provinces.json").read_text("utf-8")), "concession"
+    )
+    known = set(admin3["adm3_pcode"])
+    for df_ in (stone, conc):
+        df_["tambon_in_boundaries"] = df_["tambon_pcode"].isin(known)
+    st_by = stone[stone["tambon_in_boundaries"]]
+    cn_by = conc[conc["tambon_in_boundaries"]]
+    m_ = out["dpim_tambon_pcode"]
+    out["dpim_stone_crushing_licence_count_tambon_context"] = (
+        m_.map(st_by.groupby("tambon_pcode").size()).fillna(0).astype(int)
+    )
+    out["dpim_stone_crushing_opened_register_status_count_tambon_context"] = (
+        m_.map(
+            st_by[st_by["status_vocab"] == "OPENED_REGISTER_STATUS"].groupby("tambon_pcode").size()
+        )
+        .fillna(0)
+        .astype(int)
+    )
+    out["dpim_concession_count_tambon_context"] = (
+        m_.map(cn_by.groupby("tambon_pcode").size()).fillna(0).astype(int)
+    )
+    out["dpim_concession_unexpired_register_status_count_tambon_context"] = (
+        m_.map(
+            cn_by[
+                cn_by["status_vocab"].isin(["UNEXPIRED_REGISTER_STATUS", "RENEWED_REGISTER_STATUS"])
+            ]
+            .groupby("tambon_pcode")
+            .size()
+        )
+        .fillna(0)
+        .astype(int)
+    )
+    out["dpim_spatial_resolution"] = SOURCE_SEMANTICS["dpim_licences"]["spatial_resolution"]
+    out["dpim_status_semantics"] = "REGISTER_STATUS_NOT_CURRENT_OPERATING_STATUS"
+    stone.drop(columns=["spatial_resolution"]).assign(
+        spatial_resolution="TAMBON_ADMINISTRATIVE"
+    ).to_csv(TABLES / "dpim-stone-crushing-licences-aoi.csv", index=False)
+    conc.to_csv(TABLES / "dpim-mining-concessions-aoi.csv", index=False)
+
+    # legacy 2016 snapshot (LEGACY_CONTEXT) and the open-API record (province only, never mapped to cells)
     dpim = one_version("mining-dpim-concessions")
     leg = ind.dpim_legacy(
         pd.read_csv(
@@ -334,55 +432,97 @@ def main() -> int:
     leg["adm3_pcode"] = leg["tambon_key"].map(key_to_pc)
     leg_match = float(leg["adm3_pcode"].notna().mean())
     lc = leg.dropna(subset=["adm3_pcode"]).groupby("adm3_pcode").size()
-    out["legacy_dpim_2016_concession_record_count_in_tambon"] = (
+    out["legacy_dpim_2016_concession_count_tambon_context"] = (
         out["diw_tambon_pcode"].map(lc).fillna(0).astype(int)
     )
     out["legacy_dpim_evidence_class"] = "LEGACY_CONTEXT_2016_NOT_CURRENT"
     cur = ind.dpim_current(
         json.loads((dpim / "concession_search_current.json").read_text("utf-8")), TODAY
     )
-    cur_summary = (
-        cur.groupby(["province_name", "date_status"])
-        .agg(records=("license_id", "size"), area_rai=("area_rai", "sum"))
-        .reset_index()
-    )
-    cur_summary.to_csv(TABLES / "dpim-current-concessions-province-summary.csv", index=False)
-
-    oi = pd.concat(
+    prov_ctx = pd.concat(
         [
-            ind.osm_industry_frame(p, pc)
-            for pc, p in read_overpass("osm-industry-aoi", "industry").items()
+            cur.groupby(["province_name", "date_status"])
+            .size()
+            .rename("records")
+            .reset_index()
+            .assign(source="DPIM_OPEN_API_CONCESSIONS", resolution="PROVINCE_ADMIN_CONTEXT"),
+            stone.groupby(["province_name", "status_vocab"])
+            .size()
+            .rename("records")
+            .reset_index()
+            .rename(columns={"status_vocab": "date_status"})
+            .assign(
+                source="DPIM_STONE_CRUSHING_LICENCE_EXPORT",
+                resolution="TAMBON_ADMINISTRATIVE_AGGREGATED_TO_PROVINCE",
+            ),
+            conc.groupby(["province_name", "status_vocab"])
+            .size()
+            .rename("records")
+            .reset_index()
+            .rename(columns={"status_vocab": "date_status"})
+            .assign(
+                source="DPIM_CONCESSION_EXPORT",
+                resolution="TAMBON_ADMINISTRATIVE_AGGREGATED_TO_PROVINCE",
+            ),
         ],
         ignore_index=True,
     )
-    ox = gpd.GeoSeries(gpd.points_from_xy(oi["lon"], oi["lat"]), crs=4326).to_crs(CANONICAL)
-    oi["x"], oi["y"] = ox.x.to_numpy(), ox.y.to_numpy()
-    oi.to_csv(PROC / "osm_industry_features.csv", index=False)
-    for label, kinds in (
-        ("osm_industrial_landuse", ["OSM_INDUSTRIAL_LANDUSE"]),
-        ("osm_works_or_other_industrial", ["OSM_WORKS", "OSM_INDUSTRIAL_OTHER"]),
-        ("osm_quarry", ["OSM_QUARRY"]),
-    ):
-        sub = oi[oi["kind"].isin(kinds)]
-        counts, near = euclid_counts(cen_pts, sub[["x", "y"]].to_numpy(), n_cells)
+    prov_ctx.to_csv(TABLES / "dpim-province-admin-context.csv", index=False)
+
+    # OSM industrial features WITH geometry: polygons and points stay distinct
+    og = pd.concat(
+        [
+            ind.osm_industry_geometries(p, pc)
+            for pc, p in read_overpass("osm-industry-geom-aoi", "industry_geom").items()
+        ],
+        ignore_index=True,
+    )
+    og["geometry"] = gpd.GeoSeries(og["geometry"].tolist(), crs=4326).to_crs(CANONICAL).to_numpy()
+    og_gdf = gpd.GeoDataFrame(og, geometry="geometry", crs=CANONICAL)
+    og_gdf.assign(wkt=og_gdf.geometry.to_wkt()).drop(columns="geometry").to_csv(
+        PROC / "osm_industry_geometries.csv", index=False
+    )
+
+    def sel(kind: str, cls: str | None = None) -> np.ndarray:
+        m = og["kind"] == kind
+        if cls:
+            m &= og["geometry_class"] == cls
+        return og.loc[m, "geometry"].to_numpy()
+
+    out["osm_industrial_landuse_polygon_area_fraction_500m"] = area_fraction(
+        cell_polys, sel("OSM_INDUSTRIAL_LANDUSE", "POLYGON"), n_cells
+    ).round(4)
+    _, near = euclid_counts(cen_pts, sel("OSM_INDUSTRIAL_LANDUSE"), n_cells)
+    out["osm_industrial_landuse_geometry_nearest_km_euclidean_diagnostic"] = near
+    for cls in ("POINT", "POLYGON"):
+        counts, _ = euclid_counts(cen_pts, sel("OSM_WORKS", cls), n_cells)
         for r, v in counts.items():
-            out[f"{label}_feature_count_within_{r}km_euclidean_context"] = v
-        out[f"{label}_nearest_feature_km_euclidean_diagnostic"] = near
-    # tambon of each OSM feature, for the cross-checks
-    of = gpd.GeoDataFrame(oi, geometry=gpd.points_from_xy(oi["x"], oi["y"]), crs=CANONICAL)
-    oi["adm3_pcode"] = (
+            out[f"osm_works_{cls.lower()}_count_within_{r}km_euclidean_context"] = v
+    out["osm_quarry_polygon_area_fraction_500m"] = area_fraction(
+        cell_polys, sel("OSM_QUARRY", "POLYGON"), n_cells
+    ).round(4)
+    qcounts, qnear = euclid_counts(cen_pts, sel("OSM_QUARRY"), n_cells)
+    for r, v in qcounts.items():
+        out[f"osm_quarry_geometry_presence_within_{r}km_euclidean_context"] = v > 0
+    out["osm_quarry_geometry_nearest_km_euclidean_diagnostic"] = qnear
+    out["osm_industrial_geometry_basis"] = "OSM_GEOMETRY_CONTEXT_POINTS_AND_POLYGONS_NOT_COMBINED"
+    rp = og_gdf.geometry.representative_point()
+    og["adm3_pcode"] = (
         gpd.sjoin(
-            of[["geometry"]], admin3[["adm3_pcode", "geometry"]], how="left", predicate="within"
+            gpd.GeoDataFrame(geometry=rp, crs=CANONICAL),
+            admin3[["adm3_pcode", "geometry"]],
+            how="left",
+            predicate="within",
         )["adm3_pcode"]
         .groupby(level=0)
         .first()
-        .reindex(oi.index)
+        .reindex(og.index)
         .to_numpy()
     )
 
     # ---------------------------------------------------------------- completeness (states, not scores)
     out["evidence_settlement_state"] = (
-        "POPULATION_AND_BUILT_FORM_SIGNALS_PRESENT_INDEPENDENT_SOURCES"
+        "POPULATION_AND_BUILT_FORM_SIGNALS_PRESENT_PARTLY_DEPENDENT_SOURCES"
     )
     out["evidence_service_routing_state"] = np.select(
         [~cell_ok, out["service_components_with_a_route"] == len(svc.COMPONENTS)],
@@ -390,10 +530,10 @@ def main() -> int:
         "PARTIAL_SOME_COMPONENTS_UNREACHABLE_OR_ABSENT",
     )
     out["evidence_industry_basis"] = (
-        "OSM_LOCATED_FEATURES_PLUS_DIW_TAMBON_COUNTS_NO_OPERATING_STATUS"
+        "OSM_GEOMETRY_CONTEXT_PLUS_DIW_TAMBON_ADMIN_CONTEXT_NO_ROW_LEVEL_STATUS"
     )
     out["evidence_mining_basis"] = (
-        "OSM_QUARRY_POLYGONS_PLUS_LEGACY_2016_TAMBON_CONCESSIONS_NO_CURRENT_LOCATIONS"
+        "OSM_QUARRY_GEOMETRY_PLUS_DPIM_TAMBON_LICENCE_REGISTER_CONTEXT_NO_COORDINATES"
     )
     out["scope_statement_ref"] = (
         "SCOPE_STATEMENTS in hearthmap.context.semantics; hazard outputs keep their own M1E scope"
@@ -410,6 +550,9 @@ def main() -> int:
     pq = OUT / "regional-context-evidence.parquet"
     out.to_parquet(pq, index=False)
     lineage = {c: next(v for p, v in COLUMN_LINEAGE_RULES if re.search(p, c)) for c in out.columns}
+    (OUT / "regional-context-evidence.sources.json").write_text(
+        json.dumps(SOURCE_SEMANTICS, indent=1, ensure_ascii=False) + "\n", "utf-8"
+    )
     (OUT / "regional-context-evidence.columns.json").write_text(
         json.dumps(lineage, indent=1, ensure_ascii=False) + "\n", "utf-8"
     )
@@ -420,57 +563,146 @@ def main() -> int:
         .merge(tam, left_on="adm3_pcode", right_index=True, how="left")
         .fillna({c: 0 for c in tam.columns})
     )
-    for kind, lab in (
-        ("OSM_QUARRY", "osm_quarry_features"),
-        ("OSM_INDUSTRIAL_LANDUSE", "osm_industrial_landuse_features"),
-        ("OSM_WORKS", "osm_works_features"),
+    for kind, cls, lab in (
+        ("OSM_QUARRY", None, "osm_quarry_geometries"),
+        ("OSM_INDUSTRIAL_LANDUSE", "POLYGON", "osm_industrial_landuse_polygons"),
+        ("OSM_WORKS", "POINT", "osm_works_points"),
+        ("OSM_WORKS", "POLYGON", "osm_works_polygons"),
     ):
+        m = (og["kind"] == kind) & ((og["geometry_class"] == cls) if cls else True)
         tam_t[lab] = (
-            tam_t["adm3_pcode"]
-            .map(oi[oi["kind"] == kind].groupby("adm3_pcode").size())
-            .fillna(0)
-            .astype(int)
+            tam_t["adm3_pcode"].map(og[m].groupby("adm3_pcode").size()).fillna(0).astype(int)
         )
     tam_t["legacy_dpim_2016_concessions"] = tam_t["adm3_pcode"].map(lc).fillna(0).astype(int)
+    tam_t["dpim_stone_crushing_licences"] = (
+        tam_t["adm3_pcode"].map(st_by.groupby("tambon_pcode").size()).fillna(0).astype(int)
+    )
+    tam_t["dpim_stone_crushing_opened_register_status"] = (
+        tam_t["adm3_pcode"]
+        .map(
+            st_by[st_by["status_vocab"] == "OPENED_REGISTER_STATUS"].groupby("tambon_pcode").size()
+        )
+        .fillna(0)
+        .astype(int)
+    )
+    tam_t["dpim_concessions"] = (
+        tam_t["adm3_pcode"].map(cn_by.groupby("tambon_pcode").size()).fillna(0).astype(int)
+    )
+    tam_t["dpim_concessions_unexpired_register_status"] = (
+        tam_t["adm3_pcode"]
+        .map(
+            cn_by[
+                cn_by["status_vocab"].isin(["UNEXPIRED_REGISTER_STATUS", "RENEWED_REGISTER_STATUS"])
+            ]
+            .groupby("tambon_pcode")
+            .size()
+        )
+        .fillna(0)
+        .astype(int)
+    )
+    tam_t["spatial_resolution"] = "TAMBON_ADMINISTRATIVE"
     tam_t.drop(columns="area_sqkm").to_csv(
         TABLES / "tambon-industry-mining-context.csv", index=False
     )
+
+    def overlap(a: pd.Series, b: pd.Series, label: str) -> dict:
+        return {
+            "comparison": label,
+            "a_only": int(((a > 0) & (b == 0)).sum()),
+            "both": int(((a > 0) & (b > 0)).sum()),
+            "b_only": int(((a == 0) & (b > 0)).sum()),
+            "tambons_total": len(tam_t),
+            "note": "TAMBON-LEVEL presence overlap only; polygons and points are not combined",
+        }
+
     chk = pd.DataFrame(
         [
-            {"comparison": "tambons with DIW stone-crushing (type 301) vs tambons with an OSM quarry", "a_only": int(((tam_t["diw_stone_crushing_type301"] > 0) & (tam_t["osm_quarry_features"] == 0)).sum()), "both": int(((tam_t["diw_stone_crushing_type301"] > 0) & (tam_t["osm_quarry_features"] > 0)).sum()), "b_only": int(((tam_t["diw_stone_crushing_type301"] == 0) & (tam_t["osm_quarry_features"] > 0)).sum())},
-            {"comparison": "tambons with DIW extraction-related (301-304) vs tambons with an OSM quarry", "a_only": int(((tam_t["diw_extraction_related"] > 0) & (tam_t["osm_quarry_features"] == 0)).sum()), "both": int(((tam_t["diw_extraction_related"] > 0) & (tam_t["osm_quarry_features"] > 0)).sum()), "b_only": int(((tam_t["diw_extraction_related"] == 0) & (tam_t["osm_quarry_features"] > 0)).sum())},
-            {"comparison": "tambons with DIW registered factories vs tambons with OSM industrial landuse/works", "a_only": int(((tam_t["diw_registered_factories"] > 0) & (tam_t["osm_industrial_landuse_features"] + tam_t["osm_works_features"] == 0)).sum()), "both": int(((tam_t["diw_registered_factories"] > 0) & (tam_t["osm_industrial_landuse_features"] + tam_t["osm_works_features"] > 0)).sum()), "b_only": int(((tam_t["diw_registered_factories"] == 0) & (tam_t["osm_industrial_landuse_features"] + tam_t["osm_works_features"] > 0)).sum())},
-            {"comparison": "tambons with a 2016 DPIM concession (legacy) vs tambons with an OSM quarry", "a_only": int(((tam_t["legacy_dpim_2016_concessions"] > 0) & (tam_t["osm_quarry_features"] == 0)).sum()), "both": int(((tam_t["legacy_dpim_2016_concessions"] > 0) & (tam_t["osm_quarry_features"] > 0)).sum()), "b_only": int(((tam_t["legacy_dpim_2016_concessions"] == 0) & (tam_t["osm_quarry_features"] > 0)).sum())},
+            overlap(tam_t["diw_stone_crushing_type301"], tam_t["osm_quarry_geometries"], "tambons with DIW stone-crushing (type 301) vs tambons with an OSM quarry geometry"),
+            overlap(tam_t["dpim_stone_crushing_licences"], tam_t["osm_quarry_geometries"], "tambons with a DPIM stone-crushing licence record (any status) vs tambons with an OSM quarry geometry"),
+            overlap(tam_t["dpim_stone_crushing_licences"], tam_t["diw_stone_crushing_type301"], "tambons with a DPIM stone-crushing licence record vs tambons with a DIW stone-crushing record"),
+            overlap(tam_t["dpim_concessions"], tam_t["osm_quarry_geometries"], "tambons with a DPIM concession record (any status) vs tambons with an OSM quarry geometry"),
+            overlap(tam_t["diw_registered_factories"], tam_t["osm_industrial_landuse_polygons"], "tambons with DIW registered factories vs tambons with an OSM industrial landuse polygon"),
+            overlap(tam_t["diw_registered_factories"], tam_t["osm_works_points"] + tam_t["osm_works_polygons"], "tambons with DIW registered factories vs tambons with an OSM works feature (presence only)"),
         ]
     )  # fmt: skip
-    chk["tambons_total"] = len(tam_t)
     chk.to_csv(TABLES / "source-crosschecks.csv", index=False)
 
+    # statistics with explicit denominators (routable-only medians are never AOI-wide medians)
     stats = []
     num = [
         c
         for c in out.columns
         if out[c].dtype.kind in "fi" and not c.endswith("_poi_members") and c != "coverage_fraction"
     ]
-    for pc, name in {**PROV, "AOI": "Whole AOI"}.items():
-        s = out if pc == "AOI" else out[out["majority_pcode"] == pc]
+    scopes = {
+        **{name: (out["majority_pcode"] == pc).to_numpy() for pc, name in PROV.items()},
+        "Whole AOI": np.ones(n_cells, dtype=bool),
+    }
+    routed_cells = cell_ok
+    for scope, m in scopes.items():
         for c in num:
-            v = s[c].replace(-1, np.nan).dropna()
-            if v.empty:
-                continue
+            v = out[c].replace(-1, np.nan).to_numpy(dtype=float)
+            is_time = c.startswith("drive_time_to_nearest_service_") or (
+                "_count_within_" in c and c.startswith("service_")
+            )
+            resolved = (m & routed_cells) if is_time else m
+            lab = "MEDIAN_AMONG_ROUTABLE_CELLS_ONLY" if is_time else "ALL_CELLS"
             stats.append(
-                {
-                    "scope": name,
-                    "column": c,
-                    "n_cells": len(v),
-                    "mean": round(float(v.mean()), 3),
-                    "p10": round(float(v.quantile(0.1)), 3),
-                    "median": round(float(v.median()), 3),
-                    "p90": round(float(v.quantile(0.9)), 3),
-                    "max": round(float(v.max()), 3),
-                }
+                stat_with_denominator(
+                    np.where(m, v, np.nan), resolved, np.where(m, area_w, 0.0), lab, scope, c
+                )
             )
     pd.DataFrame(stats).to_csv(TABLES / "descriptive-statistics.csv", index=False)
+    rows = []
+    for scope, m in scopes.items():
+        rows.append(
+            {
+                "scope": scope,
+                "cells_total": int(m.sum()),
+                "cells_routable": int((m & routed_cells).sum()),
+                "cells_unresolved_no_road_within_1km": int((m & ~routed_cells).sum()),
+                "routable_cell_share": round(float((m & routed_cells).sum() / m.sum()), 4),
+                "area_total_km2": round(float(area_w[m].sum()), 1),
+                "area_routable_km2": round(float(area_w[m & routed_cells].sum()), 1),
+                "routable_area_share": round(
+                    float(area_w[m & routed_cells].sum() / area_w[m].sum()), 4
+                ),
+                "unresolved_area_share": round(
+                    float(area_w[m & ~routed_cells].sum() / area_w[m].sum()), 4
+                ),
+            }
+        )
+    pd.DataFrame(rows).to_csv(TABLES / "routing-denominators.csv", index=False)
+
+    # CORE vs BROADER: both are CANDIDATE_DEFINITIONs; the difference stays visible
+    tc, tb = (
+        out["drive_time_to_nearest_service_cluster_core_min"],
+        out["drive_time_to_nearest_service_cluster_broader_min"],
+    )
+    both = tc.notna() & tb.notna()
+    sens = []
+    for scope, m in scopes.items():
+        mm = both.to_numpy() & m
+        sens.append({"scope": scope, "definition_status": CANDIDATE_DEFINITION, "cells_routable_for_both": int(mm.sum()), "cells_total": int(m.sum()), "routable_cell_share": round(float(mm.sum() / m.sum()), 4),
+                     "median_core_min": round(float(tc[mm].median()), 2), "median_broader_min": round(float(tb[mm].median()), 2), "median_of_paired_difference_core_minus_broader_min": round(float((tc[mm] - tb[mm]).median()), 2), "p90_paired_difference_min": round(float((tc[mm] - tb[mm]).quantile(0.9)), 2),
+                     "statistic_population": "AMONG_CELLS_ROUTABLE_FOR_BOTH_DEFINITIONS_ONLY"})  # fmt: skip
+    pd.DataFrame(sens).to_csv(TABLES / "service-cluster-sensitivity.csv", index=False)
+
+    # urban-core calibration distributions: descriptive, no threshold, no combination
+    uc_cols = [
+        "population_worldpop2025_density_per_km2",
+        "built_ghsl2020_fraction_500m",
+        "road_density_osm_drivable_km_per_km2",
+        "osm_service_poi_density_per_km2_mean_2p5km",
+        "service_components_reached_within_15min",
+    ]
+    dist = distribution_table(
+        out, uc_cols, {k: pd.Series(v, index=out.index) for k, v in scopes.items()}
+    )
+    dist["note"] = (
+        "descriptive distribution for human calibration; no quantile is a policy threshold; variables are never combined"
+    )
+    dist.to_csv(TABLES / "urban-core-calibration-distributions.csv", index=False)
     comp = pd.crosstab(out["majority_pcode"], out["settlement_signal_agreement_class"])
     comp.to_csv(TABLES / "settlement-signal-agreement.csv")
     summary = {
@@ -481,10 +713,11 @@ def main() -> int:
         "service_routed_pois": int(sv["routed"].sum()),
         "diw_aoi_records": len(diw), "diw_tambon_match": diw_match, "diw_by_province": diw["province_pcode"].value_counts().to_dict(),
         "diw_extraction_by_type": diw["extraction_type"].value_counts().to_dict(),
+        "dpim_stone_crushing_aoi_records": len(stone), "dpim_stone_crushing_by_status": stone["status_vocab"].value_counts().to_dict(), "dpim_concession_export_aoi_records": len(conc), "dpim_concession_by_status": conc["status_vocab"].value_counts().to_dict(), "dpim_tambon_code_match_share": [round(float(stone["tambon_in_boundaries"].mean()), 3), round(float(conc["tambon_in_boundaries"].mean()), 3)],
         "legacy_dpim_aoi_records": len(leg), "legacy_dpim_tambon_match_share": round(leg_match, 3),
-        "dpim_current_aoi_records": len(cur), "osm_industry_features_by_kind": oi["kind"].value_counts().to_dict(),
-        "cells_without_road_access": int((~cell_ok).sum()),
-        "spearman_correlation_population_vs_built_cells_with_signal": round(float(pd.Series(pop[has]).rank().corr(pd.Series(built[has]).rank())), 3),
+        "dpim_open_api_aoi_records": len(cur), "osm_industry_geometries_by_kind_and_class": {f"{k}|{c}": int(n) for (k, c), n in og.groupby(["kind", "geometry_class"]).size().items()},
+        "cells_without_road_access": int((~cell_ok).sum()), "unresolved_cell_share": round(float((~cell_ok).mean()), 4), "unresolved_area_share": round(float(area_w[~cell_ok].sum() / area_w.sum()), 4),
+        "descriptive_rank_correlation_population_vs_built_PARTLY_DEPENDENT_sources_not_validation": round(float(pd.Series(pop[has]).rank().corr(pd.Series(built[has]).rank())), 3),
         "seconds": round(time.time() - t0),
     }  # fmt: skip
     (OUT / "build-summary.json").write_text(
@@ -493,11 +726,11 @@ def main() -> int:
 
     rec = ProvenanceRecord(
         artifact_id="m2d-regional-context-evidence", artifact_path=pq.as_posix(), artifact_kind="table", code_version=current_code_version(),
-        sources=[source_ref("population-worldpop-r2025a", original_crs="EPSG:4326"), source_ref("builtup-ghsl-r2023a", original_crs="EPSG:4326"), source_ref("osm-service-pois-aoi", original_crs="EPSG:4326"), source_ref("osm-industry-aoi", original_crs="EPSG:4326"), source_ref("industry-diw-factories", original_crs=None), source_ref("mining-dpim-concessions", original_crs=None), source_ref("boundaries-ocha-cod-ab", original_crs="EPSG:4326")],
+        sources=[source_ref("population-worldpop-r2025a", original_crs="EPSG:4326"), source_ref("builtup-ghsl-r2023a", original_crs="EPSG:4326"), source_ref("osm-service-pois-aoi", original_crs="EPSG:4326"), source_ref("osm-industry-geom-aoi", original_crs="EPSG:4326"), source_ref("industry-diw-factories", original_crs=None), source_ref("mining-dpim-concessions", original_crs=None), source_ref("mining-dpim-licence-exports", original_crs=None), source_ref("boundaries-ocha-cod-ab", original_crs="EPSG:4326")],
         normalized_crs=CANONICAL,
-        method="Wave-1 evidence: rasters summed to 500 m cells by pixel centre; OSM POIs classified into separate components and routed on the frozen M2A BASELINE_DRIVE_TIME network; DIW/DPIM records are tambon-level only; no score of any kind.",
+        method="Wave-1 evidence: rasters summed to 500 m cells by pixel centre; OSM POIs classified into separate components and routed on the frozen M2A BASELINE_DRIVE_TIME network; DIW and DPIM licence records are TAMBON_ADMINISTRATIVE only (no distance, buffer or local-presence claim); the DPIM open API is PROVINCE_ADMIN_CONTEXT and is never mapped to cells; WorldPop and GHSL are partly dependent; no score of any kind.",
         spatial_resolution="500 m cells (population/built-form/POI), tambon (DIW, DPIM legacy), province (DPIM current)", confidence=Confidence.LOW,
-        limitations=[*list(SCOPE_STATEMENTS.values()), "DIW registers have no coordinates or operating status; DPIM sources have no coordinates; no source here locates a stone-crushing plant.", "OSM completeness varies and the absence of a POI is not the absence of a service.", "Euclidean context counts are descriptive radii, not exclusion buffers."],
+        limitations=[*list(SCOPE_STATEMENTS.values()), "DIW registers have no coordinates or row-level status (record_status UNKNOWN); DPIM licence exports have tambon resolution and register status only; LICENCE_STATUS is not current operating status; no source here locates a stone-crushing plant to a point.", SOURCE_SEMANTICS["population"]["dependency_note"], "WorldPop R2025A is a MODELLED_POPULATION_ESTIMATE (alpha), not observed population.", "OSM completeness varies and the absence of a POI is not the absence of a service.", "Euclidean context counts are descriptive radii, not exclusion buffers."],
     )  # fmt: skip
     Path(str(pq) + ".provenance.json").write_text(rec.to_json() + "\n", "utf-8")
     print(json.dumps(summary, ensure_ascii=False)[:1500])

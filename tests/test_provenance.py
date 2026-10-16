@@ -154,6 +154,9 @@ def test_repository_registry_verification_state_m1a():
         "osm-industry-aoi",
         "industry-diw-factories",
         "mining-dpim-concessions",
+        # M2D.1 (2026-10-16): OSM industry geometry extract and official DPIM licence exports
+        "osm-industry-geom-aoi",
+        "mining-dpim-licence-exports",
     }
     # Every verified source was actually acquired and processed locally.
     assert all(s.local_raw_path and s.processing_status == "PROCESSED" for s in verified)

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 import rasterio
+import shapely
 from pyproj import Transformer
 from rasterio.windows import from_bounds
 
@@ -94,3 +95,16 @@ def aggregate_to_grid(
             np.add.at(sums, idx[ok], arr[keep][ok])
             used += int(ok.sum())
     return sums, used
+
+
+def area_fraction(cells: np.ndarray, polys: np.ndarray, n_cells: int) -> np.ndarray:
+    """Share of each 500 m cell covered by the given polygons (overlaps between polygons are merged first)."""
+    out = np.zeros(n_cells)
+    if len(polys) == 0:
+        return out
+    merged = shapely.unary_union(polys)
+    tree = shapely.STRtree(cells)
+    ci = tree.query(merged, predicate="intersects")
+    inter = shapely.area(shapely.intersection(cells[ci], merged))
+    out[ci] = np.clip(inter / shapely.area(cells[ci]), 0, 1)
+    return out
