@@ -1,0 +1,234 @@
+# M2C evidence acquisition backlog (data for docs/research/m2c-evidence-backlog.md; the markdown is generated).
+#
+# Candidate sources are LISTED, not verified or acquired: verifying them (and their licences) is the job of the proposed milestone.
+# A source appearing here is never acquired merely because it is listed. Priority is derived from the requirement entries in
+# config/family-evaluability.yaml (best of the entries that cite the family), never typed here.
+schema_version: 1
+version: "0.1.0"
+families:
+  - id: EF-01
+    name: Education register freshness
+    purpose: Replace the stale 2021/2020 education register with a current, authoritative institution list (levels, status, coordinates).
+    current_state: "DOPA gis-02 (budget year 2564) is the stale fallback; OBEC 2563 class ranges classify about half of schools; the MOE central CKAN register is temporarily unreachable; the MOE Data Virtualization report is a Power BI embed without export or coordinates."
+    candidate_sources:
+      - {name: "MOE central CKAN per-school resource (dataset_04_25660427)", registry_id: schools-official, status: "EXISTS_TEMPORARILY_UNREACHABLE - manual import path ready"}
+      - {name: "DLA school / child-development-centre list 2569", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "OPEC private-school evidence", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Current vocational institution data", registry_id: null, status: "CANDIDATE_UNVERIFIED (vocational is currently IRRELEVANT)"}
+      - {name: "OSM schools (cross-check only)", registry_id: osm-facilities-aoi, status: "ACQUIRED, validation only"}
+    known_limitations: ["no single current register is reachable", "a federated register would mix sources of different vintage and authority; roles must stay explicit", "current-school presence needs an enrolment signal"]
+    required_resolution: "point, with official id, level fields, status and coordinate confidence"
+    freshness_expectation: "current academic year"
+    acquisition_difficulty: MEDIUM
+    legal_licensing: "MOE/OBEC terms to confirm per source; OSM is ODbL and stays separate"
+    proposed_milestone: "M2D-education-current-register"
+  - id: EF-02
+    name: Healthcare currency and capability verification path
+    purpose: Keep facility existence/type/status current and define how capability (emergency, trauma, ICU) would be verified if the owner ever requires it.
+    current_state: "MoPH public ArcGIS layers (2026 edit, mostly 2023-dated records) give location, type, level and status for government facilities; no capability fields; HCODE is browser-gated."
+    candidate_sources:
+      - {name: "MoPH public hospital layers (update68/update69)", registry_id: facility-moph-hospital-update68, status: "ACQUIRED"}
+      - {name: "MoPH HCODE export (manual)", registry_id: health-facilities-moph, status: "EXISTS_AGENT_BLOCKED - manual import path ready"}
+      - {name: "Hospital-level / capability statements from the hospitals themselves", registry_id: null, status: "FIELD_VERIFICATION"}
+    known_limitations: ["government facilities only", "a facility class is not a capability", "no licence statement on the public layer"]
+    required_resolution: "point; facility-level capability statements only if requirements are set"
+    freshness_expectation: "annual or better"
+    acquisition_difficulty: LOW
+    legal_licensing: "public service without stated terms; HCODE terms to confirm"
+    proposed_milestone: "M2D-health-refresh (only if HCODE becomes available)"
+  - id: EF-03
+    name: Town-services accessibility
+    purpose: Give 'town services within about 35 minutes' an operational meaning and evidence.
+    current_state: "No town-services layer or definition exists; university and hospital times are not a proxy."
+    candidate_sources:
+      - {name: "OSM POIs (supermarket, pharmacy, bank/ATM, fuel, market, municipal offices)", registry_id: osm-facilities-aoi, status: "ACQUIRED for schools/health only; other POIs not acquired"}
+      - {name: "Department of Energy Business fuel-station registry", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Bank of Thailand / bank branch and ATM locators", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Department of Business Development establishment registry", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Municipal / DOPA administrative-centre points", registry_id: places-dopa-gis02, status: "ACQUIRED (2021)"}
+    known_limitations: ["the bundle must be defined and approved by the owner before any evidence is built", "OSM business completeness and freshness vary", "commercial POI datasets carry restrictive licences", "routing from cell centres to towns needs a defined set of destinations"]
+    required_resolution: "point destinations routed on the frozen network"
+    freshness_expectation: "within about two years; businesses close often"
+    acquisition_difficulty: MEDIUM
+    legal_licensing: "OSM ODbL; commercial POIs generally not usable"
+    proposed_milestone: "M2D-town-services"
+  - id: EF-04
+    name: Land-price evidence
+    purpose: Evaluate the bare-land price ceiling (THB 500,000) responsibly, per unit area and with market-value semantics kept honest.
+    current_state: "No land-price evidence has been acquired."
+    candidate_sources:
+      - {name: "Treasury Department appraised land values", registry_id: land-value-treasury-appraisal, status: "NEEDS_RESEARCH"}
+      - {name: "Land Department transaction / reference prices", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Listing asking prices (marketplaces)", registry_id: null, status: "CANDIDATE_UNVERIFIED - terms of use must be checked; no scraping is planned"}
+    known_limitations: ["an asking price is not a market value", "a total price is meaningless without parcel area", "stale and duplicate listings", "geocoding uncertainty", "appraised values lag and differ from market"]
+    required_resolution: "per unit area by zone for candidate comparison; parcel-level price and area for shortlist"
+    freshness_expectation: "listings: weeks; appraised values: current appraisal cycle"
+    acquisition_difficulty: HIGH
+    legal_licensing: "marketplace terms usually forbid scraping; government appraisal terms to confirm"
+    proposed_milestone: "M2D-land-price-evidence"
+  - id: EF-05
+    name: Electricity service context vs parcel connection
+    purpose: Keep regional service context separate from parcel connection verification.
+    current_state: "PEA Power Map has no verified machine-readable endpoint; every cell is NOT_ASSESSED."
+    candidate_sources:
+      - {name: "PEA Power Map / planning context", registry_id: electricity-pea, status: "NOT_VERIFIED"}
+      - {name: "Settlement / electrification proxies (built-up, night lights)", registry_id: population-grids, status: "NEEDS_RESEARCH"}
+      - {name: "Parcel-level PEA confirmation procedure", registry_id: null, status: "FIELD_VERIFICATION"}
+    known_limitations: ["PEA planning information creates no obligation to serve", "nearby poles do not prove a connection", "capacity, phase, cost and reliability are out of scope"]
+    required_resolution: "parcel"
+    freshness_expectation: "at purchase"
+    acquisition_difficulty: HIGH
+    legal_licensing: "no scraping or reverse-engineering of PEA services"
+    proposed_milestone: "M3-parcel-verification-protocol"
+  - id: EF-06
+    name: Water - PWA, local public, village, groundwater
+    purpose: Support the accepted water paths with separate evidence and verification, never collapsing them.
+    current_state: "No PWA polygons are published; no local or village system evidence; no groundwater evidence acquired."
+    candidate_sources:
+      - {name: "PWA service-area information", registry_id: water-pwa-service, status: "NEEDS_RESEARCH (province tables only)"}
+      - {name: "Groundwater department regional potential maps and well records (aquifer potential, depth, yield, quality)", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Local-authority water-service records", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+    known_limitations: ["regional groundwater potential is context only", "yield, quality, depth and drilling legality are parcel facts", "village systems are rarely mapped"]
+    required_resolution: "parcel / field"
+    freshness_expectation: "dry-season verification"
+    acquisition_difficulty: HIGH
+    legal_licensing: "to confirm per source"
+    proposed_milestone: "M3-parcel-verification-protocol (+ M2D-groundwater-context optional)"
+  - id: EF-07
+    name: Fixed fiber availability
+    purpose: Verify actual fixed fiber at the address; mobile coverage never satisfies it.
+    current_state: "Telecom is DEFERRED; NBTC publishes aggregates; Ookla tiles are crowd-sourced speed tests."
+    candidate_sources:
+      - {name: "Provider coverage / address-availability checks", registry_id: null, status: "FIELD_VERIFICATION"}
+      - {name: "NBTC infrastructure context", registry_id: telecom-nbtc-coverage, status: "REJECTED for grid use (aggregates)"}
+      - {name: "Ookla open data", registry_id: telecom-ookla-open-data, status: "CANDIDATE, deferred"}
+    known_limitations: ["mobile coverage and speed tests are not fixed fiber", "provider maps are indicative", "no open spatial fiber layer is known"]
+    required_resolution: "address"
+    freshness_expectation: "at purchase"
+    acquisition_difficulty: HIGH
+    legal_licensing: "provider terms; no scraping"
+    proposed_milestone: "M3-parcel-verification-protocol"
+  - id: EF-08
+    name: Road access - network, legal, all-weather, surface
+    purpose: Keep five road concepts separate; extend regional evidence only where it can responsibly help.
+    current_state: "OSM routing covers part of network accessibility; DRR links validate OSM presence; legal, all-weather and surface evidence is absent."
+    candidate_sources:
+      - {name: "OSM roads with surface/tracktype tags", registry_id: osm-overpass-aoi, status: "ACQUIRED (tracks and services absent)"}
+      - {name: "DRR / DOH road inventories", registry_id: roads-official-doh-drr, status: "ACQUIRED as validation only"}
+      - {name: "Title/cadastral and road-status records", registry_id: null, status: "PARCEL_VERIFICATION"}
+    known_limitations: ["surface tags are sparse", "free-flow time is not wet-season usability", "legal access is a parcel fact"]
+    required_resolution: "parcel and final access road"
+    freshness_expectation: "at purchase"
+    acquisition_difficulty: MEDIUM
+    legal_licensing: "OSM ODbL; cadastral data access to confirm"
+    proposed_milestone: "M3-parcel-verification-protocol"
+  - id: EF-09
+    name: Industrial nuisance evidence
+    purpose: Context-aware evidence of factories and industrial areas for the avoid-industrial-nuisance preference.
+    current_state: "No factory register acquired; nuisance sources are NEEDS_RESEARCH in the registry."
+    candidate_sources:
+      - {name: "Department of Industrial Works factory register", registry_id: nuisance-sources, status: "NEEDS_RESEARCH"}
+      - {name: "Industrial Estate Authority estate polygons", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Land-use layers (LDD)", registry_id: landuse-ldd, status: "NEEDS_RESEARCH"}
+      - {name: "OSM landuse=industrial / man_made", registry_id: null, status: "CANDIDATE, completeness unknown"}
+    known_limitations: ["factories differ in harm: type, scale, active status, noise, dust, truck traffic", "registers lag reality", "no buffer or exclusion is authorised"]
+    required_resolution: "point or polygon with type, scale and status"
+    freshness_expectation: "annual"
+    acquisition_difficulty: MEDIUM
+    legal_licensing: "to confirm per source"
+    proposed_milestone: "M2D-nuisance-sources"
+  - id: EF-10
+    name: Mining / quarry / crushing evidence
+    purpose: Active mining and quarry operations for the avoid-mining-nuisance preference.
+    current_state: "No concession or permit records acquired."
+    candidate_sources:
+      - {name: "Department of Primary Industries and Mines concessions and quarry permits", registry_id: nuisance-sources, status: "NEEDS_RESEARCH"}
+      - {name: "Crushing-plant / industrial-works records", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "OSM landuse=quarry", registry_id: null, status: "CANDIDATE, completeness unknown"}
+    known_limitations: ["historical or inactive features are not active nuisance", "truck routes, dust and noise pathways differ by site", "no exclusion radius is authorised"]
+    required_resolution: "polygon/point with permit status"
+    freshness_expectation: "annual"
+    acquisition_difficulty: MEDIUM
+    legal_licensing: "to confirm"
+    proposed_milestone: "M2D-nuisance-sources"
+  - id: EF-11
+    name: Major-road noise proxy
+    purpose: A labelled proxy for residential exposure to noisy major roads.
+    current_state: "Only OSM road class and lane tags exist; no traffic counts."
+    candidate_sources:
+      - {name: "Department of Highways traffic-volume statistics", registry_id: roads-official-doh-drr, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "OSM road hierarchy, lanes, maxspeed", registry_id: osm-overpass-aoi, status: "ACQUIRED"}
+      - {name: "Terrain shielding", registry_id: null, status: "only if ever justified"}
+    known_limitations: ["road class alone is not noise", "without traffic counts any model is PROXY_ONLY", "access to a major road is a different concept"]
+    required_resolution: "road segment with exposure distance"
+    freshness_expectation: "annual traffic data"
+    acquisition_difficulty: MEDIUM
+    legal_licensing: "to confirm"
+    proposed_milestone: "M2D-road-noise-proxy"
+  - id: EF-12
+    name: Nightlife concentration evidence
+    purpose: Validated evidence of concentrated late-night venues, not restaurants.
+    current_state: "OSM venue points not acquired for this purpose; completeness unvalidated."
+    candidate_sources:
+      - {name: "OSM amenity=bar/pub/nightclub", registry_id: null, status: "CANDIDATE, completeness unknown"}
+      - {name: "Establishment / liquor-licence records", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Tourism / night-economy district context", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+    known_limitations: ["restaurant density is not nightlife", "POI completeness and freshness unknown", "no penalty or buffer is active"]
+    required_resolution: "point clusters"
+    freshness_expectation: "within a year"
+    acquisition_difficulty: MEDIUM
+    legal_licensing: "OSM ODbL; licence records to confirm"
+    proposed_milestone: "M2D-nightlife-evidence"
+  - id: EF-13
+    name: Settlement and peace evidence
+    purpose: A multi-signal picture of settlement intensity for the quiet, lower-density preference (no scalar livability score).
+    current_state: "No population, built-up or night-lights layer is acquired."
+    candidate_sources:
+      - {name: "Population raster", registry_id: population-grids, status: "NEEDS_RESEARCH"}
+      - {name: "Built-up surface / building footprints", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Night-time lights", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+      - {name: "Road density and POI intensity (OSM)", registry_id: osm-overpass-aoi, status: "ACQUIRED for roads"}
+      - {name: "DOPA registered population by sub-district", registry_id: null, status: "CANDIDATE_UNVERIFIED"}
+    known_limitations: ["peacefulness is more than density", "raster products have their own vintage and modelling error", "dense-core definition needs owner input"]
+    required_resolution: "100 m to 1 km cells"
+    freshness_expectation: "within about three years"
+    acquisition_difficulty: LOW
+    legal_licensing: "open licences common (attribution); confirm per product"
+    proposed_milestone: "M2D-settlement-intensity"
+  - id: EF-14
+    name: Terrain preference calibration
+    purpose: Define what 'gentle / rolling' means before any evaluation, using existing terrain evidence.
+    current_state: "Regional slope statistics exist (M1B 30 m DSM); no numeric interpretation is authorised."
+    candidate_sources:
+      - {name: "Existing M1B slope statistics", registry_id: dem-copernicus-glo30, status: "ACQUIRED"}
+      - {name: "Local relief / usable-area fraction (derived)", registry_id: null, status: "DERIVED later"}
+    known_limitations: ["30 m DSM includes canopy and buildings", "terrain preference must stay separate from hazard terrain evidence"]
+    required_resolution: "30 m"
+    freshness_expectation: "static"
+    acquisition_difficulty: LOW
+    legal_licensing: "Copernicus licence already in use"
+    proposed_milestone: "M2D-terrain-calibration (owner decision, no new data)"
+  - id: EF-15
+    name: Parcel size semantics
+    purpose: Keep nominal, usable, buildable and accessible area separate when parcels are analysed.
+    current_state: "Parcel size is intentionally unset; no parcels are analysed."
+    candidate_sources:
+      - {name: "Cadastral / survey records", registry_id: null, status: "PARCEL_VERIFICATION"}
+    known_limitations: ["cadastral area is not usable residential area"]
+    required_resolution: "parcel"
+    freshness_expectation: "at purchase"
+    acquisition_difficulty: HIGH
+    legal_licensing: "to confirm"
+    proposed_milestone: "M3-parcel-analysis"
+  - id: EF-16
+    name: Alternatives as decision context
+    purpose: Show nearest N facilities with travel time, type, classification and source freshness; never a gate.
+    current_state: "Counts within 15/30/60 minutes and nearest-facility ids exist for education and healthcare."
+    candidate_sources:
+      - {name: "Existing M2A.2 artifact", registry_id: null, status: "ACQUIRED (derived)"}
+    known_limitations: ["bands only; arbitrary times need a rebuild", "education facilities are stale"]
+    required_resolution: "500 m cell"
+    freshness_expectation: "tracks EF-01 and EF-02"
+    acquisition_difficulty: LOW
+    legal_licensing: "inherits the facility sources"
+    proposed_milestone: "M2D-alternatives-output"

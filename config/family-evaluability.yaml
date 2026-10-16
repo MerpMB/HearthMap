@@ -1,0 +1,619 @@
+# M2C evaluability plan (planning artifact; NO geographic scoring).
+#
+# For each calibrated requirement family: what evidence exists, at what resolution/freshness/completeness, whether it is
+# SAFE to evaluate with, and in which decision stage it may responsibly be used. These are SEPARATE judgements and are never
+# collapsed into one confidence field. Priorities are DERIVED by code from importance + the factors below (see
+# hearthmap.family.evaluability.derive_priority); they are never typed in and never depend on how easy a dataset is to obtain.
+#
+# Stages: REGIONAL_SCREENING | CANDIDATE_ZONE_COMPARISON | PARCEL_SHORTLIST | PRE_PURCHASE_VERIFICATION
+# States: READY | READY_WITH_LIMITATIONS | PROXY_ONLY | PARTIAL | NOT_EVALUABLE | PARCEL_VERIFICATION_ONLY |
+#         FIELD_VERIFICATION_ONLY | BLOCKED_BY_SOURCE_GAP | INTENTIONALLY_NOT_USED
+# A column existing in an artifact never makes a requirement READY.
+schema_version: 1
+version: "0.1.0"
+status: PLAN_ONLY_NO_EVALUATION_ACTIVE
+
+scoring_gate:
+  FAMILY_SCORING_ALLOWED: false          # M2C does not turn scoring on, and the loader refuses a true value
+  criteria:
+    - "Every MUST/STRONG_PREFERENCE requirement is either evaluable at a regional/candidate stage (READY, READY_WITH_LIMITATIONS or explicit PROXY_ONLY) or has been moved to an explicit later-stage verification state."
+    - "Evidence that decides the regional search space (P0 families) is at least READY_WITH_LIMITATIONS, or an explicitly labelled PROXY_ONLY with documented semantics approved by the owner."
+    - "No unsupported MUST requirement is silently ignored: it appears in the permission matrix with a verification stage."
+    - "No unresolved or missing evidence is interpreted as positive evidence."
+    - "Proxy evidence is never presented as verified, and parcel/field requirements are never satisfied by regional evidence."
+    - "User requirements (config/family-requirements.yaml) are unchanged by evidence gaps; IRRELEVANT dimensions stay excluded."
+    - "M1E hazard actions remain independent and immutable; family access, terrain preference and site-improvement willingness never offset them."
+    - "The owner has reviewed the interpretation of each evaluable requirement (including the numeric meaning of any preference) and explicitly authorised scoring."
+
+hazard_contract: M1E hazard actions are immutable and independent of every family requirement and every evidence state below.
+
+entries:
+  # ------------------------------------------------------------------------------------------------ education
+  - id: EDU-KG
+    title: Kindergarten travel time
+    requirement_paths: [education.kindergarten]
+    importance_path: education.kindergarten.importance
+    evidence_families: [EF-01]
+    evidence: {exists: PARTIAL, resolution: "500 m cell, baseline drive time to facility points", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "register is DOPA 2021 + OBEC 2020 classes (about half of schools authoritative); the MOE current register is not accessible"}
+    stages:
+      REGIONAL_SCREENING: [PARTIAL, "drive times exist but facility freshness and classification are partial"]
+      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "show nearest kindergartens with source vintage and classification basis"]
+      PARCEL_SHORTLIST: [PARTIAL, "re-measure from the parcel entrance with current facilities"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "confirm the facility is open and enrolling"]
+    allowed_use: "regional context and candidate comparison with freshness shown; a time above the preferred band is information, not a rejection"
+    forbidden_use: "presenting travel time as school quality; treating a stale facility as currently open; rejecting a site on stale data alone"
+    next_evidence_needed: "current institution register (MOE central register or a federated current register), current-school presence verification, classification freshness, coordinate confidence"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: MEDIUM, false_negative_cost: MEDIUM}
+    why: "Education travel times shape which regions are searched; the register is stale, so the evidence gap matters at the first stage."
+  - id: EDU-PRIMARY
+    title: Primary school travel time
+    requirement_paths: [education.primary]
+    importance_path: education.primary.importance
+    evidence_families: [EF-01]
+    evidence: {exists: PARTIAL, resolution: "500 m cell, baseline drive time to facility points", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "unstated school levels default to primary at LOW confidence; register stale"}
+    stages:
+      REGIONAL_SCREENING: [PARTIAL, "usable for context only until a current register exists"]
+      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "compare with freshness and basis shown"]
+      PARCEL_SHORTLIST: [PARTIAL, "re-measure from the parcel entrance"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "confirm a currently operating primary school and its catchment/enrolment rules"]
+    allowed_use: "regional context and candidate comparison with freshness shown; a MUST that cannot yet be evaluated is carried as verify-before-purchase, never passed"
+    forbidden_use: "treating missing or stale school evidence as a pass; school quality claims; hiding that levels are partly derived"
+    next_evidence_needed: "current institution register with authoritative levels, status and coordinates"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: HIGH, false_negative_cost: MEDIUM}
+    why: "A MUST whose travel time shapes the search space, resting on a stale register."
+  - id: EDU-LOWSEC
+    title: Lower secondary travel time
+    requirement_paths: [education.lower_secondary]
+    importance_path: education.lower_secondary.importance
+    evidence_families: [EF-01]
+    evidence: {exists: PARTIAL, resolution: "500 m cell; lower and upper secondary are pooled in the artifact", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "authoritative OBEC class ranges separate lower from upper secondary for about half of schools; the artifact does not yet"}
+    stages:
+      REGIONAL_SCREENING: [PARTIAL, "pooled secondary evidence only"]
+      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "separate lower secondary using authoritative class ranges where available"]
+      PARCEL_SHORTLIST: [PARTIAL, "re-measure with current facilities"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "confirm the school offers lower secondary"]
+    allowed_use: "regional context with the pooled-secondary limitation shown"
+    forbidden_use: "treating pooled secondary time as lower-secondary truth; treating missing evidence as a pass"
+    next_evidence_needed: "current register with level fields; rebuild with lower and upper secondary separated"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: HIGH, false_negative_cost: MEDIUM}
+    why: "A MUST on a stage the current artifact cannot separate, on a stale register."
+  - id: EDU-UPSEC
+    title: Upper secondary travel time
+    requirement_paths: [education.upper_secondary]
+    importance_path: education.upper_secondary.importance
+    evidence_families: [EF-01]
+    evidence: {exists: PARTIAL, resolution: "500 m cell; pooled with lower secondary", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "same pooled, stale evidence as lower secondary"}
+    stages:
+      REGIONAL_SCREENING: [PARTIAL, "pooled secondary evidence only"]
+      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "separate with authoritative class ranges where available"]
+      PARCEL_SHORTLIST: [PARTIAL, "re-measure with current facilities"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "confirm the school offers upper secondary"]
+    allowed_use: "regional context with the pooled-secondary limitation shown"
+    forbidden_use: "treating pooled time as upper-secondary truth; treating missing evidence as a pass"
+    next_evidence_needed: "as EDU-LOWSEC"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: MEDIUM, false_negative_cost: MEDIUM}
+    why: "A strong preference on the same stale, pooled evidence."
+  - id: ALT-CHOICES
+    title: Education and healthcare alternatives (decision context)
+    requirement_paths: [redundancy, education.kindergarten.minimum_choices, education.primary.minimum_choices, education.lower_secondary.minimum_choices, education.upper_secondary.minimum_choices]
+    importance_path: redundancy.number_of_primary_schools_within_time.importance
+    evidence_families: [EF-16, EF-01, EF-02]
+    gate: false
+    use_as: DECISION_CONTEXT
+    evidence: {exists: YES, resolution: "500 m cell; counts within 15/30/60 minutes", freshness: STALE, completeness: PARTIAL, safety: PARTIAL, safety_reason: "counts exist for the configured bands only; education facilities are stale"}
+    stages:
+      REGIONAL_SCREENING: [INTENTIONALLY_NOT_USED, "no minimum number of schools was requested: not a gate"]
+      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "show the nearest N facilities with travel time, type, classification and source freshness"]
+      PARCEL_SHORTLIST: [PARTIAL, "show alternatives from the parcel entrance"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "confirm the alternatives actually exist and are open"]
+    allowed_use: "multiple reachable alternatives displayed side by side as decision context"
+    forbidden_use: "any minimum-choice gate or score; penalising a location because only one institution meets the preferred band"
+    next_evidence_needed: "arbitrary-time counts (not only 15/30/60); current registers"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    intentionally_not_used_reason: "the owner wants alternatives shown for comparison, not a fixed minimum number of schools"
+    priority_factors: {earliest_decision_stage: CANDIDATE_ZONE_COMPARISON, changes_regional_search_space: false, evidence_gap: NONE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: LOW, false_negative_cost: LOW}
+    why: "Context output, not a requirement with a threshold."
+  # ------------------------------------------------------------------------------------------------ healthcare
+  - id: HC-PRIMARY
+    title: Primary healthcare travel time
+    requirement_paths: [healthcare.primary_healthcare]
+    importance_path: healthcare.primary_healthcare.importance
+    evidence_families: [EF-02]
+    evidence: {exists: YES, resolution: "500 m cell, baseline drive time to MoPH facility points", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "current MoPH layer (2026 edit, mostly 2023-dated records); government facilities only; a preference, not a gate"}
+    stages:
+      REGIONAL_SCREENING: [READY_WITH_LIMITATIONS, "context with the government-only limitation shown"]
+      CANDIDATE_ZONE_COMPARISON: [READY_WITH_LIMITATIONS, "nearest facilities with type and record date"]
+      PARCEL_SHORTLIST: [READY_WITH_LIMITATIONS, "re-measure from the parcel entrance"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "confirm the unit is open and serves the area"]
+    allowed_use: "regional context and comparison; a longer time lowers a preference, never rejects"
+    forbidden_use: "treating a primary-care unit as emergency capability; treating the preference as a hard gate"
+    next_evidence_needed: "HCODE export or newer MoPH records for status and dates; private clinics are out of scope"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: CANDIDATE_ZONE_COMPARISON, changes_regional_search_space: false, evidence_gap: NONE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: LOW, false_negative_cost: LOW}
+    why: "Current evidence is adequate for a preference."
+  - id: HC-HOSPITAL
+    title: Hospital travel time
+    requirement_paths: [healthcare.hospital]
+    importance_path: healthcare.hospital.importance
+    evidence_families: [EF-02]
+    evidence: {exists: YES, resolution: "500 m cell, baseline drive time to MoPH hospital points", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "source-stated hospital types; government hospitals only; type is not capability"}
+    stages:
+      REGIONAL_SCREENING: [READY_WITH_LIMITATIONS, "usable for the MUST with the limitations shown; cells with no road access stay unresolved"]
+      CANDIDATE_ZONE_COMPARISON: [READY_WITH_LIMITATIONS, "nearest hospitals with type and record date"]
+      PARCEL_SHORTLIST: [READY_WITH_LIMITATIONS, "re-measure from the parcel entrance"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "confirm the hospital operates and the route"]
+    allowed_use: "evaluation against the stated limits with unresolved cells reported as unresolved, never as passing"
+    forbidden_use: "inferring emergency, trauma, ICU or specialist capability from the word hospital or from its class; treating an unrouted cell as within the limit"
+    next_evidence_needed: "none blocking; HCODE export or newer MoPH records would improve dates and status"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: NONE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: MEDIUM, false_negative_cost: MEDIUM}
+    why: "Evidence is adequate with limitations; no acquisition is needed to evaluate it."
+  - id: HC-REGIONAL
+    title: Regional / referral hospital travel time
+    requirement_paths: [healthcare.regional_or_referral_hospital]
+    importance_path: healthcare.regional_or_referral_hospital.importance
+    evidence_families: [EF-02]
+    evidence: {exists: YES, resolution: "500 m cell, drive time to the two hospitals the source types as regional", freshness: ACCEPTABLE, completeness: PARTIAL, safety: SAFE, safety_reason: "source typecode only; large general and university hospitals are not promoted; no capability stated"}
+    stages:
+      REGIONAL_SCREENING: [READY_WITH_LIMITATIONS, "two regional hospitals; cells beyond the 120 minute search limit stay unresolved"]
+      CANDIDATE_ZONE_COMPARISON: [READY_WITH_LIMITATIONS, "show the regional hospital reached and its type"]
+      PARCEL_SHORTLIST: [READY_WITH_LIMITATIONS, "re-measure from the parcel entrance"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "confirm what services the referral hospital actually provides"]
+    allowed_use: "evaluation of the stated window with limitations shown"
+    forbidden_use: "treating a regional class as emergency/trauma/ICU capability"
+    next_evidence_needed: "none blocking; an authoritative service-level/capability source if the owner later wants capability requirements"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: NONE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: LOW, false_negative_cost: LOW}
+    why: "Evidence is adequate with limitations."
+  - id: HC-CAPABILITY
+    title: Emergency / trauma / ICU capability (future verification path)
+    requirement_paths: []
+    importance_path: null
+    evidence_families: [EF-02]
+    evidence: {exists: "NO", resolution: "none", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "no accessible source states capability; no requirement has been set"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "no capability evidence"]
+      CANDIDATE_ZONE_COMPARISON: [NOT_EVALUABLE, "no capability evidence"]
+      PARCEL_SHORTLIST: [NOT_EVALUABLE, "no capability evidence"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "ask the specific hospital what it provides"]
+    allowed_use: "a future facility-verification checklist only"
+    forbidden_use: "inferring capability from facility class, bed count or name"
+    next_evidence_needed: "owner-defined capability requirements, then facility-level verification"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PRE_PURCHASE_VERIFICATION, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: HIGH, false_negative_cost: LOW}
+    why: "No requirement has been stated; recorded so the question is not silently assumed answered."
+  # ------------------------------------------------------------------------------------------------ town services
+  - id: TOWN-SERVICES
+    title: Town-services access (preferred 35 min)
+    requirement_paths: [urban_access.preferred_drive_time_to_town_services, urban_access.hard_limit_policy]
+    importance_path: urban_access.preferred_drive_time_to_town_services_importance
+    evidence_families: [EF-03]
+    evidence: {exists: "NO", resolution: "none (no town-services layer or definition)", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "'town services' has no operational definition yet; university/hospital times are not a proxy"}
+    stages:
+      REGIONAL_SCREENING: [BLOCKED_BY_SOURCE_GAP, "needs an owner-approved definition and a facility source"]
+      CANDIDATE_ZONE_COMPARISON: [BLOCKED_BY_SOURCE_GAP, "same"]
+      PARCEL_SHORTLIST: [NOT_EVALUABLE, "re-measure once defined"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "drive the route to the actual services"]
+    allowed_use: "none until defined; the hard limit is case by case (no number is derived)"
+    forbidden_use: "converting 'case by case' into a threshold; using hospital or university access as town services; treating missing evidence as within 35 minutes"
+    next_evidence_needed: "operational definition of the town-services bundle (owner approval), authoritative and OSM facility sources with freshness, routing from cell centres"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: MEDIUM, false_negative_cost: HIGH}
+    why: "A strong preference with no evidence at all that decides how far from towns the search can go."
+  # ------------------------------------------------------------------------------------------------ land price
+  - id: LAND-PRICE
+    title: Bare-land purchase price ceiling (THB 500,000)
+    requirement_paths: [land.land_purchase_budget]
+    importance_path: land.land_purchase_budget.importance
+    evidence_families: [EF-04]
+    evidence: {exists: "NO", resolution: "none", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "no land-price evidence; an asking price is not a market value; a parcel price is meaningless without its area"}
+    stages:
+      REGIONAL_SCREENING: [BLOCKED_BY_SOURCE_GAP, "price levels by area could only ever be indicative"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "at best appraised-value or listing-price proxies by zone, normalised by area and labelled proxy"]
+      PARCEL_SHORTLIST: [PARCEL_VERIFICATION_ONLY, "actual asking price with area, status and duplicates checked"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "negotiated/transaction price against the ceiling"]
+    proxy_semantics: "appraised value or asking price per unit area is an indication of price level, not the purchase price of any parcel"
+    allowed_use: "labelled proxy price levels by zone once acquired; shortlist parcels carry their verified price"
+    forbidden_use: "treating an asking price as market value; comparing parcel totals without area; presenting a proxy as verified; treating missing price evidence as affordable"
+    next_evidence_needed: "government appraised values, transaction/reference prices, listing asking prices with stale and duplicate detection and geocoding uncertainty"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: LOW, false_positive_cost: HIGH, false_negative_cost: HIGH}
+    why: "A MUST that can remove large parts of the search space and has no evidence yet."
+  # ------------------------------------------------------------------------------------------------ electricity
+  - id: ELEC-GRID
+    title: Grid electricity at the parcel (before purchase)
+    requirement_paths: [utilities.electricity]
+    importance_path: utilities.electricity.importance
+    evidence_families: [EF-05]
+    parcel_only: true
+    evidence: {exists: "NO", resolution: "none (PEA Power Map has no verified machine-readable source)", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "regional service context is not parcel connection truth; nearby poles do not prove a connection"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "regional service context may be added later as context only"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "at best settlement/electrification context, labelled proxy; no source yet"]
+      PARCEL_SHORTLIST: [PARCEL_VERIFICATION_ONLY, "ask PEA whether the parcel can be connected"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "written/confirmed connection availability before purchase"]
+    proxy_semantics: "settlement or distribution-infrastructure context suggests where service is likely, not that a parcel can connect"
+    allowed_use: "context only; missing evidence triggers verification, never rejection or acceptance"
+    forbidden_use: "inferring connection availability from nearby poles; turning PEA planning maps into parcel truth; inferring capacity, transformer, phase, cost or reliability"
+    next_evidence_needed: "PEA service-context source if one becomes accessible; a parcel-level confirmation procedure with PEA"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PARCEL_SHORTLIST, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: HIGH, false_negative_cost: LOW}
+    why: "A MUST whose truth exists only at the parcel; regional evidence cannot decide it."
+  # ------------------------------------------------------------------------------------------------ water (four separate paths)
+  - id: WATER-PWA
+    title: Water path - PWA service
+    requirement_paths: [utilities.water]
+    importance_path: utilities.water.importance
+    evidence_families: [EF-06]
+    field_only: true
+    evidence: {exists: "NO", resolution: "none (no PWA service-area polygons are published)", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "PWA is not required; outside PWA is not 'no water' and not 'acceptable water'"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "no polygons"]
+      CANDIDATE_ZONE_COMPARISON: [BLOCKED_BY_SOURCE_GAP, "PWA branch/area context would be a convenience signal only"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "ask the local PWA branch whether the parcel can be served"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm connection and cost"]
+    allowed_use: "optional convenience context; PWA availability is a bonus fact, not a requirement"
+    forbidden_use: "treating outside PWA as no water or as verified acceptable water"
+    next_evidence_needed: "PWA service-area information if published"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PARCEL_SHORTLIST, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: MEDIUM, false_negative_cost: LOW}
+    why: "The requirement is verified water at the parcel; PWA is only one possible path."
+  - id: WATER-LOCAL
+    title: Water path - municipal / local-government public water
+    requirement_paths: [utilities.water]
+    importance_path: utilities.water.importance
+    evidence_families: [EF-06]
+    field_only: true
+    evidence: {exists: "NO", resolution: "none", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "local-government systems are rarely mapped; reliability is only known locally"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "no evidence"]
+      CANDIDATE_ZONE_COMPARISON: [NOT_EVALUABLE, "no evidence"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "ask the municipality/TAO about service and reliability"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm reliability before purchase"]
+    allowed_use: "a checklist item; acceptance only after field verification of reliability"
+    forbidden_use: "assuming a local system exists or is reliable"
+    next_evidence_needed: "local-authority water-service records where published; otherwise field verification"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PRE_PURCHASE_VERIFICATION, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: MEDIUM, false_negative_cost: LOW}
+    why: "Reliability of a local system can only be established in the field."
+  - id: WATER-VILLAGE
+    title: Water path - village water system
+    requirement_paths: [utilities.water]
+    importance_path: utilities.water.importance
+    evidence_families: [EF-06]
+    field_only: true
+    evidence: {exists: "NO", resolution: "none", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "village systems are almost never mapped; reliability and quality are local facts"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "no evidence"]
+      CANDIDATE_ZONE_COMPARISON: [NOT_EVALUABLE, "no evidence"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "ask the village committee and neighbours"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm supply through the dry season"]
+    allowed_use: "a checklist item; acceptance only after field verification"
+    forbidden_use: "assuming a village system exists or is reliable; regional evidence cannot satisfy this"
+    next_evidence_needed: "field verification protocol (dry-season reliability, quality, access terms)"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PRE_PURCHASE_VERIFICATION, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: HIGH, false_negative_cost: LOW}
+    why: "Only field verification can establish village-system reliability."
+  - id: WATER-GROUND
+    title: Water path - groundwater / well
+    requirement_paths: [utilities.water]
+    importance_path: utilities.water.importance
+    evidence_families: [EF-06]
+    field_only: true
+    groundwater_components: [aquifer_potential, expected_depth, yield, quality, legal_and_drilling_constraints]
+    evidence: {exists: "NO", resolution: "none acquired (regional groundwater potential maps may exist)", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "regional aquifer potential is context only; yield, depth, quality and drilling legality are parcel facts"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "no evidence acquired"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "at best regional aquifer-potential context, labelled proxy"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "nearby wells and local drilling experience"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "yield, depth, quality, drilling permission and cost"]
+    proxy_semantics: "regional groundwater potential describes the setting, not whether a well on this parcel will yield potable water"
+    allowed_use: "labelled context once acquired; well acceptance only after parcel-level verification"
+    forbidden_use: "treating regional potential as yield or quality; treating accepting well water as groundwater existing"
+    next_evidence_needed: "groundwater-department regional maps and well records (context), parcel-level verification protocol"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PRE_PURCHASE_VERIFICATION, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: MEDIUM, false_positive_cost: HIGH, false_negative_cost: LOW}
+    why: "Suitability of a well is parcel truth; regional potential can only add context."
+  # ------------------------------------------------------------------------------------------------ fiber
+  - id: FIBER
+    title: Fixed fiber internet (before purchase)
+    requirement_paths: [utilities.telecom]
+    importance_path: utilities.telecom.importance
+    evidence_families: [EF-07]
+    parcel_only: true
+    substitutes_not_accepted: [MOBILE_4G, MOBILE_5G, FIXED_WIRELESS, SATELLITE]
+    evidence: {exists: "NO", resolution: "none (NBTC publishes population-share aggregates; Ookla tiles are crowd-sourced speed tests)", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "mobile coverage and speed tests never satisfy a fiber requirement"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "no fiber coverage layer"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "at best provider coverage maps or settlement proxies, labelled proxy; never mobile coverage"]
+      PARCEL_SHORTLIST: [PARCEL_VERIFICATION_ONLY, "check provider availability for the address"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "direct provider confirmation that fixed fiber can be installed"]
+    proxy_semantics: "provider coverage maps and nearby-service evidence suggest likelihood, not that this parcel can be connected"
+    allowed_use: "labelled proxy at candidate stage once a source exists; missing evidence triggers verification, never rejection or acceptance"
+    forbidden_use: "letting 4G/5G, fixed wireless or satellite satisfy it; presenting a proxy as verified; weakening the MUST because evidence is missing"
+    next_evidence_needed: "provider coverage sources and an address-level verification procedure"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PARCEL_SHORTLIST, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: HIGH, false_negative_cost: LOW}
+    why: "A MUST decided at the address, not at the regional level."
+  # ------------------------------------------------------------------------------------------------ road access (five separate concepts)
+  - id: ROAD-A-NETWORK
+    title: Road access A - network accessibility (OSM routing)
+    requirement_paths: [road_access.major_road]
+    importance_path: road_access.major_road.importance
+    evidence_families: [EF-08]
+    evidence: {exists: YES, resolution: "500 m cell, OSM network, baseline drive time", freshness: CURRENT, completeness: PARTIAL, safety: PARTIAL, safety_reason: "no major-road threshold was given; routing is free-flow and lacks tracks/services"}
+    stages:
+      REGIONAL_SCREENING: [PARTIAL, "connectivity context; cells with no road within 1 km are unresolved"]
+      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "distance/class of the nearest major road"]
+      PARCEL_SHORTLIST: [PARCEL_VERIFICATION_ONLY, "the actual route from the parcel"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "drive the route"]
+    allowed_use: "context (the major-road threshold is intentionally UNSET)"
+    forbidden_use: "treating network accessibility as legal, all-weather or noise-free access"
+    next_evidence_needed: "none until the owner sets a threshold"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: CANDIDATE_ZONE_COMPARISON, changes_regional_search_space: false, evidence_gap: NONE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: LOW, false_negative_cost: LOW}
+    why: "No active threshold."
+  - id: ROAD-B-LEGAL
+    title: Road access B - legal vehicle access
+    requirement_paths: [road_access.legal_vehicle_access]
+    importance_path: road_access.legal_vehicle_access.importance
+    evidence_families: [EF-08]
+    parcel_only: true
+    evidence: {exists: "NO", resolution: "none", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "legal access is a parcel title/easement fact; no cadastral or road-ownership data is available"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "parcel fact"]
+      CANDIDATE_ZONE_COMPARISON: [NOT_EVALUABLE, "parcel fact"]
+      PARCEL_SHORTLIST: [PARCEL_VERIFICATION_ONLY, "required: title deed, access road status and any easement"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "required: legal confirmation"]
+    allowed_use: "a mandatory shortlist and pre-purchase check"
+    forbidden_use: "inferring legal access from a mapped road or from routing success"
+    next_evidence_needed: "parcel-level legal documents (cadastral/title), road-status records"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PARCEL_SHORTLIST, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: HIGH, false_negative_cost: LOW}
+    why: "A MUST that exists only at the parcel."
+  - id: ROAD-C-ALLWEATHER
+    title: Road access C - all-weather vehicle access
+    requirement_paths: [road_access.all_weather_vehicle_access]
+    importance_path: road_access.all_weather_vehicle_access.importance
+    evidence_families: [EF-08]
+    field_only: true
+    evidence: {exists: PARTIAL, resolution: "road class only (OSM); flood/landslide context lives in M1E and stays independent", freshness: CURRENT, completeness: LOW, safety: NOT_SAFE_REGIONALLY, safety_reason: "free-flow time says nothing about wet-season usability; road class alone does not prove all-weather access"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "no wet-season evidence"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "at best road class + surface + known seasonal flooding, labelled proxy"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "inspect the final access road and ask locals about the wet season"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "wet-season verification"]
+    proxy_semantics: "road class and surface suggest likely year-round usability, not that this road is passable in the wet season"
+    allowed_use: "labelled proxy at candidate stage; shortlist and purchase need field verification"
+    forbidden_use: "satisfying all-weather access with regional evidence; presenting the proxy as verified"
+    next_evidence_needed: "surface/seasonal evidence where it exists; a field-verification protocol"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PARCEL_SHORTLIST, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: HIGH, false_negative_cost: LOW}
+    why: "A MUST verified by inspecting the road in the wet season."
+  - id: ROAD-D-SURFACE
+    title: Road access D - road surface (unpaved final access acceptable)
+    requirement_paths: [road_access.tolerate_unpaved_local_access]
+    importance_path: road_access.all_weather_vehicle_access.importance
+    evidence_families: [EF-08]
+    field_only: true
+    evidence: {exists: "NO", resolution: "none (surface is not in the extract used; tracks and service roads are absent)", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "the user accepts unpaved final access, but it must remain usable year-round, which is a field fact"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "no surface evidence"]
+      CANDIDATE_ZONE_COMPARISON: [NOT_EVALUABLE, "no surface evidence"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "inspect the final access surface and condition"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm practical usability"]
+    allowed_use: "supports the all-weather check; acceptance of unpaved surfaces is already a user tolerance"
+    forbidden_use: "treating an unpaved surface as failing or as passing without a usability check"
+    next_evidence_needed: "surface tags where available; field inspection"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PARCEL_SHORTLIST, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: MEDIUM, false_negative_cost: LOW}
+    why: "Surface evidence only matters as part of the all-weather check."
+  - id: ROAD-E-NOISE
+    title: Road access E - residential exposure to major-road noise
+    requirement_paths: [livability.avoid_major_road_noise]
+    importance_path: livability.avoid_major_road_noise.importance
+    evidence_families: [EF-11]
+    buffer_authorised: false
+    evidence: {exists: PARTIAL, resolution: "OSM road hierarchy and lane tags only", freshness: CURRENT, completeness: LOW, safety: NOT_SAFE_REGIONALLY, safety_reason: "road class alone is not noise; no traffic volumes, heavy-vehicle shares or terrain shielding"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "local phenomenon"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "at best a road-hierarchy/traffic/distance proxy, labelled proxy and never called noise"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "visit at different times of day"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "listen on site"]
+    proxy_semantics: "distance to a high-hierarchy road is an exposure proxy; without traffic counts it must stay labelled PROXY_ONLY"
+    allowed_use: "labelled proxy for candidate comparison once built; no buffer or exclusion is authorised"
+    forbidden_use: "calling road class noise; hard exclusion by distance; collapsing this into access to a major road"
+    next_evidence_needed: "traffic-count data (if obtainable), lane/class context, terrain shielding only if justified"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: CANDIDATE_ZONE_COMPARISON, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: MEDIUM, false_negative_cost: MEDIUM}
+    why: "A strong avoidance preference that can only be proxied at the candidate-zone scale."
+  # ------------------------------------------------------------------------------------------------ nuisance families
+  - id: NUIS-INDUSTRIAL
+    title: Industrial nuisance avoidance
+    requirement_paths: [livability.avoid_industrial_nuisance]
+    importance_path: livability.avoid_industrial_nuisance.importance
+    evidence_families: [EF-09]
+    buffer_authorised: false
+    evidence: {exists: PARTIAL, resolution: "OSM landuse/man_made features only (not acquired for this purpose)", freshness: NONE, completeness: LOW, safety: NOT_SAFE_REGIONALLY, safety_reason: "no factory register acquired; a mapped factory is not automatically a nuisance"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "local phenomenon"]
+      CANDIDATE_ZONE_COMPARISON: [BLOCKED_BY_SOURCE_GAP, "needs a factory register with type, scale and status"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "visit: smell, noise, dust, truck traffic"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm with neighbours and local authority"]
+    allowed_use: "future context-aware proximity information; no buffer or exclusion is authorised"
+    forbidden_use: "treating every mapped industrial feature as harmful; a fixed exclusion radius; treating missing data as no nuisance"
+    next_evidence_needed: "factory/industrial-estate registers with type, scale, active status; truck-access context; pollution registries if available"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: CANDIDATE_ZONE_COMPARISON, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: MEDIUM, false_negative_cost: HIGH}
+    why: "A strong avoidance preference with no usable evidence; a missed factory is costly."
+  - id: NUIS-MINING
+    title: Mining / quarry / crushing nuisance avoidance
+    requirement_paths: [livability.avoid_mining_quarry_nuisance]
+    importance_path: livability.avoid_mining_quarry_nuisance.importance
+    evidence_families: [EF-10]
+    buffer_authorised: false
+    evidence: {exists: PARTIAL, resolution: "OSM landuse=quarry only (not acquired for this purpose)", freshness: NONE, completeness: LOW, safety: NOT_SAFE_REGIONALLY, safety_reason: "no concession or permit register acquired; historical or inactive sites must not count as active nuisance"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "local phenomenon"]
+      CANDIDATE_ZONE_COMPARISON: [BLOCKED_BY_SOURCE_GAP, "needs concession/permit records with active status"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "visit: dust, blasting, truck routes"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm active status and plans with the local authority"]
+    allowed_use: "future context-aware proximity information; no exclusion radius is authorised"
+    forbidden_use: "treating historical or inactive features as active nuisance; a fixed radius; treating missing data as no nuisance"
+    next_evidence_needed: "mining concessions, quarry permits, crushing-plant records, active/inactive status, truck routes"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: CANDIDATE_ZONE_COMPARISON, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: MEDIUM, false_negative_cost: HIGH}
+    why: "A strong avoidance preference with no usable evidence."
+  - id: NUIS-NIGHTLIFE
+    title: Nightlife concentration avoidance
+    requirement_paths: [livability.avoid_nightlife_concentration]
+    importance_path: livability.avoid_nightlife_concentration.importance
+    evidence_families: [EF-12]
+    buffer_authorised: false
+    evidence: {exists: PARTIAL, resolution: "OSM bar/pub/nightclub points (completeness unknown)", freshness: NONE, completeness: LOW, safety: NOT_SAFE_REGIONALLY, safety_reason: "POI completeness and freshness unvalidated; restaurants are not nightlife"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "local phenomenon"]
+      CANDIDATE_ZONE_COMPARISON: [PROXY_ONLY, "at best a validated cluster of late-night venues, labelled proxy"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "visit in the evening"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm with neighbours"]
+    proxy_semantics: "a cluster of bars/clubs/karaoke venues indicates night-economy intensity, not a nuisance at a given house"
+    allowed_use: "labelled proxy once a validated method exists; no penalty or buffer is active"
+    forbidden_use: "using restaurant or generic POI density as nightlife; treating missing POIs as quiet"
+    next_evidence_needed: "validated venue evidence (type, opening hours), completeness assessment"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: CANDIDATE_ZONE_COMPARISON, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: MEDIUM, false_positive_cost: LOW, false_negative_cost: MEDIUM}
+    why: "A strong avoidance preference that can only be proxied from venue clusters."
+  # ------------------------------------------------------------------------------------------------ settlement / peace
+  - id: SETTLE-PEACE
+    title: Quiet, lower-density setting (avoid the dense urban core)
+    requirement_paths: [livability.avoid_dense_urban_core, livability.preferred_population_density]
+    importance_path: livability.avoid_dense_urban_core_importance
+    evidence_families: [EF-13]
+    peace_is_multi_signal: true
+    evidence: {exists: "NO", resolution: "none (no population, built-up or night-lights layer acquired)", freshness: NONE, completeness: NONE, safety: NOT_SAFE_REGIONALLY, safety_reason: "peacefulness is a multi-signal concept; population density alone is not peace"}
+    stages:
+      REGIONAL_SCREENING: [BLOCKED_BY_SOURCE_GAP, "needs settlement-intensity evidence"]
+      CANDIDATE_ZONE_COMPARISON: [BLOCKED_BY_SOURCE_GAP, "multi-signal context (density, built-up, lights, road/POI intensity)"]
+      PARCEL_SHORTLIST: [FIELD_VERIFICATION_ONLY, "visit at different times"]
+      PRE_PURCHASE_VERIFICATION: [FIELD_VERIFICATION_ONLY, "confirm the neighbourhood character"]
+    allowed_use: "multi-signal livability context once acquired; no scalar livability score"
+    forbidden_use: "reducing peacefulness to population density alone; a scalar livability score; treating missing evidence as quiet"
+    next_evidence_needed: "population raster, built-up surface, settlement density, night-time lights, building footprints, road density, POI intensity"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: MEDIUM, false_negative_cost: MEDIUM}
+    why: "A strong preference that decides which areas are too urban, with no evidence yet."
+  # ------------------------------------------------------------------------------------------------ terrain / land
+  - id: TERRAIN-PREF
+    title: Gentle / rolling terrain preference
+    requirement_paths: [land.terrain_preference]
+    importance_path: land.terrain_preference_importance
+    evidence_families: [EF-14]
+    numeric_slope_threshold_authorised: false
+    evidence: {exists: YES, resolution: "regional slope statistics from a 30 m DSM per 500 m cell (M1B)", freshness: ACCEPTABLE, completeness: HIGH, safety: PARTIAL, safety_reason: "the preference has no numeric slope interpretation; data availability is not permission to evaluate"}
+    stages:
+      REGIONAL_SCREENING: [PARTIAL, "terrain character could be described, but no interpretation is authorised"]
+      CANDIDATE_ZONE_COMPARISON: [PARTIAL, "describe slope distribution / local relief as context only"]
+      PARCEL_SHORTLIST: [PARCEL_VERIFICATION_ONLY, "parcel-scale terrain from a survey or site visit"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "visit the site"]
+    allowed_use: "descriptive terrain context; kept separate from M1E hazard terrain evidence"
+    forbidden_use: "inventing slope-degree thresholds; reading the preference as steep or any slope acceptable; letting terrain override a hazard action"
+    next_evidence_needed: "owner calibration of what gentle/rolling means (median slope, slope distribution, local relief, usable-area fraction) before any evaluation"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: CANDIDATE_ZONE_COMPARISON, changes_regional_search_space: false, evidence_gap: CALIBRATION, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: LOW, false_negative_cost: LOW}
+    why: "Evidence exists; the gap is owner calibration, not data."
+  - id: SITE-IMPROVE
+    title: Site-improvement willingness (drainage, retaining structures, grading/fill)
+    requirement_paths: [land.willingness_to_improve_drainage, land.willingness_to_build_retaining_structures, land.willingness_to_grade_or_fill]
+    importance_path: null
+    evidence_families: []
+    evidence: {exists: "NO", resolution: "n/a", freshness: NONE, completeness: NONE, safety: NOT_APPLICABLE, safety_reason: "a permissive tolerance, not an evidence question; no allowance or limit was stated"}
+    stages:
+      REGIONAL_SCREENING: [INTENTIONALLY_NOT_USED, "tolerance only"]
+      CANDIDATE_ZONE_COMPARISON: [INTENTIONALLY_NOT_USED, "tolerance only"]
+      PARCEL_SHORTLIST: [INTENTIONALLY_NOT_USED, "may be noted when a verified, improvable site issue is found"]
+      PRE_PURCHASE_VERIFICATION: [INTENTIONALLY_NOT_USED, "engineering feasibility and cost need parcel-level investigation"]
+    allowed_use: "avoid rejecting a site solely for an improvable issue that is verified as improvable"
+    forbidden_use: "overriding, cancelling or softening any M1E hazard action; inventing a financial allowance; treating willingness as feasibility"
+    next_evidence_needed: "none; parcel investigation decides feasibility"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    intentionally_not_used_reason: "willingness to improve a site never overrides hazard truth and carries no evidence need of its own"
+    priority_factors: {earliest_decision_stage: PRE_PURCHASE_VERIFICATION, changes_regional_search_space: false, evidence_gap: NONE, regional_evidence_feasible: false, feasibility: HIGH, false_positive_cost: LOW, false_negative_cost: LOW}
+    why: "Tolerance only."
+  - id: PARCEL-AREA
+    title: Parcel size (intentionally unset)
+    requirement_paths: [land.preferred_area_rai, land.minimum_area_rai, land.maximum_area_rai]
+    importance_path: null
+    evidence_families: [EF-15]
+    parcel_only: true
+    area_concepts: [NOMINAL_AREA, USABLE_AREA, BUILDABLE_AREA, ACCESSIBLE_AREA]
+    evidence: {exists: "NO", resolution: "none", freshness: NONE, completeness: NONE, safety: NOT_APPLICABLE, safety_reason: "no size requirement exists; cadastral area is not usable residential area"}
+    stages:
+      REGIONAL_SCREENING: [NOT_EVALUABLE, "parcel attribute"]
+      CANDIDATE_ZONE_COMPARISON: [NOT_EVALUABLE, "parcel attribute"]
+      PARCEL_SHORTLIST: [PARCEL_VERIFICATION_ONLY, "record nominal, usable, buildable and accessible area separately"]
+      PRE_PURCHASE_VERIFICATION: [PARCEL_VERIFICATION_ONLY, "survey the usable area"]
+    allowed_use: "future parcel records only"
+    forbidden_use: "creating size preferences; assuming cadastral area equals usable residential area; comparing parcel prices without area"
+    next_evidence_needed: "parcel-level survey/cadastral data when parcels are analysed"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    priority_factors: {earliest_decision_stage: PARCEL_SHORTLIST, changes_regional_search_space: false, evidence_gap: EVIDENCE, regional_evidence_feasible: false, feasibility: LOW, false_positive_cost: MEDIUM, false_negative_cost: LOW}
+    why: "No requirement is set; recorded so area semantics are not collapsed later."
+  # ------------------------------------------------------------------------------------------------ explicitly irrelevant
+  - id: IRR-AIRPORT
+    title: Airport proximity (IRRELEVANT)
+    requirement_paths: [urban_access.airport]
+    importance_path: urban_access.airport_importance
+    evidence_families: []
+    evidence: {exists: "NO", resolution: "n/a", freshness: NONE, completeness: NONE, safety: NOT_APPLICABLE, safety_reason: "excluded by the owner"}
+    stages:
+      REGIONAL_SCREENING: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      CANDIDATE_ZONE_COMPARISON: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      PARCEL_SHORTLIST: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      PRE_PURCHASE_VERIFICATION: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+    allowed_use: "none: neither rewarded nor penalised"
+    forbidden_use: "any use in evaluation or prioritisation unless the owner changes the requirement"
+    next_evidence_needed: "none"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    intentionally_not_used_reason: "the owner marked airport proximity IRRELEVANT"
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: HIGH, false_negative_cost: HIGH}
+    why: "Excluded by the owner."
+  - id: IRR-UNIVERSITY
+    title: University proximity (IRRELEVANT)
+    requirement_paths: [education.university]
+    importance_path: education.university.importance
+    evidence_families: []
+    evidence: {exists: PARTIAL, resolution: "n/a", freshness: NONE, completeness: NONE, safety: NOT_APPLICABLE, safety_reason: "excluded by the owner (not a statement about life in general)"}
+    stages:
+      REGIONAL_SCREENING: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      CANDIDATE_ZONE_COMPARISON: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      PARCEL_SHORTLIST: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      PRE_PURCHASE_VERIFICATION: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+    allowed_use: "none: neither rewarded nor penalised"
+    forbidden_use: "any use in evaluation or prioritisation unless the owner changes the requirement"
+    next_evidence_needed: "none"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    intentionally_not_used_reason: "the owner marked university proximity IRRELEVANT"
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: HIGH, false_negative_cost: HIGH}
+    why: "Excluded by the owner."
+  - id: IRR-VOCATIONAL
+    title: Vocational access (IRRELEVANT)
+    requirement_paths: [education.vocational]
+    importance_path: education.vocational.importance
+    evidence_families: []
+    evidence: {exists: PARTIAL, resolution: "n/a", freshness: NONE, completeness: NONE, safety: NOT_APPLICABLE, safety_reason: "excluded by the owner"}
+    stages:
+      REGIONAL_SCREENING: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      CANDIDATE_ZONE_COMPARISON: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      PARCEL_SHORTLIST: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+      PRE_PURCHASE_VERIFICATION: [INTENTIONALLY_NOT_USED, "irrelevant to this decision"]
+    allowed_use: "none: neither rewarded nor penalised"
+    forbidden_use: "any use in evaluation or prioritisation unless the owner changes the requirement"
+    next_evidence_needed: "none"
+    verification_stage: PRE_PURCHASE_VERIFICATION
+    intentionally_not_used_reason: "the owner marked vocational access IRRELEVANT"
+    priority_factors: {earliest_decision_stage: REGIONAL_SCREENING, changes_regional_search_space: true, evidence_gap: EVIDENCE, regional_evidence_feasible: true, feasibility: HIGH, false_positive_cost: HIGH, false_negative_cost: HIGH}
+    why: "Excluded by the owner."
