@@ -81,3 +81,17 @@ def distribution_table(
                 row["max"] = round(float(v.max()), 4) if len(v) else float("nan")
                 rows.append(row)
     return pd.DataFrame(rows)
+
+
+def weighted_coverage(quantity: np.ndarray, routable: np.ndarray) -> dict[str, float]:
+    """Share of a quantity (modelled people, built-up m2, area) in routable vs unresolved cells.
+
+    Unresolved cells keep their quantity: it is never treated as zero. Cell-count, area, population and built-up coverage are
+    different weightings and must not be conflated; this only ever weights by the quantity it is given.
+    """
+    q = np.nan_to_num(np.asarray(quantity, dtype=float), nan=0.0)
+    total = float(q.sum())
+    routed = float(q[routable].sum())
+    unresolved = total - routed
+    share = (unresolved / total) if total else float("nan")
+    return {"total": total, "routable": routed, "unresolved": unresolved, "unresolved_share": share}
