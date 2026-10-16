@@ -19,3 +19,18 @@ Rules:
 5. **Point-based fields** (routing and distances evaluated at the cell centroid) are not footprint aggregations, but note that an edge cell's centroid can lie outside the AOI.
 
 Status of existing evidence: see `docs/research/m2d1c-aoi-evidence-audit.csv` (AOI_CLIPPED_ALREADY, FULL_CELL_CONTEXT_ONLY, POTENTIALLY_AFFECTED, NOT_APPLICABLE).
+
+## Point semantics (M2D.1d)
+
+| Concept | Definition |
+|---|---|
+| `GRID_CENTROID` | the nominal centre of the 500 m square; stored for context (`grid_centroid_lon/lat`) |
+| `AOI_ANALYSIS_POINT` | the routing and distance origin: the centroid when it lies inside `GRID_FOOTPRINT intersect AOI`, otherwise the deterministic point-on-surface of that footprint (`analysis_point_lon/lat`, `analysis_point_method`) |
+
+A route origin outside the AOI must not represent the AOI sliver. The analysis point is geographically neutral: never moved toward roads, services or administrative centres.
+
+## Local evidence vs external context (M2D.1d)
+
+Evidence is classified as `LOCAL_AOI_EVIDENCE` (describes the AOI footprint: clipped), `EXTERNAL_ACCESS_CONTEXT` (real-world reach that may cross the AOI boundary: routes and destinations),
+`EXTERNAL_INFLUENCE_CONTEXT` (things just outside the AOI that may matter: nearby factories or quarries; no buffer or distance rule is activated) or `MIXED_REQUIRES_SEPARATION` (must be split before use). Local presence is not accessible destination, and local road context is not routing network extent.
+Nominal-grid intensity (mass divided by the nominal 0.25 km2 cell) is never described as density within the AOI footprint.

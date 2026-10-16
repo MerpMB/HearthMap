@@ -19,6 +19,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import shapely
+from pyproj import Transformer
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "m1a"))
@@ -29,6 +30,7 @@ from common import CANONICAL, PROCESSED, source_ref  # noqa: E402
 from hearthmap.context import SCOPE_STATEMENTS, forbidden_columns  # noqa: E402
 from hearthmap.context import industry as ind  # noqa: E402
 from hearthmap.context import services as svc  # noqa: E402
+from hearthmap.context.origin import analysis_points  # noqa: E402
 from hearthmap.context.semantics import (  # noqa: E402
     CANDIDATE_DEFINITION,
     COLUMN_LINEAGE_RULES,
@@ -40,6 +42,7 @@ from hearthmap.context.settlement import (  # noqa: E402
     aggregate_to_grid_aoi,
     area_fraction,
     assign_max_overlap,
+    clip_polygons_to_aoi,
 )
 from hearthmap.context.stats import distribution_table, stat_with_denominator  # noqa: E402
 from hearthmap.enums import Confidence  # noqa: E402
@@ -131,6 +134,21 @@ def main() -> int:
     prov_gdf = gpd.read_file(PROCESSED / "boundaries.gpkg", layer="province_boundaries")
     aoi_poly = shapely.union_all(prov_gdf.geometry.to_numpy())
     aoi_ll_poly = gpd.GeoSeries([aoi_poly], crs=prov_gdf.crs).to_crs(4326).iloc[0]
+    # POINT SEMANTICS: routing and distance origins are AOI_ANALYSIS_POINTs. An edge cell whose nominal GRID_CENTROID lies outside
+    # GRID_FOOTPRINT intersect AOI gets a deterministic point-on-surface of the clipped footprint; every other cell keeps its centroid.
+    grid_cen_xy = cen.copy()  # nominal GRID_CENTROID (context)
+    cen, ap_method, _ = analysis_points(cell_polys, grid["coverage_fraction"].to_numpy(), aoi_poly)
+    cen_pts = shapely.points(cen)
+    to_ll = Transformer.from_crs(CANONICAL, "EPSG:4326", always_xy=True)
+    glon, glat = to_ll.transform(grid_cen_xy[:, 0], grid_cen_xy[:, 1])
+    alon, alat = to_ll.transform(cen[:, 0], cen[:, 1])
+    out["grid_centroid_lon"], out["grid_centroid_lat"] = np.round(glon, 6), np.round(glat, 6)
+    out["analysis_point_lon"], out["analysis_point_lat"] = np.round(alon, 6), np.round(alat, 6)
+    out["analysis_point_method"] = ap_method
+    origin_changed = ap_method != "GRID_CENTROID"
+    print(
+        f"analysis origins replaced for {int(origin_changed.sum())} of {int((grid['coverage_fraction'] < 1 - 1e-9).sum())} partial cells"
+    )
     wp = next(one_version("population-worldpop-r2025a").glob("*.tif"))
     pop_full, pop, used, pop_dropped = aggregate_to_grid_aoi(
         [str(wp)], gi, window_ll, n_cells, aoi_ll_poly, nodata=-99999
@@ -142,11 +160,11 @@ def main() -> int:
     print(
         f"population: {used:,} pixels, full-cell sum {pop_full.sum():,.0f}, AOI-clipped {pop.sum():,.0f} ({time.time() - t0:.0f}s)"
     )
-    out["population_worldpop2025_count_500m"] = pop.round(2)
-    out["population_worldpop2025_count_500m_full_cell_context"] = pop_full.round(2)
-    out["population_worldpop2025_density_per_km2"] = (pop / CELL_KM2).round(1)
+    out["population_worldpop2025_mass_aoi_clipped"] = pop.round(2)
+    out["population_worldpop2025_mass_full_cell_context"] = pop_full.round(2)
+    out["population_worldpop2025_intensity_per_nominal_grid_cell_km2"] = (pop / CELL_KM2).round(1)
     for r, tag in ((1, "1p5km"), (2, "2p5km")):
-        out[f"population_worldpop2025_density_per_km2_mean_{tag}"] = (
+        out[f"population_worldpop2025_intensity_per_nominal_grid_cell_km2_mean_{tag}"] = (
             gi.smooth_mean(pop, r) / CELL_KM2
         ).round(1)
     out["population_product_class"] = SOURCE_SEMANTICS["population"]["product_class"]
@@ -163,14 +181,16 @@ def main() -> int:
     print(
         f"built-up: {used:,} pixels, full-cell {built_full.sum() / 1e6:,.1f} km2, AOI-clipped {built.sum() / 1e6:,.1f} km2 ({time.time() - t0:.0f}s)"
     )
-    out["built_ghsl2020_surface_m2_500m"] = built.round(0)
-    out["built_ghsl2020_surface_m2_500m_full_cell_context"] = built_full.round(0)
+    out["built_ghsl2020_m2_aoi_clipped"] = built.round(0)
+    out["built_ghsl2020_m2_full_cell_context"] = built_full.round(0)
     frac = np.clip(
         built / (CELL_KM2 * 1e6), 0, 1
     )  # share of the NOMINAL 0.25 km2 cell; the AOI-clipped numerator, so edge cells read lower
-    out["built_ghsl2020_fraction_500m"] = frac.round(4)
+    out["built_ghsl2020_intensity_fraction_of_nominal_grid_cell"] = frac.round(4)
     for r, tag in ((1, "1p5km"), (2, "2p5km")):
-        out[f"built_ghsl2020_fraction_mean_{tag}"] = gi.smooth_mean(frac, r).round(4)
+        out[f"built_ghsl2020_intensity_fraction_of_nominal_grid_cell_mean_{tag}"] = gi.smooth_mean(
+            frac, r
+        ).round(4)
     out["evidence_settlement_footprint"] = (
         "AOI_ANALYTICAL_FOOTPRINT: population and built-up are clipped to grid cell INTERSECT AOI; *_full_cell_context columns are CONTEXT_ONLY"
     )
@@ -197,18 +217,28 @@ def main() -> int:
     net = load_network()
     rev = reverse(net)
     routable = np.where(net.component_size[net.component] >= 500)[0]
-    # drivable-road length density (unordered edge pairs counted once)
+    # LOCAL road context: drivable-road length that lies INSIDE the AOI (edge midpoint rule), per cell. This is NOT the routing network extent:
+    # the network itself extends beyond the AOI so that real routes can cross the boundary.
     u = np.repeat(np.arange(len(net.indptr) - 1), np.diff(net.indptr))
     key = np.minimum(u, net.indices) * len(net.xy) + np.maximum(u, net.indices)
     _, first = np.unique(key, return_index=True)
     mid = (net.xy[u[first]] + net.xy[net.indices[first]]) / 2
+    in_aoi_edge = shapely.contains_xy(aoi_poly, mid[:, 0], mid[:, 1])
     ei = gi.locate(mid[:, 0], mid[:, 1])
+    good = (ei >= 0) & in_aoi_edge
     rl = np.zeros(n_cells)
-    np.add.at(rl, ei[ei >= 0], net.length_m[first][ei >= 0] / 1000.0)
-    out["road_density_osm_drivable_km_per_km2"] = (rl / CELL_KM2).round(2)
-    out["road_density_osm_drivable_km_per_km2_mean_1p5km"] = (
+    np.add.at(rl, ei[good], net.length_m[first][good] / 1000.0)
+    rl_full = np.zeros(n_cells)
+    np.add.at(rl_full, ei[ei >= 0], net.length_m[first][ei >= 0] / 1000.0)
+    out["road_length_osm_drivable_km_aoi_clipped_500m"] = rl.round(3)
+    out["road_length_osm_drivable_km_full_cell_context"] = rl_full.round(3)
+    out["road_intensity_osm_drivable_km_per_nominal_grid_cell_km2"] = (rl / CELL_KM2).round(2)
+    out["road_intensity_osm_drivable_km_per_nominal_grid_cell_km2_mean_1p5km"] = (
         gi.smooth_mean(rl, 1) / CELL_KM2
     ).round(2)
+    out["evidence_road_semantics"] = (
+        "LOCAL_ROAD_CONTEXT (AOI-clipped length, per nominal grid cell) is not ROUTING_NETWORK_EXTENT (the OSM network used for routing extends beyond the AOI)"
+    )
 
     # descriptive agreement between two PARTLY DEPENDENT signals (WorldPop uses GHSL as a covariate) (terciles of cells that have either signal; not a score)
     has = (pop > 0) | (built > 0)
@@ -227,7 +257,20 @@ def main() -> int:
     # ---------------------------------------------------------------- routing set-up
     cell_node, cell_snap = snap(cen, net.xy, routable)
     cell_ok = cell_snap <= tt["max_snap_distance_m"]
-    out["road_snap_distance_m"] = cell_snap.round(1)
+    out["road_snap_distance_m"] = cell_snap.round(1)  # measured from the AOI_ANALYSIS_POINT
+    _, cell_any_snap = snap(
+        cen, net.xy, np.arange(len(net.xy))
+    )  # any network fragment (to tell 'no road' from 'isolated fragment')
+    out["road_any_network_fragment_distance_m"] = cell_any_snap.round(1)
+    out["road_access_context"] = np.select(
+        [cell_ok, cell_any_snap <= tt["max_snap_distance_m"]],
+        ["CONNECTED_ROAD_WITHIN_SNAP_DISTANCE", "ONLY_ISOLATED_ROAD_FRAGMENT_WITHIN_SNAP_DISTANCE"],
+        "NO_ROAD_WITHIN_SNAP_DISTANCE",
+    )
+    # comparison only (not part of the artifact): the same frozen routing from the nominal GRID_CENTROID
+    cell_node_nom, cell_snap_nom = snap(grid_cen_xy, net.xy, routable)
+    cell_ok_nom = cell_snap_nom <= tt["max_snap_distance_m"]
+    cmp_cols: dict[str, np.ndarray] = {"nominal_centroid_snap_distance_m": cell_snap_nom.round(1)}
     speeds = cfg.speeds
     et = rev.edge_time_s(speeds, 1.0)
     lg = ListGraph(rev, et)
@@ -274,6 +317,11 @@ def main() -> int:
                 rev, et, src, np.arange(len(ids)), tt["max_search_min"] * 60.0
             )
             tc = t[cell_node]
+            tn = t[cell_node_nom]
+            cmp_old = np.full(n_cells, np.nan)
+            ok_old = cell_ok_nom & np.isfinite(tn)
+            cmp_old[ok_old] = tn[ok_old] / 60.0
+            cmp_cols[f"nominal_centroid_time_{label}_min"] = np.round(cmp_old, 2)
             reached = cell_ok & np.isfinite(tc)
             t_min[reached] = tc[reached] / 60.0
             reason[~cell_ok] = "NO_ROAD_WITHIN_SNAP_DISTANCE"
@@ -288,6 +336,7 @@ def main() -> int:
                     out[f"service_{label}_count_within_{b}min"] = np.where(
                         cell_ok, cnt[b][cell_node], -1
                     )
+        cmp_cols.setdefault(f"nominal_centroid_time_{label}_min", np.full(n_cells, np.nan))
         out[f"drive_time_to_nearest_service_{label}_min"] = np.round(t_min, 2)
         out[f"route_available_service_{label}"] = np.isfinite(t_min)
         out[f"service_{label}_unresolved_reason"] = np.where(np.isfinite(t_min), "", reason)
@@ -300,6 +349,7 @@ def main() -> int:
                 "cfg": cfg["travel_time"],
                 "net": Path("data/processed/m2a/network.npz").stat().st_size,
                 "clusters": svc.CLUSTER_DEFINITIONS,
+                "origins": hashlib.sha256(cen.tobytes()).hexdigest(),
             },
             sort_keys=True,
             default=str,
@@ -317,6 +367,8 @@ def main() -> int:
         rc = pd.read_parquet(cache_pq)
         for c in rc.columns:
             out[c] = rc[c].to_numpy()
+        cmp_cols = {c: v for c, v in pd.read_parquet(PROC / "routing_cache_cmp.parquet").items()}
+        cmp_cols = {c: np.asarray(v) for c, v in cmp_cols.items()}
         print("routing columns loaded from cache")
     else:
         for comp in svc.COMPONENTS:
@@ -328,6 +380,7 @@ def main() -> int:
             }
             route(f"cluster_{name.lower()}", members, False)
         out[[c for c in out.columns if c not in before_cols]].to_parquet(cache_pq, index=False)
+        pd.DataFrame(cmp_cols).to_parquet(PROC / "routing_cache_cmp.parquet", index=False)
         cache_meta.write_text(cache_key)
     for name in svc.CLUSTER_DEFINITIONS:
         col = f"cluster_{name.lower()}"
@@ -348,13 +401,19 @@ def main() -> int:
     for r, v in nlc.items():
         out[f"nightlife_candidate_count_within_{r}km_euclidean_context"] = v
     out["nightlife_nearest_candidate_km_euclidean_diagnostic"] = nln
-    # OSM service-POI intensity (all components after duplicate collapse): DESCRIPTIVE_CONTEXT only
+    # LOCAL_SERVICE_PRESENCE: only POIs physically inside the AOI count (a POI outside the AOI is not an in-AOI local POI even when it falls in the
+    # nominal edge cell). ACCESSIBLE_SERVICE_DESTINATION is different: routing above uses every OSM POI of the three provinces, including any outside the AOI polygon.
+    sv_in_aoi = shapely.contains_xy(aoi_poly, sxy[:, 0], sxy[:, 1])
     pidx = gi.locate(sxy[:, 0], sxy[:, 1])
-    poi_n = np.bincount(pidx[pidx >= 0], minlength=n_cells).astype(float)
-    out["osm_service_poi_count_500m"] = poi_n.astype(int)
-    out["osm_service_poi_density_per_km2_mean_2p5km"] = (gi.smooth_mean(poi_n, 2) / CELL_KM2).round(
-        2
+    poi_n = np.bincount(pidx[(pidx >= 0) & sv_in_aoi], minlength=n_cells).astype(float)
+    out["osm_service_poi_local_count_aoi_clipped_500m"] = poi_n.astype(int)
+    out["osm_service_poi_local_intensity_per_nominal_grid_cell_km2_mean_2p5km"] = (
+        gi.smooth_mean(poi_n, 2) / CELL_KM2
+    ).round(2)
+    out["evidence_service_semantics"] = (
+        "LOCAL_SERVICE_PRESENCE (osm_service_poi_local_*: POIs inside the AOI only) is not ACCESSIBLE_SERVICE_DESTINATION (drive_time_to_nearest_service_*: all OSM POIs of the three provinces, including any outside the AOI polygon; destinations across the provinces' outer borders are absent from the extract)"
     )
+    n_poi_outside_aoi = int((~sv_in_aoi).sum())
     sv.drop(columns=["node"], errors="ignore").to_csv(PROC / "service_pois.csv", index=False)
     nl.to_csv(PROC / "nightlife_candidates.csv", index=False)
 
@@ -544,8 +603,11 @@ def main() -> int:
             m &= og["geometry_class"] == cls
         return og.loc[m, "geometry"].to_numpy()
 
-    out["osm_industrial_landuse_polygon_area_fraction_500m"] = area_fraction(
-        cell_polys, sel("OSM_INDUSTRIAL_LANDUSE", "POLYGON"), n_cells
+    def local_polys(kind: str) -> np.ndarray:
+        return clip_polygons_to_aoi(sel(kind, "POLYGON"), aoi_poly)
+
+    out["osm_industrial_landuse_polygon_fraction_of_nominal_grid_cell_aoi_clipped"] = area_fraction(
+        cell_polys, local_polys("OSM_INDUSTRIAL_LANDUSE"), n_cells
     ).round(4)
     _, near = euclid_counts(cen_pts, sel("OSM_INDUSTRIAL_LANDUSE"), n_cells)
     out["osm_industrial_landuse_geometry_nearest_km_euclidean_diagnostic"] = near
@@ -553,14 +615,16 @@ def main() -> int:
         counts, _ = euclid_counts(cen_pts, sel("OSM_WORKS", cls), n_cells)
         for r, v in counts.items():
             out[f"osm_works_{cls.lower()}_count_within_{r}km_euclidean_context"] = v
-    out["osm_quarry_polygon_area_fraction_500m"] = area_fraction(
-        cell_polys, sel("OSM_QUARRY", "POLYGON"), n_cells
+    out["osm_quarry_polygon_fraction_of_nominal_grid_cell_aoi_clipped"] = area_fraction(
+        cell_polys, local_polys("OSM_QUARRY"), n_cells
     ).round(4)
     qcounts, qnear = euclid_counts(cen_pts, sel("OSM_QUARRY"), n_cells)
     for r, v in qcounts.items():
         out[f"osm_quarry_geometry_presence_within_{r}km_euclidean_context"] = v > 0
     out["osm_quarry_geometry_nearest_km_euclidean_diagnostic"] = qnear
-    out["osm_industrial_geometry_basis"] = "OSM_GEOMETRY_CONTEXT_POINTS_AND_POLYGONS_NOT_COMBINED"
+    out["osm_industrial_geometry_basis"] = (
+        "LOCAL polygon occupancy is AOI-clipped; the euclidean counts and nearest distances are EXTERNAL_INFLUENCE_CONTEXT from the AOI analysis point (features outside the AOI may count); points and polygons are not combined"
+    )
     rp = og_gdf.geometry.representative_point()
     og["adm3_pcode"] = (
         gpd.sjoin(
@@ -745,10 +809,10 @@ def main() -> int:
 
     # urban-core calibration distributions: descriptive, no threshold, no combination
     uc_cols = [
-        "population_worldpop2025_density_per_km2",
-        "built_ghsl2020_fraction_500m",
-        "road_density_osm_drivable_km_per_km2",
-        "osm_service_poi_density_per_km2_mean_2p5km",
+        "population_worldpop2025_intensity_per_nominal_grid_cell_km2",
+        "built_ghsl2020_intensity_fraction_of_nominal_grid_cell",
+        "road_intensity_osm_drivable_km_per_nominal_grid_cell_km2",
+        "osm_service_poi_local_intensity_per_nominal_grid_cell_km2_mean_2p5km",
         "service_components_reached_within_15min",
     ]
     dist = distribution_table(
@@ -762,7 +826,7 @@ def main() -> int:
     comp.to_csv(TABLES / "settlement-signal-agreement.csv")
     summary = {
         "cells": n_cells, "population_total_aoi_clipped": round(float(pop.sum())), "population_total_full_cell_grid_context": round(float(pop_full.sum())), "built_up_km2_aoi_clipped": round(float(built.sum() / 1e6), 1), "built_up_km2_full_cell_grid_context": round(float(built_full.sum() / 1e6), 1), "edge_cells_with_less_than_full_aoi_coverage": int((grid["coverage_fraction"] < 1 - 1e-9).sum()),
-        "service_pois_raw": n_raw, "service_pois_after_dedup": len(sv), "nightlife_candidates": len(nl),
+        "service_pois_raw": n_raw, "service_pois_after_dedup": len(sv), "service_pois_outside_aoi_polygon": n_poi_outside_aoi, "nightlife_candidates": len(nl),
         "service_pois_by_component": sv["component"].value_counts().to_dict(),
         "service_cluster_poi_members": {k: int((sv[f"cluster_{k.lower()}"] >= 0).sum()) for k in svc.CLUSTER_DEFINITIONS},
         "service_routed_pois": int(sv["routed"].sum()),

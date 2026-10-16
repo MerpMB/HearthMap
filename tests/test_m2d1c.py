@@ -133,8 +133,8 @@ def test_code_never_scales_a_full_cell_value_by_coverage_fraction_and_never_deri
             assert "full_cell_context" not in path.read_text("utf-8"), path.name
     qa = (ROOT / "scripts/m2d/routing_coverage_qa.py").read_text("utf-8")
     assert (
-        'pop = df["population_worldpop2025_count_500m"]' in qa
-        and 'built = df["built_ghsl2020_surface_m2_500m"]' in qa
+        'pop = df["population_worldpop2025_mass_aoi_clipped"]' in qa
+        and 'built = df["built_ghsl2020_m2_aoi_clipped"]' in qa
     )  # QA uses the clipped analytical columns
     for line in [
         ln for ln in qa.splitlines() if "full_cell_context" in ln
@@ -169,24 +169,23 @@ def test_interior_cells_keep_their_values_and_edge_cells_do_not_exceed_the_full_
     interior = df["coverage_fraction"] >= 1 - 1e-9
     assert interior.sum() > 150_000
     assert np.array_equal(
-        df.loc[interior, "population_worldpop2025_count_500m"],
-        df.loc[interior, "population_worldpop2025_count_500m_full_cell_context"],
+        df.loc[interior, "population_worldpop2025_mass_aoi_clipped"],
+        df.loc[interior, "population_worldpop2025_mass_full_cell_context"],
     )
     assert np.array_equal(
-        df.loc[interior, "built_ghsl2020_surface_m2_500m"],
-        df.loc[interior, "built_ghsl2020_surface_m2_500m_full_cell_context"],
+        df.loc[interior, "built_ghsl2020_m2_aoi_clipped"],
+        df.loc[interior, "built_ghsl2020_m2_full_cell_context"],
     )
     assert (
-        df["population_worldpop2025_count_500m"]
-        <= df["population_worldpop2025_count_500m_full_cell_context"] + 1e-6
+        df["population_worldpop2025_mass_aoi_clipped"]
+        <= df["population_worldpop2025_mass_full_cell_context"] + 1e-6
     ).all()
     assert (
-        df["built_ghsl2020_surface_m2_500m"]
-        <= df["built_ghsl2020_surface_m2_500m_full_cell_context"] + 1e-6
+        df["built_ghsl2020_m2_aoi_clipped"] <= df["built_ghsl2020_m2_full_cell_context"] + 1e-6
     ).all()
     assert (
-        df.loc[~interior, "population_worldpop2025_count_500m"]
-        < df.loc[~interior, "population_worldpop2025_count_500m_full_cell_context"] - 1e-6
+        df.loc[~interior, "population_worldpop2025_mass_aoi_clipped"]
+        < df.loc[~interior, "population_worldpop2025_mass_full_cell_context"] - 1e-6
     ).any()
     assert forbidden_columns(df.columns) == []
 
@@ -216,13 +215,13 @@ def test_aoi_totals_use_clipped_evidence_and_state_old_vs_new():
     pop = t.loc["WorldPop modelled population (people)"]
     built = t.loc["GHSL built-up surface (km2)"]
     assert pop["new_aoi_clipped_total"] == pytest.approx(
-        df["population_worldpop2025_count_500m"].sum(), abs=1
+        df["population_worldpop2025_mass_aoi_clipped"].sum(), abs=1
     )
     assert pop["old_full_cell_grid_total_context_only"] == pytest.approx(
-        df["population_worldpop2025_count_500m_full_cell_context"].sum(), abs=1
+        df["population_worldpop2025_mass_full_cell_context"].sum(), abs=1
     )
     assert built["new_aoi_clipped_total"] == pytest.approx(
-        df["built_ghsl2020_surface_m2_500m"].sum() / 1e6, abs=0.001
+        df["built_ghsl2020_m2_aoi_clipped"].sum() / 1e6, abs=0.001
     )
     for r in (pop, built):
         assert r["absolute_difference"] == pytest.approx(
@@ -242,14 +241,14 @@ def test_routing_qa_uses_clipped_values_and_cell_area_shares_are_unchanged():
     aoi = w[w["scope"] == "Whole AOI"].iloc[0]
     df = pd.read_parquet(ART)
     assert aoi["modelled_population_total"] == pytest.approx(
-        df["population_worldpop2025_count_500m"].sum(), abs=2
+        df["population_worldpop2025_mass_aoi_clipped"].sum(), abs=2
     )
     assert aoi["built_up_m2_total"] == pytest.approx(
-        df["built_ghsl2020_surface_m2_500m"].sum(), abs=2
+        df["built_ghsl2020_m2_aoi_clipped"].sum(), abs=2
     )
-    assert aoi["unresolved_cell_share"] == pytest.approx(0.4299, abs=1e-4) and aoi[
-        "unresolved_area_share"
-    ] == pytest.approx(0.4265, abs=1e-4)
+    # 0.4299 before the M2D.1d origin correction (44 more cells became routable); the area share is unchanged
+    assert aoi["unresolved_cell_share"] == pytest.approx(0.4296, abs=1e-4)
+    assert aoi["unresolved_area_share"] == pytest.approx(0.4265, abs=1e-4)
     row = cmp_[cmp_["scope"] == "Whole AOI"].iloc[0]
     assert row["unresolved_population_share_corrected_aoi_clipped"] == pytest.approx(
         aoi["unresolved_population_share"], abs=1e-4
@@ -309,7 +308,7 @@ def test_audit_table_classifies_every_field_with_a_valid_class():
         "NOT_APPLICABLE",
     }
     joined = " ".join(d["field"])
-    for needle in ("worldpop", "ghsl", "terrain", "flood", "road_density"):
+    for needle in ("worldpop", "ghsl", "terrain", "flood", "road_"):
         assert needle in joined.lower()
     assert (
         d.loc[d["field"].str.contains("full_cell_context"), "class"] == "FULL_CELL_CONTEXT_ONLY"

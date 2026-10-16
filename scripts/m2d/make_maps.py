@@ -25,7 +25,7 @@ from hearthmap.context.settlement import GridIndex
 OUT = Path("outputs/m2d")
 REVIEW = Path("outputs/m2d-review")
 PROC = Path("data/processed/m2d")
-NOTE = "Evidence only - not a score, no thresholds. Cells are 500 m. See docs/research/m2d-wave1-findings.md and m2d1-semantics-review.md."
+NOTE = "Evidence only - not a score, no thresholds. Cells are 500 m nominal; edge cells are clipped to the AOI (values are AOI-clipped, see edge-cell-analysis-origin.png). See docs/research/m2d1d-edge-origin-context-semantics.md."
 # orientation points for HUMAN calibration only (chosen for familiarity, not a classification of any kind)
 REFERENCE_TOWNS = {
     "Chiang Mai (old city)": (98.9853, 18.7883),
@@ -40,6 +40,9 @@ REFERENCE_TOWNS = {
 def main() -> int:
     df = pd.read_parquet(OUT / "regional-context-evidence.parquet")
     gi = GridIndex(df["cell_id"].tolist())
+    partial_mask = df["coverage_fraction"].to_numpy() < 1 - 1e-9
+    partial_e = (gi.e0 + gi.col[partial_mask] + 0.5) * 500
+    partial_n = (gi.n0 + gi.row[partial_mask] + 0.5) * 500
     prov = gpd.read_file(PROCESSED / "boundaries.gpkg", layer="province_boundaries").to_crs(
         CANONICAL
     )
@@ -88,7 +91,11 @@ def main() -> int:
         plt.close(fig)
 
     # 1-2 population and built form
-    pd_ = df["population_worldpop2025_density_per_km2"].replace(0, np.nan).to_numpy()
+    pd_ = (
+        df["population_worldpop2025_intensity_per_nominal_grid_cell_km2"]
+        .replace(0, np.nan)
+        .to_numpy()
+    )
     fig, ax = base(
         "Population intensity: WorldPop R2025A (MODELLED_POPULATION_ESTIMATE, alpha release; NOT observed population, NOT peacefulness)"
     )
@@ -96,7 +103,7 @@ def main() -> int:
         ax, pd_, "viridis", "modelled people / km2 (log)", norm=LogNorm(vmin=1, vmax=np.nanmax(pd_))
     )
     save(fig, "population-intensity")
-    b = df["built_ghsl2020_fraction_500m"].replace(0, np.nan).to_numpy()
+    b = df["built_ghsl2020_intensity_fraction_of_nominal_grid_cell"].replace(0, np.nan).to_numpy()
     fig, ax = base(
         "Built-form intensity: GHS-BUILT-S 2020 built-up surface fraction (satellite-derived; NOT a building count, NOT population)"
     )
@@ -370,11 +377,26 @@ def main() -> int:
     # 12 urban-core calibration panels: separate variables, shared reference windows, NO combination and NO threshold
     tr = Transformer.from_crs("EPSG:4326", "EPSG:32647", always_xy=True)
     variables = [
-        ("population_worldpop2025_density_per_km2", "modelled people / km2", "viridis", True),
-        ("built_ghsl2020_fraction_500m", "built-up fraction", "magma_r", False),
-        ("road_density_osm_drivable_km_per_km2", "road km / km2", "cividis", False),
         (
-            "osm_service_poi_density_per_km2_mean_2p5km",
+            "population_worldpop2025_intensity_per_nominal_grid_cell_km2",
+            "modelled people / km2",
+            "viridis",
+            True,
+        ),
+        (
+            "built_ghsl2020_intensity_fraction_of_nominal_grid_cell",
+            "built-up fraction",
+            "magma_r",
+            False,
+        ),
+        (
+            "road_intensity_osm_drivable_km_per_nominal_grid_cell_km2",
+            "road km / km2",
+            "cividis",
+            False,
+        ),
+        (
+            "osm_service_poi_local_intensity_per_nominal_grid_cell_km2_mean_2p5km",
             "OSM service POIs / km2 (2.5 km mean; completeness uneven)",
             "plasma",
             False,
@@ -402,12 +424,15 @@ def main() -> int:
             ax.set_xlim(win[0], win[1])
             ax.set_ylim(win[2], win[3])
             ax.plot([x], [y], "w+", ms=8, mew=1.5)
+            ax.scatter(
+                partial_e, partial_n, s=14, facecolors="none", edgecolors="red", linewidths=0.6
+            )  # partial AOI cells: a sliver is not a full 500 m footprint
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"{name}\n{lab}" if c == 0 else lab, fontsize=6)
             plt.colorbar(im, ax=ax, shrink=0.7)
     fig.suptitle(
-        "Urban-core calibration panels (12 km windows): four separate descriptive variables, same colour limit per column (99th percentile of non-zero cells, for display only). No scalar, no threshold; reference towns were chosen for orientation, not classification.",
+        "Urban-core calibration panels (12 km windows): four separate descriptive variables, same colour limit per column (99th percentile of non-zero cells, for display only). No scalar, no threshold; reference towns were chosen for orientation, not classification. Red rings mark partial AOI cells (coverage below 1; values are AOI-clipped).",
         fontsize=8,
     )
     fig.text(0.01, 0.005, NOTE, fontsize=7)

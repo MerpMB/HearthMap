@@ -59,16 +59,14 @@ TIME_COLUMNS = [
 
 def main() -> int:
     df = pd.read_parquet(OUT / "regional-context-evidence.parquet")
-    m2a = pd.read_parquet("outputs/m2a2/family-infrastructure-evidence.parquet")
-    assert (df["cell_id"].to_numpy() == m2a["cell_id"].to_numpy()).all()
     n = len(df)
     # same flag the service routing used (the artifact rounds snap distance to 0.1 m, so re-deriving it from the rounded value could flip cells at exactly 1000 m)
     routable = (
         df["service_convenience_store_unresolved_reason"] != "NO_ROAD_WITHIN_SNAP_DISTANCE"
     ).to_numpy()
-    pop = df["population_worldpop2025_count_500m"].to_numpy()
-    built = df["built_ghsl2020_surface_m2_500m"].to_numpy()
-    frac = df["built_ghsl2020_fraction_500m"].to_numpy()
+    pop = df["population_worldpop2025_mass_aoi_clipped"].to_numpy()
+    built = df["built_ghsl2020_m2_aoi_clipped"].to_numpy()
+    frac = df["built_ghsl2020_intensity_fraction_of_nominal_grid_cell"].to_numpy()
     area = (df["coverage_fraction"] * 0.25).to_numpy()
     scopes = {
         **{name: (df["majority_pcode"] == pc).to_numpy() for pc, name in PROV.items()},
@@ -95,8 +93,8 @@ def main() -> int:
     cov = pd.DataFrame(rows)
     cov.to_csv(OUT / "tables" / "routing-coverage-weighted.csv", index=False)
     # old (full-cell context) vs corrected (AOI-clipped) shares: cell and area shares must not move
-    pop_ctx = df["population_worldpop2025_count_500m_full_cell_context"].to_numpy()
-    built_ctx = df["built_ghsl2020_surface_m2_500m_full_cell_context"].to_numpy()
+    pop_ctx = df["population_worldpop2025_mass_full_cell_context"].to_numpy()
+    built_ctx = df["built_ghsl2020_m2_full_cell_context"].to_numpy()
     cmp_rows = []
     for scope, m in scopes.items():
         po = weighted_coverage(np.where(m, pop_ctx, 0), routable)["unresolved_share"]
@@ -204,8 +202,8 @@ def main() -> int:
     clon, clat = lonlat.x.to_numpy(), lonlat.y.to_numpy()
     cov_frac = grid["coverage_fraction"].to_numpy()
     dsnap = df["road_snap_distance_m"].to_numpy()
-    frag = m2a["road_any_fragment_distance_m"].to_numpy()
-    ctx_road = m2a["road_access_context"].to_numpy()
+    frag = df["road_any_network_fragment_distance_m"].to_numpy()
+    ctx_road = df["road_access_context"].to_numpy()
     bands = pd.cut(
         dsnap, [1000, 2000, 5000, 10000, np.inf], labels=["1-2 km", "2-5 km", "5-10 km", ">10 km"]
     )

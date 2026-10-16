@@ -245,3 +245,11 @@ def assign_max_overlap(
         share[ci[first]] = inter[first] / shapely.area(cells[ci[first]])
         method[ci[first]] = "MAX_OVERLAP_WITHIN_OWN_GROUP"
     return ids, share, method
+
+
+def clip_polygons_to_aoi(polys: np.ndarray, aoi: shapely.Geometry) -> np.ndarray:
+    """LOCAL occupancy geometry: polygons intersected with the AOI. A polygon wholly outside the AOI disappears (it is external influence context, never local occupancy)."""
+    if len(polys) == 0:
+        return polys
+    g = shapely.intersection(polys, aoi)
+    return g[~shapely.is_empty(g)]

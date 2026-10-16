@@ -1,5 +1,7 @@
 # M2D.1c - edge-cell AOI evidence accounting
 
+> **Updated in M2D.1d** ([m2d1d-edge-origin-context-semantics.md](m2d1d-edge-origin-context-semantics.md)): the AOI-clipped columns are renamed (`*_mass_aoi_clipped`, `*_intensity_per_nominal_grid_cell*`) and routing/distance origins now use AOI analysis points. The unresolved cell share is 42.96%; area, population and built-up shares are unchanged.
+
 Date: 2026-10-16. Branch: `claude/m2d1c-edge-cell-aoi-accounting`. Corrects an accounting issue found by the M2D.1b audit.
 No routing policy, user requirement or M1E hazard action changed (tested); routing, travel times and every non-settlement analytical value are byte-identical;
 no scoring; Wave 2 not started; `M2D_HUMAN_VISUAL_SIGNOFF` stays PENDING. Grid semantics are defined in [grid-footprint-semantics.md](../architecture/grid-footprint-semantics.md).
@@ -14,7 +16,7 @@ WorldPop and GHSL values were summed over the **whole** 500 m cell, so an edge c
 - **Clipping:** a pixel is assigned to the cell holding its centre (unchanged rule); its analytical contribution is its value times the share of the **pixel footprint inside the AOI** (centre-and-corner test, 8 x 8 point lattice for mixed boundary pixels).
   This is not `full-cell value x coverage_fraction`: the dense settlement can sit on either side of the boundary, and the weighting follows the actual pixels. Pixel values are conserved totals, so footprint share is value share under a uniform-within-pixel assumption.
 - **Interior cells:** cells fully inside the AOI keep their full-cell value by rule (`coverage_fraction` at least 1 - 1e-9; 157,344 cells, maximum difference 0.0 people and 0.0 m2, tested). The correction touches edge cells only.
-- **Columns:** `population_worldpop2025_count_500m` and `built_ghsl2020_surface_m2_500m` keep their names with corrected semantics (AOI-clipped; lineage `evidence_footprint = AOI_ANALYTICAL_FOOTPRINT`, `evidence_settlement_footprint` states it).
+- **Columns:** `population_worldpop2025_mass_aoi_clipped` and `built_ghsl2020_m2_aoi_clipped` keep their names with corrected semantics (AOI-clipped; lineage `evidence_footprint = AOI_ANALYTICAL_FOOTPRINT`, `evidence_settlement_footprint` states it).
   The previous sums are kept as `*_full_cell_context` (lineage `FULL_CELL_CONTEXT_ONLY`, `GRID_FOOTPRINT`) and no derived column, map, statistic or QA table uses them except the explicit old-vs-corrected comparisons.
 - **Densities and fractions** are still per the nominal 0.25 km2 cell, now with the AOI-clipped numerator, so an edge cell reads lower than the local density of its AOI part. Dividing by the (possibly tiny) footprint area would inflate slivers because pixels are assigned by centre, so I did not.
   Neighbourhood means (1.5 and 2.5 km) of interior cells near the edge shift slightly because their edge neighbours changed.

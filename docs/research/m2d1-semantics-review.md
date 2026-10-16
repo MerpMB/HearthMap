@@ -32,7 +32,7 @@ inherits its tambon value. No DIW distance, buffer or local-presence column exis
 ## 4. OSM industrial geometry
 
 The M2D extract held bounding boxes only, so M2D.1 re-acquired the same features with real geometry (`osm-industry-geom-aoi`; 298 of 301 became geometries). Points and polygons are
-never summed: `osm_industrial_landuse_polygon_area_fraction_500m`, `osm_works_point_count_*` and `osm_works_polygon_count_*` (separate), `osm_quarry_polygon_area_fraction_500m`,
+never summed: `osm_industrial_landuse_polygon_fraction_of_nominal_grid_cell_aoi_clipped`, `osm_works_point_count_*` and `osm_works_polygon_count_*` (separate), `osm_quarry_polygon_fraction_of_nominal_grid_cell_aoi_clipped`,
 `osm_quarry_geometry_presence_*` and Euclidean nearest-geometry diagnostics. OSM remains validation/context evidence, not operating status.
 
 ## 5. DPIM: the official stone-crushing export exists - what it holds

@@ -40,7 +40,7 @@ def test_forbidden_columns_detects_scores_ranks_and_verdicts():
     ]
     assert set(forbidden_columns(bad)) == set(bad)
     ok = [
-        "population_worldpop2025_density_per_km2",
+        "population_worldpop2025_intensity_per_nominal_grid_cell_km2",
         "service_cluster_core_definition",
         "nightlife_candidate_count_within_1km_euclidean_context",
         "diw_evidence_basis",
@@ -390,10 +390,11 @@ def test_artifact_has_no_score_columns_full_lineage_and_separate_signals():
     assert set(lineage) == set(df.columns)
     assert df["cell_id"].is_unique and len(df) == 162073
     assert (
-        "population_worldpop2025_density_per_km2" in df and "built_ghsl2020_fraction_500m" in df
+        "population_worldpop2025_intensity_per_nominal_grid_cell_km2" in df
+        and "built_ghsl2020_intensity_fraction_of_nominal_grid_cell" in df
     )  # POPULATION_INTENSITY != BUILT_FORM_INTENSITY
-    assert df["built_ghsl2020_fraction_500m"].between(0, 1).all()
-    assert (df["population_worldpop2025_count_500m"] >= 0).all()
+    assert df["built_ghsl2020_intensity_fraction_of_nominal_grid_cell"].between(0, 1).all()
+    assert (df["population_worldpop2025_mass_aoi_clipped"] >= 0).all()
     assert df["routing_basis"].eq("BASELINE_DRIVE_TIME").all()
 
 

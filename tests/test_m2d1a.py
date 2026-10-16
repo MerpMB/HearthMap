@@ -97,11 +97,9 @@ def test_weighted_table_states_modelled_population_and_separates_the_shares():
     # totals tie back to the artifact
     df = pd.read_parquet(ART)
     assert a["modelled_population_total"] == pytest.approx(
-        df["population_worldpop2025_count_500m"].sum(), abs=2
+        df["population_worldpop2025_mass_aoi_clipped"].sum(), abs=2
     )
-    assert a["built_up_m2_total"] == pytest.approx(
-        df["built_ghsl2020_surface_m2_500m"].sum(), abs=2
-    )
+    assert a["built_up_m2_total"] == pytest.approx(df["built_ghsl2020_m2_aoi_clipped"].sum(), abs=2)
     assert int(a["cells_unresolved"]) == int(
         (df["service_convenience_store_unresolved_reason"] == "NO_ROAD_WITHIN_SNAP_DISTANCE").sum()
     )

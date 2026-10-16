@@ -108,8 +108,8 @@ def test_tambon_context_is_always_a_tambon_of_the_cells_own_province():
 @needs_outputs
 def test_totals_are_the_aoi_clipped_totals_after_m2d1c_and_routing_is_unchanged():
     df = pd.read_parquet(ART)
-    assert df["population_worldpop2025_count_500m"].sum() == pytest.approx(3341405.0, abs=5.0)
-    assert df["built_ghsl2020_surface_m2_500m"].sum() == pytest.approx(330408622, rel=0.001)
+    assert df["population_worldpop2025_mass_aoi_clipped"].sum() == pytest.approx(3341405.0, abs=5.0)
+    assert df["built_ghsl2020_m2_aoi_clipped"].sum() == pytest.approx(330408622, rel=0.001)
     assert df["routing_config_fingerprint"].eq("5c35e98882c3ac62").all()
 
 

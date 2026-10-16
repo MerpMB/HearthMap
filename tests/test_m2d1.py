@@ -177,7 +177,7 @@ def test_osm_polygons_and_points_are_distinct_classes_and_never_summed():
     )  # no single combined feature count
     assert (
         'f"osm_works_{cls.lower()}_count_within_' in text
-        and "osm_industrial_landuse_polygon_area_fraction_500m" in text
+        and "osm_industrial_landuse_polygon_fraction_of_nominal_grid_cell_aoi_clipped" in text
     )
 
 
@@ -213,8 +213,8 @@ def test_artifact_keeps_osm_point_and_polygon_columns_separate():
     )
     assert not [c for c in df.columns if re.match(r"osm_(industrial|works)_feature_count", c)]
     for c in (
-        "osm_industrial_landuse_polygon_area_fraction_500m",
-        "osm_quarry_polygon_area_fraction_500m",
+        "osm_industrial_landuse_polygon_fraction_of_nominal_grid_cell_aoi_clipped",
+        "osm_quarry_polygon_fraction_of_nominal_grid_cell_aoi_clipped",
     ):
         assert df[c].between(0, 1).all()
     assert df["osm_quarry_geometry_presence_within_1km_euclidean_context"].dtype == bool
@@ -307,15 +307,15 @@ def test_no_urban_core_threshold_exists_anywhere_in_the_m2d_code_or_artifact():
 @needs_artifact
 def test_artifact_has_descriptive_poi_intensity_but_no_urban_core_variable():
     df = pd.read_parquet(ARTIFACT)
-    assert "osm_service_poi_density_per_km2_mean_2p5km" in df
+    assert "osm_service_poi_local_intensity_per_nominal_grid_cell_km2_mean_2p5km" in df
     assert not [c for c in df.columns if "urban_core" in c or "dense" in c or "peace" in c]
     dist = pd.read_csv(ROOT / "outputs/m2d/tables/urban-core-calibration-distributions.csv")
     assert dist["note"].str.contains("no quantile is a policy threshold").all()
     assert {
-        "population_worldpop2025_density_per_km2",
-        "built_ghsl2020_fraction_500m",
-        "road_density_osm_drivable_km_per_km2",
-        "osm_service_poi_density_per_km2_mean_2p5km",
+        "population_worldpop2025_intensity_per_nominal_grid_cell_km2",
+        "built_ghsl2020_intensity_fraction_of_nominal_grid_cell",
+        "road_intensity_osm_drivable_km_per_nominal_grid_cell_km2",
+        "osm_service_poi_local_intensity_per_nominal_grid_cell_km2_mean_2p5km",
     } <= set(dist["column"])
 
 

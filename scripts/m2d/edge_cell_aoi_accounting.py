@@ -26,12 +26,12 @@ INTERIOR = 1 - 1e-9
 def main() -> int:
     df = pd.read_parquet(OUT / "regional-context-evidence.parquet")
     pop, pop_full = (
-        df["population_worldpop2025_count_500m"].to_numpy(),
-        df["population_worldpop2025_count_500m_full_cell_context"].to_numpy(),
+        df["population_worldpop2025_mass_aoi_clipped"].to_numpy(),
+        df["population_worldpop2025_mass_full_cell_context"].to_numpy(),
     )
     built, built_full = (
-        df["built_ghsl2020_surface_m2_500m"].to_numpy(),
-        df["built_ghsl2020_surface_m2_500m_full_cell_context"].to_numpy(),
+        df["built_ghsl2020_m2_aoi_clipped"].to_numpy(),
+        df["built_ghsl2020_m2_full_cell_context"].to_numpy(),
     )
     cov = df["coverage_fraction"].to_numpy()
     partial = cov < INTERIOR
@@ -89,15 +89,13 @@ def main() -> int:
         "grid_id": CHECK_CELL,
         "aoi_coverage_fraction": round(float(c["coverage_fraction"]), 4),
         "full_cell_worldpop_modelled_population": round(
-            float(c["population_worldpop2025_count_500m_full_cell_context"]), 2
+            float(c["population_worldpop2025_mass_full_cell_context"]), 2
         ),
         "aoi_clipped_worldpop_modelled_population": round(
-            float(c["population_worldpop2025_count_500m"]), 2
+            float(c["population_worldpop2025_mass_aoi_clipped"]), 2
         ),
-        "full_cell_ghsl_built_up_m2": round(
-            float(c["built_ghsl2020_surface_m2_500m_full_cell_context"]), 0
-        ),
-        "aoi_clipped_ghsl_built_up_m2": round(float(c["built_ghsl2020_surface_m2_500m"]), 0),
+        "full_cell_ghsl_built_up_m2": round(float(c["built_ghsl2020_m2_full_cell_context"]), 0),
+        "aoi_clipped_ghsl_built_up_m2": round(float(c["built_ghsl2020_m2_aoi_clipped"]), 0),
     }
     summary = {
         "edge_cells_with_partial_aoi_coverage": int(partial.sum()),

@@ -71,162 +71,228 @@ SOURCE_SEMANTICS = {
 
 CANDIDATE_DEFINITION = "CANDIDATE_DEFINITION"
 
+# Semantic classes of a field. A field says what it is: LOCAL evidence about the AOI, EXTERNAL access or influence context, or a mix that must be separated.
+LOCAL_AOI_EVIDENCE = "LOCAL_AOI_EVIDENCE"
+EXTERNAL_ACCESS_CONTEXT = "EXTERNAL_ACCESS_CONTEXT"
+EXTERNAL_INFLUENCE_CONTEXT = "EXTERNAL_INFLUENCE_CONTEXT"
+MIXED_REQUIRES_SEPARATION = "MIXED_REQUIRES_SEPARATION"
+SEMANTIC_CLASSES = (
+    LOCAL_AOI_EVIDENCE,
+    EXTERNAL_ACCESS_CONTEXT,
+    EXTERNAL_INFLUENCE_CONTEXT,
+    MIXED_REQUIRES_SEPARATION,
+)
+
+_RES = {
+    "cell": "CELL_500M",
+    "tambon": "TAMBON_ADMINISTRATIVE",
+    "none": "NOT_SPATIAL",
+    "geom": "OSM_GEOMETRY",
+}
+_WP, _GH = "population-worldpop-r2025a", "builtup-ghsl-r2023a"
+
+
+def _r(
+    pattern: str, family: str, sources: str, etype: str, res: str, **extra: str
+) -> tuple[str, dict[str, str]]:
+    return pattern, {
+        "family": family,
+        "sources": sources,
+        "evidence_type": etype,
+        "spatial_resolution": res,
+        **extra,
+    }
+
+
 # (column-name regex, lineage). Every artifact column must match one rule; the first match wins.
-_RES = {"cell": "CELL_500M", "tambon": "TAMBON_ADMINISTRATIVE", "none": "NOT_SPATIAL"}
 COLUMN_LINEAGE_RULES: list[tuple[str, dict[str, str]]] = [
-    (
+    _r(
         r"^(cell_id|majority_pcode|coverage_fraction)$",
-        {
-            "family": "GRID",
-            "sources": "analysis_grid_500m (M1A)",
-            "evidence_type": "GRID_KEY",
-            "spatial_resolution": _RES["cell"],
-        },
+        "GRID",
+        "analysis_grid_500m (M1A)",
+        "GRID_KEY",
+        _RES["cell"],
     ),
-    (
+    _r(
+        r"^(grid_centroid|analysis_point)_(lon|lat|method)$",
+        "GRID",
+        "analysis_grid_500m (M1A); AOI polygon (M1A boundaries)",
+        "POINT_SEMANTICS",
+        _RES["cell"],
+        note="GRID_CENTROID is the nominal context point; AOI_ANALYSIS_POINT is the routing/distance origin (the centroid when it lies inside GRID_FOOTPRINT intersect AOI, otherwise a point-on-surface of that footprint)",
+    ),
+    _r(
         r"^(population|built)_.*_full_cell_context$",
-        {
-            "family": "SETTLEMENT",
-            "sources": "population-worldpop-r2025a; builtup-ghsl-r2023a",
-            "evidence_type": "FULL_CELL_CONTEXT_ONLY",
-            "evidence_footprint": "GRID_FOOTPRINT",
-            "spatial_resolution": _RES["cell"],
-            "note": "summed over the whole 500 m cell including any part outside the AOI; never an AOI analytical value",
-        },
+        "SETTLEMENT",
+        f"{_WP}; {_GH}",
+        "FULL_CELL_CONTEXT_ONLY",
+        _RES["cell"],
+        evidence_footprint="GRID_FOOTPRINT",
+        note="summed over the whole 500 m cell including any part outside the AOI; never an AOI analytical value",
     ),
-    (
+    _r(
+        r"^(population_worldpop2025_mass_aoi_clipped|built_ghsl2020_m2_aoi_clipped)$",
+        "SETTLEMENT",
+        f"{_WP}; {_GH}",
+        "AOI_CLIPPED_MASS",
+        _RES["cell"],
+        semantic_class=LOCAL_AOI_EVIDENCE,
+        evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
+        mass_class="POPULATION_MASS_AOI_CLIPPED (MODELLED_POPULATION_ESTIMATE) or BUILT_UP_M2_AOI_CLIPPED",
+        worldpop_depends_partly_on_ghsl="true",
+    ),
+    _r(
+        r"^(population|built)_.*intensity_",
+        "SETTLEMENT",
+        f"{_WP}; {_GH}",
+        "INTENSITY_PER_NOMINAL_GRID_CELL",
+        _RES["cell"],
+        semantic_class=LOCAL_AOI_EVIDENCE,
+        evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
+        denominator="nominal 0.25 km2 grid cell, NOT the AOI footprint",
+        note="AOI-clipped numerator over the nominal cell area; an edge cell therefore reads lower than the local density of its AOI part, and this is not a density within the AOI footprint",
+    ),
+    _r(
         r"^population_",
-        {
-            "family": "SETTLEMENT",
-            "sources": "population-worldpop-r2025a",
-            "evidence_type": "POPULATION_INTENSITY_EVIDENCE",
-            "evidence_footprint": "AOI_ANALYTICAL_FOOTPRINT",
-            "spatial_resolution": _RES["cell"],
-            "product_class": "MODELLED_POPULATION_ESTIMATE",
-            "worldpop_depends_partly_on_ghsl": "true",
-        },
+        "SETTLEMENT",
+        _WP,
+        "POPULATION_INTENSITY_EVIDENCE",
+        _RES["cell"],
+        evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
+        product_class="MODELLED_POPULATION_ESTIMATE",
+        worldpop_depends_partly_on_ghsl="true",
     ),
-    (
+    _r(
         r"^built_",
-        {
-            "family": "SETTLEMENT",
-            "sources": "builtup-ghsl-r2023a",
-            "evidence_type": "BUILT_FORM_INTENSITY_EVIDENCE",
-            "evidence_footprint": "AOI_ANALYTICAL_FOOTPRINT",
-            "spatial_resolution": _RES["cell"],
-            "note": "GHSL is a covariate of the WorldPop model: not independent of population",
-        },
+        "SETTLEMENT",
+        _GH,
+        "BUILT_FORM_INTENSITY_EVIDENCE",
+        _RES["cell"],
+        evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
+        note="GHSL is a covariate of the WorldPop model: not independent of population",
     ),
-    (
-        r"^road_density_",
-        {
-            "family": "SETTLEMENT",
-            "sources": "osm network (M2A cache)",
-            "evidence_type": "ROAD_NETWORK_DENSITY_CONTEXT",
-            "spatial_resolution": _RES["cell"],
-        },
+    _r(
+        r"^road_(length|intensity)_.*full_cell_context$",
+        "SETTLEMENT",
+        "osm network (M2A cache)",
+        "FULL_CELL_CONTEXT_ONLY",
+        _RES["cell"],
+        evidence_footprint="GRID_FOOTPRINT",
+        note="whole-cell road length including outside the AOI; context only",
     ),
-    (
+    _r(
+        r"^road_(length|intensity)_",
+        "SETTLEMENT",
+        "osm network (M2A cache)",
+        "LOCAL_ROAD_CONTEXT",
+        _RES["cell"],
+        semantic_class=LOCAL_AOI_EVIDENCE,
+        evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
+        note="drivable-road length inside the AOI (edge midpoint rule); the routing network itself extends beyond the AOI (ROUTING_NETWORK_EXTENT)",
+    ),
+    _r(
         r"^settlement_",
-        {
-            "family": "SETTLEMENT",
-            "sources": "population-worldpop-r2025a; builtup-ghsl-r2023a",
-            "evidence_type": "SIGNAL_COMPARISON_DESCRIPTIVE",
-            "spatial_resolution": _RES["cell"],
-            "note": "partly dependent sources; descriptive agreement only",
-        },
+        "SETTLEMENT",
+        f"{_WP}; {_GH}",
+        "SIGNAL_COMPARISON_DESCRIPTIVE",
+        _RES["cell"],
+        note="partly dependent sources; descriptive agreement only",
     ),
-    (
+    _r(
         r"^osm_service_poi_",
-        {
-            "family": "POI_INTENSITY",
-            "sources": "osm-service-pois-aoi",
-            "evidence_type": "DESCRIPTIVE_CONTEXT",
-            "spatial_resolution": _RES["cell"],
-            "note": "OSM completeness is spatially uneven; not peacefulness and not urban-core truth",
-        },
+        "POI_INTENSITY",
+        "osm-service-pois-aoi",
+        "LOCAL_SERVICE_PRESENCE",
+        _RES["cell"],
+        semantic_class=LOCAL_AOI_EVIDENCE,
+        note="only POIs inside the AOI count; OSM completeness is spatially uneven; not peacefulness and not urban-core truth",
     ),
-    (
+    _r(
         r"^(service_|drive_time_to_nearest_service_|network_distance_to_nearest_service_|nearest_service_|route_available_service_)",
-        {
-            "family": "TOWN_SERVICES",
-            "sources": "osm-service-pois-aoi; osm network (M2A cache)",
-            "evidence_type": "SERVICE_COMPONENT_ACCESS_BASELINE_DRIVE_TIME",
-            "spatial_resolution": _RES["cell"],
-        },
+        "TOWN_SERVICES",
+        "osm-service-pois-aoi; osm network (M2A cache)",
+        "ACCESSIBLE_SERVICE_DESTINATION_BASELINE_DRIVE_TIME",
+        _RES["cell"],
+        semantic_class=EXTERNAL_ACCESS_CONTEXT,
+        origin="AOI_ANALYSIS_POINT",
+        note="destinations are all OSM POIs of the three provinces (including any outside the AOI polygon); destinations across the outer provincial borders are absent from the extract",
     ),
-    (
+    _r(
         r"^nightlife_",
-        {
-            "family": "NIGHTLIFE_CANDIDATES",
-            "sources": "osm-service-pois-aoi",
-            "evidence_type": "OSM_TAG_CANDIDATE_CONTEXT",
-            "spatial_resolution": _RES["cell"],
-        },
+        "NIGHTLIFE_CANDIDATES",
+        "osm-service-pois-aoi",
+        "OSM_TAG_CANDIDATE_CONTEXT",
+        _RES["cell"],
+        semantic_class=EXTERNAL_INFLUENCE_CONTEXT,
+        origin="AOI_ANALYSIS_POINT",
     ),
-    (
+    _r(
         r"^diw_",
-        {
-            "family": "INDUSTRY",
-            "sources": "industry-diw-factories; boundaries-ocha-cod-ab",
-            "evidence_type": "REGISTER_TAMBON_ADMIN_CONTEXT",
-            "spatial_resolution": _RES["tambon"],
-            "note": "a cell inherits its tambon value; it does not mean a factory is near the cell",
-        },
+        "INDUSTRY",
+        "industry-diw-factories; boundaries-ocha-cod-ab",
+        "REGISTER_TAMBON_ADMIN_CONTEXT",
+        _RES["tambon"],
+        note="a cell inherits its tambon value; it does not mean a factory is near the cell",
     ),
-    (
+    _r(
+        r"^osm_(industrial|quarry)_.*polygon_fraction_of_nominal_grid_cell_aoi_clipped$",
+        "INDUSTRY",
+        "osm-industry-geom-aoi",
+        "LOCAL_POLYGON_OCCUPANCY_AOI_CLIPPED",
+        _RES["geom"],
+        semantic_class=LOCAL_AOI_EVIDENCE,
+        evidence_footprint="AOI_ANALYTICAL_FOOTPRINT",
+        denominator="nominal 0.25 km2 grid cell",
+        note="polygon intersect AOI intersect cell; a polygon wholly outside the AOI contributes nothing",
+    ),
+    _r(
         r"^osm_(industrial|works)_",
-        {
-            "family": "INDUSTRY",
-            "sources": "osm-industry-geom-aoi",
-            "evidence_type": "OSM_GEOMETRY_CONTEXT",
-            "spatial_resolution": "OSM_GEOMETRY",
-        },
+        "INDUSTRY",
+        "osm-industry-geom-aoi",
+        "EXTERNAL_INFLUENCE_CONTEXT",
+        _RES["geom"],
+        semantic_class=EXTERNAL_INFLUENCE_CONTEXT,
+        origin="AOI_ANALYSIS_POINT",
+        note="euclidean context from the AOI analysis point; features just outside the AOI may count; no nuisance distance or buffer is activated",
     ),
-    (
+    _r(
         r"^osm_quarry_",
-        {
-            "family": "MINING_QUARRY",
-            "sources": "osm-industry-geom-aoi",
-            "evidence_type": "OSM_GEOMETRY_CONTEXT",
-            "spatial_resolution": "OSM_GEOMETRY",
-        },
+        "MINING_QUARRY",
+        "osm-industry-geom-aoi",
+        "EXTERNAL_INFLUENCE_CONTEXT",
+        _RES["geom"],
+        semantic_class=EXTERNAL_INFLUENCE_CONTEXT,
+        origin="AOI_ANALYSIS_POINT",
+        note="euclidean context from the AOI analysis point; features just outside the AOI may count; no nuisance distance or buffer is activated",
     ),
-    (
+    _r(
         r"^dpim_",
-        {
-            "family": "MINING_QUARRY",
-            "sources": "mining-dpim-licence-exports; boundaries-ocha-cod-ab",
-            "evidence_type": "LICENCE_REGISTER_TAMBON_ADMIN_CONTEXT",
-            "spatial_resolution": _RES["tambon"],
-            "note": "licence status is not current operating status; a cell inherits its tambon value",
-        },
+        "MINING_QUARRY",
+        "mining-dpim-licence-exports; boundaries-ocha-cod-ab",
+        "LICENCE_REGISTER_TAMBON_ADMIN_CONTEXT",
+        _RES["tambon"],
+        note="licence status is not current operating status; a cell inherits its tambon value",
     ),
-    (
+    _r(
         r"^legacy_dpim_",
-        {
-            "family": "MINING_QUARRY",
-            "sources": "mining-dpim-concessions (2016 snapshot)",
-            "evidence_type": "LEGACY_CONTEXT",
-            "spatial_resolution": _RES["tambon"],
-        },
+        "MINING_QUARRY",
+        "mining-dpim-concessions (2016 snapshot)",
+        "LEGACY_CONTEXT",
+        _RES["tambon"],
     ),
-    (
-        r"^(road_snap_distance_m|routing_basis|routing_config_fingerprint)$",
-        {
-            "family": "ROUTING",
-            "sources": "osm network (M2A cache); config/family-infrastructure.yaml",
-            "evidence_type": "ROUTING_BASIS",
-            "spatial_resolution": _RES["cell"],
-        },
+    _r(
+        r"^(road_snap_distance_m|road_access_context|road_any_network_fragment_distance_m|routing_basis|routing_config_fingerprint)$",
+        "ROUTING",
+        "osm network (M2A cache); config/family-infrastructure.yaml",
+        "ROUTING_BASIS",
+        _RES["cell"],
+        origin="AOI_ANALYSIS_POINT",
     ),
-    (
+    _r(
         r"^(evidence_|scope_)",
-        {
-            "family": "COMPLETENESS",
-            "sources": "derived from the columns of this artifact",
-            "evidence_type": "EVIDENCE_COMPLETENESS_STATE",
-            "spatial_resolution": _RES["none"],
-        },
+        "COMPLETENESS",
+        "derived from the columns of this artifact",
+        "EVIDENCE_COMPLETENESS_STATE",
+        _RES["none"],
     ),
 ]
