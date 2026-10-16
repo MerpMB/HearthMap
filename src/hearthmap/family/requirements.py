@@ -103,12 +103,22 @@ class MajorRoad(_M):
     maximum_baseline_drive_time_to_major_road: Num = UNSET
 
 
+class AccessReq(_M):
+    required: Flag = UNSET
+    importance: Imp = UNSET
+
+
 class RoadAccess(_M):
     major_road: MajorRoad = MajorRoad()
-    tolerate_unpaved_local_access: Flag = UNSET
-    minimum_all_weather_access_expectation: (
-        Unset | Literal["NOT_REQUIRED", "DRY_SEASON_ONLY", "ALL_WEATHER_REQUIRED"]
-    ) = UNSET
+    legal_vehicle_access: AccessReq = (
+        AccessReq()
+    )  # parcel-level legal/legitimate access; never provable from regional data
+    all_weather_vehicle_access: AccessReq = (
+        AccessReq()
+    )  # a normal vehicle year-round; concerns usability, not paving
+    tolerate_unpaved_local_access: Flag = (
+        UNSET  # unpaved/gravel FINAL access acceptable (if it stays usable in the wet season)
+    )
     route_redundancy_importance: Imp = UNSET
 
 
@@ -118,16 +128,27 @@ class Electricity(_M):
 
 
 class Water(_M):
+    importance: Imp = UNSET  # importance of a verified, reliable supply (any acceptable system)
+    must_be_verified_before_purchase: Flag = UNSET
     accept_non_PWA_system_if_field_verified: Flag = UNSET
     require_municipal_or_PWA_service: Flag = UNSET
     well_water_acceptable: Flag = UNSET
 
 
+SUBSTITUTES = Literal["MOBILE_4G", "MOBILE_5G", "FIXED_WIRELESS", "SATELLITE"]
+
+
 class Telecom(_M):
     minimum_requirement: (
-        Unset | Literal["NONE", "MOBILE_VOICE", "MOBILE_DATA", "FIXED_BROADBAND"]
+        Unset | Literal["NONE", "MOBILE_VOICE", "MOBILE_DATA", "FIXED_BROADBAND", "FIXED_FIBER"]
     ) = UNSET
-    verification_stage: Unset | Literal["SCREENING", "SHORTLIST", "PARCEL_PURCHASE"] = UNSET
+    importance: Imp = UNSET
+    verification_stage: (
+        Unset | Literal["SCREENING", "SHORTLIST", "PARCEL_PURCHASE", "BEFORE_PURCHASE"]
+    ) = UNSET
+    substitutes_not_accepted: Unset | list[SUBSTITUTES] = (
+        UNSET  # technologies that do NOT satisfy the requirement
+    )
 
 
 class Utilities(_M):
@@ -140,6 +161,7 @@ class UrbanAccess(_M):
     preferred_drive_time_to_town_services: Num = UNSET
     preferred_drive_time_to_town_services_importance: Imp = UNSET
     absolute_max_drive_time_to_major_city_services: Num = UNSET
+    hard_limit_policy: Unset | Literal["CASE_BY_CASE", "FIXED"] = UNSET
     airport_importance: Imp = UNSET
     shopping_daily_services_importance: Imp = UNSET
 
@@ -156,8 +178,19 @@ class Livability(_M):
     agricultural_surroundings_preference: Imp = UNSET
 
 
+class PurchaseBudget(_M):
+    """Budget for the LAND PURCHASE PRICE only (bare land); never a house-construction budget."""
+
+    preferred_thb: Num = UNSET
+    absolute_max_thb: Num = UNSET
+    importance: Imp = UNSET
+
+
 class Land(_M):
-    budget_thb: Num = UNSET
+    land_purchase_budget: PurchaseBudget = PurchaseBudget()
+    house_construction_budget_thb: Num = (
+        UNSET  # deliberately separate from the land price; not stated
+    )
     preferred_area_rai: Num = UNSET
     minimum_area_rai: Num = UNSET
     maximum_area_rai: Num = UNSET
@@ -166,6 +199,7 @@ class Land(_M):
     )
     willingness_to_improve_drainage: Flag = UNSET
     willingness_to_build_retaining_structures: Flag = UNSET
+    willingness_to_grade_or_fill: Flag = UNSET
 
 
 class ProjectState(_M):
@@ -175,11 +209,20 @@ class ProjectState(_M):
     reason: str
 
 
+class HazardContract(_M):
+    """Hazard (M1E) and preference semantics stay separate: a willingness to engineer a site never changes a hazard action."""
+
+    m1e_actions_immutable: bool
+    site_improvement_willingness_overrides_hazard_actions: bool
+    family_access_offsets_hazard_actions: bool
+
+
 class Requirements(_M):
     schema_version: Literal[1]
     version: str
     status: str
     project_state: ProjectState
+    hazard_contract: HazardContract
     education: Education = Education()
     healthcare: Healthcare = Healthcare()
     redundancy: Redundancy = Redundancy()
@@ -207,7 +250,9 @@ def leaves(model: BaseModel, prefix: str = "") -> list[tuple[str, Any]]:
         p = f"{prefix}{name}"
         if isinstance(v, BaseModel):
             out += leaves(v, p + ".")
-        elif p.startswith(("project_state", "schema_version", "version", "status")):
+        elif p.startswith(
+            ("project_state", "hazard_contract", "schema_version", "version", "status")
+        ):
             continue
         else:
             out.append((p, v))
@@ -351,16 +396,29 @@ def validate_requirements(req: Requirements) -> list[Issue]:
         if _set(r.minimum_count) != _set(r.within_minutes):
             err(p, "minimum_count and within_minutes must be set together")
 
+    hc_ = req.hazard_contract
+    if not hc_.m1e_actions_immutable:
+        err("hazard_contract.m1e_actions_immutable", "M1E hazard actions must stay immutable")
+    if hc_.site_improvement_willingness_overrides_hazard_actions:
+        err("hazard_contract", "willingness to improve a site must never override a hazard action")
+    if hc_.family_access_offsets_hazard_actions:
+        err("hazard_contract", "family access must never offset a hazard action")
+
     ra = req.road_access
     check_obj("road_access.major_road", ra.major_road)
-    if (
-        ra.tolerate_unpaved_local_access is True
-        and ra.minimum_all_weather_access_expectation == "ALL_WEATHER_REQUIRED"
-    ):
-        warn(
-            "road_access",
-            "tolerating unpaved local access while requiring all-weather access: confirm what is meant",
-        )
+    pair(
+        "road_access.legal_vehicle_access",
+        ra.legal_vehicle_access.required,
+        ra.legal_vehicle_access.importance,
+        flag=True,
+    )
+    pair(
+        "road_access.all_weather_vehicle_access",
+        ra.all_weather_vehicle_access.required,
+        ra.all_weather_vehicle_access.importance,
+        flag=True,
+    )
+    # unpaved final access + all-weather access are NOT contradictory: all-weather concerns wet-season usability, not paving
 
     w = req.utilities.water
     if (
@@ -371,7 +429,36 @@ def validate_requirements(req: Requirements) -> list[Issue]:
     if w.require_municipal_or_PWA_service is True and w.well_water_acceptable is True:
         err("utilities.water", "requires municipal/PWA service but also accepts well water")
 
+    wi = req.utilities.water
+    if wi.importance is Importance.IRRELEVANT and (
+        wi.must_be_verified_before_purchase is True
+        or wi.accept_non_PWA_system_if_field_verified is True
+    ):
+        err("utilities.water", "importance IRRELEVANT but water requirements are set")
+    if wi.must_be_verified_before_purchase is True and not _set(wi.importance):
+        warn("utilities.water", "verification required but no importance is set")
+    tc = req.utilities.telecom
+    if tc.importance is Importance.IRRELEVANT and _set(tc.minimum_requirement):
+        err("utilities.telecom", "importance IRRELEVANT but a minimum requirement is set")
+    if tc.importance in (Importance.MUST, Importance.STRONG_PREFERENCE) and not _set(
+        tc.minimum_requirement
+    ):
+        warn(
+            "utilities.telecom",
+            f"importance {tc.importance.value} but no minimum requirement is set yet",
+        )
+    if _set(tc.minimum_requirement) and not _set(tc.importance):
+        warn("utilities.telecom", "minimum requirement set without an importance")
+
     ua = req.urban_access
+    if ua.hard_limit_policy == "CASE_BY_CASE" and _set(
+        ua.absolute_max_drive_time_to_major_city_services
+    ):
+        err("urban_access", "hard_limit_policy CASE_BY_CASE contradicts a fixed absolute maximum")
+    if ua.hard_limit_policy == "FIXED" and not _set(
+        ua.absolute_max_drive_time_to_major_city_services
+    ):
+        warn("urban_access", "hard_limit_policy FIXED but no absolute maximum is set yet")
     pair(
         "urban_access.preferred_drive_time_to_town_services",
         ua.preferred_drive_time_to_town_services,
@@ -405,8 +492,19 @@ def validate_requirements(req: Requirements) -> list[Issue]:
             err("land.preferred_area_rai", "preferred area is below the minimum")
         if _set(ld.maximum_area_rai) and ld.preferred_area_rai > ld.maximum_area_rai:
             err("land.preferred_area_rai", "preferred area is above the maximum")
-    if _set(ld.budget_thb) and ld.budget_thb <= 0:
-        err("land.budget_thb", "budget must be positive")
+    b = ld.land_purchase_budget
+    for name in ("preferred_thb", "absolute_max_thb"):
+        v = getattr(b, name)
+        if _set(v) and v <= 0:
+            err(f"land.land_purchase_budget.{name}", "a land price must be positive")
+    if _set(b.preferred_thb) and _set(b.absolute_max_thb) and b.preferred_thb > b.absolute_max_thb:
+        err(
+            "land.land_purchase_budget",
+            f"preferred {b.preferred_thb} > absolute maximum {b.absolute_max_thb}",
+        )
+    check_obj("land.land_purchase_budget", b)
+    if _set(ld.house_construction_budget_thb) and ld.house_construction_budget_thb <= 0:
+        err("land.house_construction_budget_thb", "a construction budget must be positive")
     return issues
 
 
@@ -426,6 +524,14 @@ CAPABILITY_STATUSES = (
     "PARTIALLY_SUPPORTED",
     "NOT_SUPPORTED",
 )
+# Where verification would have to happen; NOT_SUPPORTED is not a failure of the requirement.
+EVIDENCE_STAGES = (
+    "REGIONAL_EVIDENCE",
+    "EVIDENCE_MISSING",
+    "PARCEL_VERIFICATION",
+    "FIELD_VERIFICATION",
+    "USER_REQUIREMENT_ONLY",
+)
 
 
 def load_capability(path: Path = CAPABILITY_PATH) -> dict[str, Any]:
@@ -435,6 +541,8 @@ def load_capability(path: Path = CAPABILITY_PATH) -> dict[str, Any]:
             raise ValueError(f"{k}: unknown capability status {v['status']}")
         if not v.get("reason"):
             raise ValueError(f"{k}: a capability needs a reason")
+        if v.get("evidence_stage", "REGIONAL_EVIDENCE") not in EVIDENCE_STAGES:
+            raise ValueError(f"{k}: unknown evidence stage {v['evidence_stage']}")
     return cap
 
 
@@ -448,7 +556,10 @@ def _capability_key(path: str) -> str:
     if parts[0] == "redundancy":
         return ".".join(parts[:2])
     if parts[0] == "road_access":
-        return ".".join(parts[:2]) if parts[1] == "major_road" else path
+        keyed = ("major_road", "legal_vehicle_access", "all_weather_vehicle_access")
+        return ".".join(parts[:2]) if parts[1] in keyed else path
+    if parts[0] == "land" and parts[1] == "land_purchase_budget":
+        return ".".join(parts[:2])
     if parts[0] == "utilities":
         return ".".join(parts[:2])
     if parts[0] == "urban_access":
@@ -466,14 +577,14 @@ def evidence_matrix(req: Requirements, cap: dict[str, Any]) -> list[dict[str, An
         if c is None:
             raise KeyError(f"no data-capability entry for requirement {path} (expected {key})")
         rows.append({
-            "requirement_path": path, "kind": "USER_REQUIREMENT", "user_requirement_value": value if not hasattr(value, "value") else value.value,
-            "data_capability": c["status"], "capability_reason": c["reason"], "evidence_columns": "|".join(c.get("evidence_columns", [])),
+            "requirement_path": path, "kind": "USER_REQUIREMENT", "user_requirement_value": "|".join(value) if isinstance(value, list) else value.value if hasattr(value, "value") else value,
+            "data_capability": c["status"], "evidence_stage": c.get("evidence_stage", "REGIONAL_EVIDENCE"), "capability_reason": c["reason"], "evidence_columns": "|".join(c.get("evidence_columns", [])),
             "limitations": " ".join(c.get("limitations", [])), "evaluation_rule": EVALUATION_RULE, "needs_user_input": value == UNSET,
         })  # fmt: skip
     for key, c in cap.get("capability_only", {}).items():
         rows.append({
             "requirement_path": key, "kind": "CAPABILITY_ONLY_FUTURE_VERIFICATION", "user_requirement_value": "n/a",
-            "data_capability": c["status"], "capability_reason": c["reason"], "evidence_columns": "|".join(c.get("evidence_columns", [])),
+            "data_capability": c["status"], "evidence_stage": c.get("evidence_stage", "REGIONAL_EVIDENCE"), "capability_reason": c["reason"], "evidence_columns": "|".join(c.get("evidence_columns", [])),
             "limitations": " ".join(c.get("limitations", [])), "evaluation_rule": EVALUATION_RULE, "needs_user_input": False,
         })  # fmt: skip
     return rows

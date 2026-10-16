@@ -13,6 +13,7 @@ import yaml
 from hearthmap.family.requirements import (
     EVALUATION_RULE,
     UNSET,
+    Importance,
     RequirementConflict,
     Requirements,
     check_requirements,
@@ -54,7 +55,7 @@ def test_project_state_allows_calibration_and_forbids_scoring():
         "allowed": False
     }
     assert "education register remains incomplete" in ps.reason
-    assert r.status == "PARTIALLY_POPULATED_INPUT_PASS_1"
+    assert r.status == "PARTIALLY_POPULATED_INPUT_PASS_2"
 
 
 PASS_1 = {
@@ -83,17 +84,42 @@ PASS_1 = {
 }
 
 
+PASS_2 = {
+    "land.land_purchase_budget.absolute_max_thb": 500000,
+    "land.land_purchase_budget.importance": "MUST",
+    "road_access.legal_vehicle_access.required": True,
+    "road_access.legal_vehicle_access.importance": "MUST",
+    "road_access.all_weather_vehicle_access.required": True,
+    "road_access.all_weather_vehicle_access.importance": "MUST",
+    "road_access.tolerate_unpaved_local_access": True,
+    "utilities.water.importance": "MUST",
+    "utilities.water.must_be_verified_before_purchase": True,
+    "utilities.water.accept_non_PWA_system_if_field_verified": True,
+    "utilities.water.require_municipal_or_PWA_service": False,
+    "utilities.telecom.minimum_requirement": "FIXED_FIBER",
+    "utilities.telecom.importance": "MUST",
+    "utilities.telecom.verification_stage": "BEFORE_PURCHASE",
+    "utilities.telecom.substitutes_not_accepted": ["MOBILE_4G", "MOBILE_5G", "FIXED_WIRELESS", "SATELLITE"],
+    "urban_access.hard_limit_policy": "CASE_BY_CASE",
+    "land.willingness_to_improve_drainage": True,
+    "land.willingness_to_build_retaining_structures": True,
+    "land.willingness_to_grade_or_fill": True,
+}  # fmt: skip
+EXPECTED = PASS_1 | PASS_2
+
+
 def plain(v):
     return v.value if hasattr(v, "value") else v
 
 
-def test_only_the_explicit_input_pass_1_decisions_are_set():
+def test_only_the_explicit_input_decisions_of_passes_1_and_2_are_set():
     r = load_requirements()
     ls = leaves(r)
-    assert len(ls) == 67
+    assert len(ls) == 79
     got = {p: plain(v) for p, v in ls if v != UNSET}
-    assert got == PASS_1  # exactly the decisions given, nothing inferred
-    assert r.status == "PARTIALLY_POPULATED_INPUT_PASS_1"
+    assert got == EXPECTED  # exactly the decisions given, nothing inferred
+    assert len(PASS_1) == 22 and len(PASS_2) == 19
+    assert r.status == "PARTIALLY_POPULATED_INPUT_PASS_2"
     assert check_requirements(r) == []  # consistent and no warnings
 
 
@@ -108,12 +134,14 @@ def test_everything_not_decided_stays_unset():
         "redundancy.number_of_primary_schools_within_time.minimum_count", "redundancy.number_of_secondary_schools_within_time.minimum_count",
         "redundancy.number_of_hospitals_within_time.minimum_count", "urban_access.absolute_max_drive_time_to_major_city_services",
         "urban_access.airport_importance", "urban_access.shopping_daily_services_importance",
-        "road_access.tolerate_unpaved_local_access", "road_access.minimum_all_weather_access_expectation",
-        "road_access.major_road.maximum_baseline_drive_time_to_major_road", "utilities.electricity.must_be_verified_before_purchase",
-        "utilities.water.well_water_acceptable", "utilities.telecom.minimum_requirement", "livability.preferred_population_density",
+        "road_access.major_road.importance", "road_access.major_road.maximum_baseline_drive_time_to_major_road",
+        "road_access.route_redundancy_importance",
+        "utilities.electricity.must_be_verified_before_purchase", "utilities.electricity.tolerate_regional_uncertainty_during_screening",
+        "utilities.water.well_water_acceptable", "livability.preferred_population_density",
         "livability.tolerate_tourism_activity", "livability.tolerate_nightlife", "livability.industrial_nuisance_tolerance",
-        "livability.agricultural_surroundings_preference", "land.budget_thb", "land.preferred_area_rai", "land.minimum_area_rai",
-        "land.maximum_area_rai", "land.terrain_tolerance",
+        "livability.agricultural_surroundings_preference",
+        "land.land_purchase_budget.preferred_thb", "land.house_construction_budget_thb",
+        "land.preferred_area_rai", "land.minimum_area_rai", "land.maximum_area_rai", "land.terrain_tolerance",
     ]  # fmt: skip
     assert set(must_stay) <= unset
     assert not any(
@@ -204,7 +232,8 @@ def test_required_sections_and_fields_exist():
     }
     assert {
         "tolerate_unpaved_local_access",
-        "minimum_all_weather_access_expectation",
+        "legal_vehicle_access",
+        "all_weather_vehicle_access",
         "route_redundancy_importance",
         "major_road",
     } == set(type(r.road_access).model_fields)
@@ -218,7 +247,9 @@ def test_required_sections_and_fields_exist():
         "industrial_nuisance_tolerance",
     } <= set(type(r.livability).model_fields)
     assert {
-        "budget_thb",
+        "land_purchase_budget",
+        "house_construction_budget_thb",
+        "willingness_to_grade_or_fill",
         "terrain_tolerance",
         "willingness_to_improve_drainage",
         "willingness_to_build_retaining_structures",
@@ -348,7 +379,23 @@ def test_other_contradictions_fail_and_nothing_is_normalised():
             )
         )
     )
-    assert any("negative value" in e for e in errors(with_(land__budget_thb=-5)))
+    assert any("negative value" in e for e in errors(with_(land__house_construction_budget_thb=-5)))
+    assert any(
+        "preferred 600000.0 > absolute maximum" in e
+        for e in errors(
+            with_(
+                land__land_purchase_budget={
+                    "preferred_thb": 600000,
+                    "absolute_max_thb": 500000,
+                    "importance": "MUST",
+                }
+            )
+        )
+    )
+    assert any(
+        "CASE_BY_CASE contradicts" in e
+        for e in errors(with_(urban_access__absolute_max_drive_time_to_major_city_services=60))
+    )
     bad = with_(
         education__primary={
             "importance": "MUST",
@@ -393,7 +440,7 @@ def test_matrix_covers_every_requirement_and_keeps_three_concepts_separate():
     req, cap = load_requirements(), load_capability()
     rows = evidence_matrix(req, cap)
     reqrows = [r for r in rows if r["kind"] == "USER_REQUIREMENT"]
-    assert len(reqrows) == len(leaves(req)) == 67
+    assert len(reqrows) == len(leaves(req)) == 79
     assert {r["requirement_path"] for r in reqrows} == {p for p, _ in leaves(req)}
     assert all(
         r["evaluation_rule"] == EVALUATION_RULE for r in rows
@@ -470,7 +517,8 @@ def test_capability_statuses_are_honest_about_current_evidence():
     assert cap["healthcare.hospital"]["status"] == "SUPPORTED_WITH_LIMITATIONS"
     for k in (
         "road_access.tolerate_unpaved_local_access",
-        "road_access.minimum_all_weather_access_expectation",
+        "road_access.legal_vehicle_access",
+        "road_access.all_weather_vehicle_access",
         "utilities.electricity",
         "utilities.water",
         "utilities.telecom",
@@ -530,3 +578,199 @@ def test_m2b0_has_no_scoring_code_and_reads_no_grid():
         "rasterio",
     }  # nothing here can touch cells
     assert "def score" not in src and "rank_" not in src
+
+
+# -- input pass 2 --------------------------------------------------------------------------------------
+def test_land_ceiling_is_the_land_purchase_price_only_and_invents_no_preferred_budget():
+    b = load_requirements().land
+    assert (
+        b.land_purchase_budget.absolute_max_thb == 500000
+        and b.land_purchase_budget.importance == Importance.MUST
+    )
+    assert (
+        b.land_purchase_budget.preferred_thb == UNSET
+    )  # no preferred budget below the ceiling was invented
+    assert (
+        b.house_construction_budget_thb == UNSET
+    )  # the ceiling says nothing about construction cost
+    assert (b.preferred_area_rai, b.minimum_area_rai, b.maximum_area_rai) == (
+        UNSET,
+        UNSET,
+        UNSET,
+    )  # no rai/ngan inferred
+    assert "budget_thb" not in {
+        p.split(".")[-1] for p, _ in leaves(load_requirements())
+    }  # the ambiguous old field is gone
+    assert "BARE LAND" in Path("config/family-requirements.yaml").read_text("utf-8")
+
+
+def test_access_requirements_are_must_but_not_provable_regionally():
+    r = load_requirements().road_access
+    assert (
+        r.legal_vehicle_access.required is True
+        and r.legal_vehicle_access.importance == Importance.MUST
+    )
+    assert (
+        r.all_weather_vehicle_access.required is True
+        and r.all_weather_vehicle_access.importance == Importance.MUST
+    )
+    assert (
+        r.tolerate_unpaved_local_access is True
+    )  # an unpaved final access is acceptable if it stays usable
+    assert (
+        r.major_road.maximum_baseline_drive_time_to_major_road == UNSET
+    )  # no major-road threshold inferred
+    rows = {
+        x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
+    }
+    for k in (
+        "road_access.legal_vehicle_access.required",
+        "road_access.all_weather_vehicle_access.required",
+    ):
+        assert (
+            rows[k]["data_capability"] == "NOT_SUPPORTED"
+            and rows[k]["evidence_stage"] == "PARCEL_VERIFICATION"
+        )
+    assert (
+        rows["road_access.tolerate_unpaved_local_access"]["evidence_stage"] == "FIELD_VERIFICATION"
+    )
+    assert not [
+        i for i in validate_requirements(load_requirements()) if i.path.startswith("road_access")
+    ]  # unpaved + all-weather is not a contradiction
+
+
+def test_water_accepts_non_pwa_only_after_field_verification_and_well_stays_unset():
+    w = load_requirements().utilities.water
+    assert (
+        w.require_municipal_or_PWA_service is False
+        and w.accept_non_PWA_system_if_field_verified is True
+    )
+    assert w.must_be_verified_before_purchase is True and w.importance == Importance.MUST
+    assert w.well_water_acceptable == UNSET  # not inferred from accepting village water
+    rows = {
+        x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
+    }
+    r = rows["utilities.water.accept_non_PWA_system_if_field_verified"]
+    assert r["data_capability"] == "NOT_SUPPORTED" and r["evidence_stage"] == "FIELD_VERIFICATION"
+    assert (
+        "NOT confirmation" in r["capability_reason"]
+    )  # outside PWA never becomes 'acceptable water confirmed'
+
+
+def test_fiber_is_a_must_that_missing_evidence_cannot_weaken():
+    t = load_requirements().utilities.telecom
+    assert (
+        t.minimum_requirement == "FIXED_FIBER"
+        and t.importance == Importance.MUST
+        and t.verification_stage == "BEFORE_PURCHASE"
+    )
+    assert (
+        t.minimum_requirement != "FIXED_BROADBAND"
+    )  # fixed fiber is distinguished from generic broadband
+    assert set(t.substitutes_not_accepted) == {
+        "MOBILE_4G",
+        "MOBILE_5G",
+        "FIXED_WIRELESS",
+        "SATELLITE",
+    }
+    rows = {
+        x["requirement_path"]: x for x in evidence_matrix(load_requirements(), load_capability())
+    }
+    m = rows["utilities.telecom.minimum_requirement"]
+    assert (
+        m["data_capability"] == "NOT_SUPPORTED" and m["user_requirement_value"] == "FIXED_FIBER"
+    )  # evidence gap, requirement intact
+    assert rows["utilities.telecom.importance"]["user_requirement_value"] == "MUST"
+    assert any(
+        "IRRELEVANT but a minimum requirement is set" in e
+        for e in errors(
+            with_(
+                utilities__telecom={
+                    "minimum_requirement": "FIXED_FIBER",
+                    "importance": "IRRELEVANT",
+                }
+            )
+        )
+    )
+
+
+def test_electricity_stays_unset_and_town_limit_is_case_by_case():
+    r = load_requirements()
+    assert (
+        r.utilities.electricity.must_be_verified_before_purchase == UNSET
+        and r.utilities.electricity.tolerate_regional_uncertainty_during_screening == UNSET
+    )
+    ua = r.urban_access
+    assert (
+        ua.preferred_drive_time_to_town_services == 35
+        and ua.preferred_drive_time_to_town_services_importance == Importance.STRONG_PREFERENCE
+    )  # pass 1 preserved
+    assert (
+        ua.absolute_max_drive_time_to_major_city_services == UNSET
+        and ua.hard_limit_policy == "CASE_BY_CASE"
+    )  # 'case by case' is not a number
+    rows = {x["requirement_path"]: x for x in evidence_matrix(r, load_capability())}
+    assert rows["urban_access.hard_limit_policy"]["evidence_stage"] == "USER_REQUIREMENT_ONLY"
+
+
+def test_site_improvement_willingness_is_permissive_user_requirement_only_and_never_overrides_hazards():
+    r = load_requirements()
+    land = r.land
+    assert (
+        land.willingness_to_improve_drainage is True
+        and land.willingness_to_build_retaining_structures is True
+        and land.willingness_to_grade_or_fill is True
+    )
+    assert land.terrain_tolerance == UNSET  # not inferred from willingness to improve
+    assert not any(
+        "allowance" in p or "improvement_budget" in p for p, _ in leaves(r)
+    )  # no financial allowance invented
+    hc = r.hazard_contract
+    assert (
+        hc.m1e_actions_immutable
+        and not hc.site_improvement_willingness_overrides_hazard_actions
+        and not hc.family_access_offsets_hazard_actions
+    )
+    rows = {x["requirement_path"]: x for x in evidence_matrix(r, load_capability())}
+    for k in (
+        "land.willingness_to_improve_drainage",
+        "land.willingness_to_build_retaining_structures",
+        "land.willingness_to_grade_or_fill",
+    ):
+        assert (
+            rows[k]["evidence_stage"] == "USER_REQUIREMENT_ONLY"
+            and rows[k]["user_requirement_value"] is True
+        )
+    for field in (
+        "site_improvement_willingness_overrides_hazard_actions",
+        "family_access_offsets_hazard_actions",
+    ):
+        bad = base()
+        bad["hazard_contract"][field] = True
+        with pytest.raises(RequirementConflict):
+            check_requirements(Requirements(**bad))
+    bad = base()
+    bad["hazard_contract"]["m1e_actions_immutable"] = False
+    with pytest.raises(RequirementConflict):
+        check_requirements(Requirements(**bad))
+
+
+def test_not_supported_is_not_failure_and_no_hazard_columns_enter_the_matrix():
+    rows = evidence_matrix(load_requirements(), load_capability())
+    assert all(
+        r["evaluation_rule"] == EVALUATION_RULE for r in rows
+    )  # every evaluation rule stays inactive
+    assert not any(
+        "flood" in r["requirement_path"]
+        or "landslide" in r["requirement_path"]
+        or "hazard" in r["requirement_path"]
+        for r in rows
+    )
+    assert {r["evidence_stage"] for r in rows} <= {
+        "REGIONAL_EVIDENCE",
+        "EVIDENCE_MISSING",
+        "PARCEL_VERIFICATION",
+        "FIELD_VERIFICATION",
+        "USER_REQUIREMENT_ONLY",
+    }
+    assert [i for i in validate_requirements(load_requirements()) if i.severity == "ERROR"] == []

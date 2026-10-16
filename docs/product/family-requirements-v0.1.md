@@ -3,7 +3,7 @@
 Status: **calibration contract only.** Config: [`config/family-requirements.yaml`](../../config/family-requirements.yaml) (what the family wants),
 [`config/family-evidence-capability.yaml`](../../config/family-evidence-capability.yaml) (what current evidence can evaluate); code:
 `hearthmap.family.requirements`; matrix: `outputs/m2b0/requirement-evidence-matrix.csv` (`python scripts/m2b0/build_matrix.py`).
-**No cell is scored, no province is ranked, no recommendation exists.** Input pass 1 (below) has populated the first explicit decisions; M2B.0 ends `READY_FOR_NEXT_USER_REQUIREMENT_INPUT`.
+**No cell is scored, no province is ranked, no recommendation exists.** Input passes 1 and 2 (below) have populated the explicit decisions so far; M2B.0 ends `READY_FOR_NEXT_USER_REQUIREMENT_INPUT`.
 
 ## Project state
 
@@ -49,6 +49,35 @@ number of schools was requested, so every `minimum_choices_*` and redundancy cou
 compared, and a location with a single institution in the preferred band is not failed or penalised. Everything else (university, vocational, airport,
 utilities, road surface, all-weather access, telecom, land, density range, school quality, emergency capability) remains `UNSET`.
 
+## Input pass 2 (explicit user decisions only)
+
+| Requirement | Value | Importance | Evidence support / stage |
+|---|---|---|---|
+| Land purchase budget (**bare land price only**) | absolute max THB 500,000; preferred UNSET | MUST | NOT_SUPPORTED / evidence missing (no land-price data) |
+| House-construction budget | UNSET (separate from the land price; not stated) | - | NOT_SUPPORTED / user requirement only |
+| Parcel area (min / preferred / max) | UNSET (usable area to be considered separately from nominal area later) | - | NOT_SUPPORTED / parcel verification |
+| Legal vehicle access | required | MUST | NOT_SUPPORTED regionally / parcel verification |
+| All-weather vehicle access (year-round, normal vehicle) | required | MUST | NOT_SUPPORTED regionally / parcel verification |
+| Unpaved final access | acceptable (if it stays usable in the wet season) | - | NOT_SUPPORTED / field verification |
+| Major-road proximity | UNSET (no time or distance given) | - | PARTIALLY_SUPPORTED (distance only) |
+| Water | PWA **not** required; a village/municipal/local-government system is acceptable **only if field-verified as reliable** before purchase; well/groundwater UNSET | MUST (verified supply) | NOT_SUPPORTED / field verification (outside PWA is not confirmed water) |
+| Telecom | **fixed fiber** (not 4G, 5G, fixed wireless or satellite), verified before purchase | MUST | NOT_SUPPORTED (no spatial fiber layer); the evidence gap never weakens the MUST |
+| Electricity | UNSET (nothing confirmed in this pass) | - | NOT_SUPPORTED / parcel verification |
+| Town services drive time | preferred 35 min (pass 1); hard maximum policy `CASE_BY_CASE`; `absolute_max_drive_time_to_major_city_services` UNSET | STRONG_PREFERENCE | NOT_SUPPORTED / user requirement only |
+| Site improvement (drainage, retaining structures, grading/fill) | willing (true), no project-level limit and no financial allowance stated | - | NOT_SUPPORTED / user requirement only |
+| Parcel terrain / slope tolerance | UNSET (not inferred from willingness to improve) | - | PARTIALLY_SUPPORTED |
+
+`NOT_SUPPORTED` describes the data, never the requirement: it is not a failure, and the matrix has an `evidence_stage` column
+(`REGIONAL_EVIDENCE | EVIDENCE_MISSING | PARCEL_VERIFICATION | FIELD_VERIFICATION | USER_REQUIREMENT_ONLY`) saying where verification must happen.
+
+**Hazard contract (unchanged):** `hazard_contract` in the config states that M1E hazard actions are immutable, that willingness to improve a site never
+overrides them, and that family access never offsets them (validation fails otherwise). Willingness to build drainage does not cancel recurrent-flood
+evidence, retaining walls do not cancel landslide avoidance, and engineering a site does not turn a severe hazard signal into suitability.
+
+Remaining UNSET groups: university / vocational / primary care importance; school and hospital redundancy counts and all minimum-choice numbers;
+airport, shopping, absolute major-city limit; major-road and route-redundancy values; electricity; well water; livability beyond the urban-core
+preference (density range, tourism, nightlife, industrial nuisance, agricultural surroundings); preferred land budget and all parcel-area values; terrain tolerance.
+
 ## How to fill in requirements
 
 Unstated values are `UNSET` ("the owner has not decided"), not a default. Fill values with the owner; invented defaults are not product truth.
@@ -70,7 +99,7 @@ accepting non-PWA or well water; minimum area above maximum (or preferred outsid
 `URBAN` density; enabling scoring. Warnings (not errors): `MUST`/`STRONG_PREFERENCE` with no threshold yet; thresholds without an importance;
 tolerating unpaved access while requiring all-weather access. A misspelt key is rejected rather than defaulted.
 
-## Evidence sufficiency (67 requirement leaves + 3 capability-only questions)
+## Evidence sufficiency (79 requirement leaves + 3 capability-only questions)
 
 | Group | Current capability | Why |
 |---|---|---|

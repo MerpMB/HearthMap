@@ -3,7 +3,7 @@
 # This file never changes what the family wants and activates no evaluation rule (EVALUATION_RULE is NOT_ACTIVE everywhere).
 # evidence_columns name columns of outputs/m2a2/family-infrastructure-evidence.parquet (checked by a test when the artifact exists).
 schema_version: 1
-version: "0.1.0"
+version: "0.1.1"
 evidence_artifact: outputs/m2a2/family-infrastructure-evidence.parquet
 evaluation_rule: NOT_ACTIVE_UNTIL_SCORING_MILESTONE
 
@@ -75,14 +75,22 @@ capabilities:
     limitations: ["Straight-line distance, not drive time; a drive-time-to-major-road layer would need an extra routing run."]
   road_access.tolerate_unpaved_local_access:
     status: NOT_SUPPORTED
-    reason: Road surface is not in the OSM extract used (tracks and services are absent and surface is not recorded).
+    evidence_stage: FIELD_VERIFICATION
+    reason: Road surface is not in the OSM extract used (tracks and services are absent and surface is not recorded); the final access road must be inspected.
     evidence_columns: []
-    limitations: ["Cannot show whether the last stretch is paved."]
-  road_access.minimum_all_weather_access_expectation:
+    limitations: ["User requirement is permissive (unpaved is acceptable if it stays usable in the wet season); it cannot be verified regionally."]
+  road_access.legal_vehicle_access:
     status: NOT_SUPPORTED
-    reason: BASELINE_DRIVE_TIME is free-flow; no rainy-season, flooding or surface information exists to prove all-weather access.
+    evidence_stage: PARCEL_VERIFICATION
+    reason: Legal / legitimate parcel access is a parcel-level legal fact (title, easement, public road status); no cadastral or road-ownership data is available regionally.
     evidence_columns: []
-    limitations: ["M2A cannot verify all-weather access."]
+    limitations: ["NOT_SUPPORTED is not a failure of the requirement: it must be verified for every shortlisted parcel."]
+  road_access.all_weather_vehicle_access:
+    status: NOT_SUPPORTED
+    evidence_stage: PARCEL_VERIFICATION
+    reason: BASELINE_DRIVE_TIME is free-flow; no wet-season, flooding or surface information exists to prove year-round vehicle access regionally.
+    evidence_columns: []
+    limitations: ["Needs a wet-season site visit or local evidence; regional flood/landslide context (M1E) stays independent."]
   road_access.route_redundancy_importance:
     status: NOT_SUPPORTED
     reason: No alternative-route or network-redundancy metric was computed.
@@ -90,17 +98,20 @@ capabilities:
     limitations: ["Would need a routing analysis (second independent route)."]
   utilities.electricity:
     status: NOT_SUPPORTED
+    evidence_stage: PARCEL_VERIFICATION
     reason: PEA Power Map has no verified machine-readable source; every cell is NOT_ASSESSED and parcel verification is always required.
     evidence_columns: [electricity_service_potential, electricity_parcel_verification_required]
     limitations: ["Planning information from PEA would never guarantee service."]
   utilities.water:
     status: NOT_SUPPORTED
-    reason: No PWA service-area polygons are published; every cell is NON_PWA_OR_UNKNOWN_SERVICE, which is not 'no water'.
+    evidence_stage: FIELD_VERIFICATION
+    reason: No PWA service-area polygons are published; every cell is NON_PWA_OR_UNKNOWN_SERVICE, which is not 'no water' and is NOT confirmation that an acceptable non-PWA system exists. Acceptance of a village/municipal system depends on field verification of its reliability.
     evidence_columns: [water_service_context, water_service_verification_required]
     limitations: ["Outside PWA is not absence of water; field verification is required."]
   utilities.telecom:
     status: NOT_SUPPORTED
-    reason: Telecom is DEFERRED; NBTC publishes aggregates, not spatial coverage.
+    evidence_stage: PARCEL_VERIFICATION
+    reason: No reliable spatial fixed-fiber coverage layer exists (telecom is DEFERRED; NBTC publishes aggregates, not spatial coverage; 4G/5G, fixed wireless and satellite do not satisfy a fiber requirement). Missing evidence never weakens the MUST.
     evidence_columns: [telecom_evidence, telecom_resolution]
     limitations: ["Province-level shares are not grid coverage."]
   urban_access.preferred_drive_time_to_town_services:
@@ -111,6 +122,12 @@ capabilities:
   urban_access.preferred_drive_time_to_town_services_importance:
     status: NOT_SUPPORTED
     reason: Importance of an item that cannot yet be evaluated (no town-services layer).
+    evidence_columns: []
+    limitations: []
+  urban_access.hard_limit_policy:
+    status: NOT_SUPPORTED
+    evidence_stage: USER_REQUIREMENT_ONLY
+    reason: A decision policy (case by case), not an evidence question.
     evidence_columns: []
     limitations: []
   urban_access.absolute_max_drive_time_to_major_city_services:
@@ -163,23 +180,33 @@ capabilities:
     reason: No land-use / agricultural-surroundings layer has been acquired.
     evidence_columns: []
     limitations: []
-  land.budget_thb:
+  land.land_purchase_budget:
     status: NOT_SUPPORTED
-    reason: No land-price evidence has been acquired.
+    evidence_stage: EVIDENCE_MISSING
+    reason: No land-price evidence has been acquired, so a THB 500,000 bare-land ceiling cannot be evaluated; the ceiling concerns the land purchase price only and says nothing about house construction cost.
+    evidence_columns: []
+    limitations: ["NOT_SUPPORTED is not a failure of the requirement."]
+  land.house_construction_budget_thb:
+    status: NOT_SUPPORTED
+    evidence_stage: USER_REQUIREMENT_ONLY
+    reason: Not stated by the owner and not an evidence question here; deliberately separate from the land price.
     evidence_columns: []
     limitations: []
   land.preferred_area_rai:
     status: NOT_SUPPORTED
+    evidence_stage: PARCEL_VERIFICATION
     reason: Area-level (500 m cell) evidence cannot evaluate parcel size; parcels are out of scope until later.
     evidence_columns: []
     limitations: []
   land.minimum_area_rai:
     status: NOT_SUPPORTED
+    evidence_stage: PARCEL_VERIFICATION
     reason: Parcel size is a parcel-level attribute.
     evidence_columns: []
     limitations: []
   land.maximum_area_rai:
     status: NOT_SUPPORTED
+    evidence_stage: PARCEL_VERIFICATION
     reason: Parcel size is a parcel-level attribute.
     evidence_columns: []
     limitations: []
@@ -189,15 +216,23 @@ capabilities:
     evidence_columns: []
     limitations: ["Hazard-integration artifacts (outputs/m1b, outputs/m1e) hold slope and landslide context; they are not joined here and never act as a score."]
   land.willingness_to_improve_drainage:
-    status: PARTIALLY_SUPPORTED
-    reason: M1E records flood and landslide verification actions per cell; no engineering feasibility or cost evidence exists.
+    status: NOT_SUPPORTED
+    evidence_stage: USER_REQUIREMENT_ONLY
+    reason: A permissive tolerance (willing, no project-level limit or allowance stated), not an evidence question. It never cancels recurrent-flood or other hazard evidence.
     evidence_columns: []
-    limitations: ["Hazard actions stay independent and are never offset by family access."]
+    limitations: ["Hazard actions (M1E) stay independent; no engineering feasibility or cost evidence exists."]
   land.willingness_to_build_retaining_structures:
-    status: PARTIALLY_SUPPORTED
-    reason: M1E records landslide/terrain verification context; no geotechnical or cost evidence exists.
+    status: NOT_SUPPORTED
+    evidence_stage: USER_REQUIREMENT_ONLY
+    reason: A permissive tolerance (willing, no project-level limit or allowance stated), not an evidence question. It never cancels landslide avoidance or other hazard evidence.
     evidence_columns: []
-    limitations: ["Parcel site investigation is always required."]
+    limitations: ["Hazard actions (M1E) stay independent; parcel geotechnical investigation is always required."]
+  land.willingness_to_grade_or_fill:
+    status: NOT_SUPPORTED
+    evidence_stage: USER_REQUIREMENT_ONLY
+    reason: A permissive tolerance (willing, no project-level limit or allowance stated), not an evidence question. Willingness to improve a site does not make a severe hazard signal acceptable.
+    evidence_columns: []
+    limitations: ["No financial allowance is invented."]
 
 # Questions that are not (yet) user requirements but must not be silently assumed answered.
 capability_only:

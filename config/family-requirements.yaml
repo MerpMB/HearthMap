@@ -10,8 +10,8 @@
 #   MUST | STRONG_PREFERENCE | PREFERENCE | NICE_TO_HAVE | IRRELEVANT
 # minutes are BASELINE_DRIVE_TIME (free-flow class speeds), not real commute time.
 schema_version: 1
-version: "0.1.1"
-status: PARTIALLY_POPULATED_INPUT_PASS_1
+version: "0.1.2"
+status: PARTIALLY_POPULATED_INPUT_PASS_2
 
 project_state:
   family_infrastructure_evidence:
@@ -23,6 +23,13 @@ project_state:
   family_suitability_scoring:
     allowed: false
   reason: current education register remains incomplete
+
+# Hazard (M1E) semantics stay separate from preferences: a willingness to engineer or improve a site never overrides, cancels or
+# softens a hazard action (e.g. DEPRIORITIZE, flood avoidance, landslide avoidance), and family access never offsets one.
+hazard_contract:
+  m1e_actions_immutable: true
+  site_improvement_willingness_overrides_hazard_actions: false
+  family_access_offsets_hazard_actions: false
 
 education:
   kindergarten:
@@ -82,28 +89,39 @@ redundancy:   # INPUT PASS 1: the owner wants no fixed minimum number of schools
 road_access:
   major_road:
     importance: UNSET
-    maximum_baseline_drive_time_to_major_road: UNSET
-  tolerate_unpaved_local_access: UNSET          # true | false
-  minimum_all_weather_access_expectation: UNSET # NOT_REQUIRED | DRY_SEASON_ONLY | ALL_WEATHER_REQUIRED
+    maximum_baseline_drive_time_to_major_road: UNSET   # no major-road time or distance was given; none is inferred
+  # INPUT PASS 2 (delegated to the proposed baseline by the owner):
+  legal_vehicle_access:             # the parcel must have legitimate / legal access (parcel-level verification)
+    required: true
+    importance: MUST
+  all_weather_vehicle_access:       # a normal vehicle must be able to reach the parcel year-round, including the wet season
+    required: true
+    importance: MUST
+  tolerate_unpaved_local_access: true   # the FINAL access road need not be paved; gravel/local access is fine if it stays practically usable year-round
   route_redundancy_importance: UNSET
 
 utilities:    # tolerance for uncertainty, not a claim that utility evidence is complete
   electricity:
     must_be_verified_before_purchase: UNSET
     tolerate_regional_uncertainty_during_screening: UNSET
-  water:
-    accept_non_PWA_system_if_field_verified: UNSET
-    require_municipal_or_PWA_service: UNSET
-    well_water_acceptable: UNSET
-  telecom:
-    minimum_requirement: UNSET     # NONE | MOBILE_VOICE | MOBILE_DATA | FIXED_BROADBAND
-    verification_stage: UNSET      # SCREENING | SHORTLIST | PARCEL_PURCHASE
+  water:       # INPUT PASS 2: PWA is not required; village / municipal / local-government water is acceptable ONLY once field-verified as reliable.
+    importance: MUST                              # a verified, reliable supply is a condition of purchase
+    must_be_verified_before_purchase: true
+    accept_non_PWA_system_if_field_verified: true
+    require_municipal_or_PWA_service: false
+    well_water_acceptable: UNSET                  # not stated; NOT inferred from accepting village water
+  telecom:     # INPUT PASS 2: actual fixed fiber internet is required. Missing evidence never weakens this MUST.
+    minimum_requirement: FIXED_FIBER   # NONE | MOBILE_VOICE | MOBILE_DATA | FIXED_BROADBAND | FIXED_FIBER
+    importance: MUST
+    verification_stage: BEFORE_PURCHASE   # SCREENING | SHORTLIST | PARCEL_PURCHASE | BEFORE_PURCHASE
+    substitutes_not_accepted: [MOBILE_4G, MOBILE_5G, FIXED_WIRELESS, SATELLITE]   # do not satisfy fiber unless the owner changes it
 
 urban_access:
   preferred_drive_time_to_town_services: 35
   preferred_drive_time_to_town_services_importance: STRONG_PREFERENCE
   # no absolute maximum town-access time was given; absolute_max_drive_time_to_major_city_services is a different item and stays UNSET
-  absolute_max_drive_time_to_major_city_services: UNSET
+  absolute_max_drive_time_to_major_city_services: UNSET   # 'consider it case by case': NOT converted into 45, 60 or any number
+  hard_limit_policy: CASE_BY_CASE
   airport_importance: UNSET
   shopping_daily_services_importance: UNSET
 
@@ -118,10 +136,17 @@ livability:   # placeholders for later livability modelling; not evaluated in M2
   agricultural_surroundings_preference: UNSET
 
 land:         # will later interact with parcel screening
-  budget_thb: UNSET
-  preferred_area_rai: UNSET
+  land_purchase_budget:      # INPUT PASS 2: the price of BARE LAND only. It says nothing about house-construction cost.
+    preferred_thb: UNSET     # not yet decided; no preferred budget below the ceiling is invented
+    absolute_max_thb: 500000 # bare land should not cost more than THB 500,000
+    importance: MUST
+  house_construction_budget_thb: UNSET   # not stated; deliberately separate from the land price
+  preferred_area_rai: UNSET  # parcel size is not fixed yet; usable area must later be considered separately from nominal area
   minimum_area_rai: UNSET
   maximum_area_rai: UNSET
-  terrain_tolerance: UNSET                   # FLAT_ONLY | GENTLE | MODERATE | STEEP_ACCEPTABLE
-  willingness_to_improve_drainage: UNSET
-  willingness_to_build_retaining_structures: UNSET
+  terrain_tolerance: UNSET   # NOT inferred from the willingness to improve a site
+  # Site-improvement tolerance (INPUT PASS 2): willing, with NO project-level limit and NO financial allowance stated yet.
+  # true means "permissive / unrestricted so far". It never overrides a hazard action (see hazard_contract).
+  willingness_to_improve_drainage: true
+  willingness_to_build_retaining_structures: true
+  willingness_to_grade_or_fill: true
